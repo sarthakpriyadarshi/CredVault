@@ -1,36 +1,137 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# CredVault - Credential & Badge Issuance Platform
+
+A scalable platform for issuing and managing digital credentials, certificates, and badges with blockchain verification support.
+
+## Features
+
+- **Multi-role Authentication**: Recipient, Issuer, and Admin roles
+- **Organization Verification**: Admin approval system for issuer organizations
+- **Template Management**: Create customizable certificate/badge templates
+- **Bulk Issuance**: Upload CSV files for batch credential issuance
+- **Blockchain Integration**: Optional blockchain verification for credentials
+- **Scalable API Architecture**: RESTful API with versioning (`/api/v1/...`)
+
+## Tech Stack
+
+- **Frontend**: Next.js 16, React 19, TypeScript, Tailwind CSS
+- **Backend**: Next.js API Routes, MongoDB with Mongoose
+- **Authentication**: NextAuth.js v5 with OAuth support
+- **Database**: MongoDB
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
 
+- Node.js 20+
+- MongoDB (local or Atlas)
+- npm or yarn
+
+### Installation
+
+1. Clone the repository
+2. Install dependencies:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+3. Create `.env.local` file (copy from `.env.local.example`):
+```env
+NEXTAUTH_URL=http://localhost:4300
+NEXTAUTH_SECRET=your-secret-key-here
+MONGODB_URI=mongodb://localhost:27017/credvault
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+4. Run the development server:
+```bash
+npm run dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Environment Variables
 
-## Learn More
+See `.env.local.example` for all required environment variables:
 
-To learn more about Next.js, take a look at the following resources:
+- `NEXTAUTH_URL`: Your application URL
+- `NEXTAUTH_SECRET`: Secret key for NextAuth (generate a random string)
+- `MONGODB_URI`: MongoDB connection string
+- `GOOGLE_CLIENT_ID` & `GOOGLE_CLIENT_SECRET`: Optional OAuth providers
+- `GITHUB_CLIENT_ID` & `GITHUB_CLIENT_SECRET`: Optional OAuth providers
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Database Models
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### User
+- Supports roles: `recipient`, `issuer`, `admin`
+- Auto-verified recipients, pending verification for issuers
+- Password hashing with bcrypt
 
-## Deploy on Vercel
+### Organization
+- Verification status: `pending`, `approved`, `rejected`
+- Linked to issuer users
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Template
+- Supports categories for organization
+- Placeholder system with x/y coordinates
+- Certificate, badge, or both types
+- Requires email field in placeholders
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Credential
+- Links to template and organization
+- Blockchain integration support
+- Expiration and revocation tracking
+
+## API Architecture
+
+The API follows a scalable, versioned structure:
+
+### Base Path
+`/api/v1/`
+
+### Authentication Routes
+- `POST /api/v1/auth/register` - User registration
+- `POST /api/v1/auth/login` - User login
+
+### User Routes
+- `GET /api/v1/users/me` - Get current user (authenticated)
+
+### Middleware
+- `withDB` - Database connection wrapper
+- `withAuth` - Authentication middleware
+- `withAdmin` - Admin-only middleware
+- `withIssuer` - Issuer/admin middleware
+
+## Project Structure
+
+```
+src/
+├── app/
+│   ├── api/v1/          # Versioned API routes
+│   ├── auth/             # Authentication pages
+│   ├── dashboard/         # Dashboard pages
+│   └── page.tsx          # Home page
+├── components/            # React components
+├── lib/
+│   ├── api/             # API utilities and middleware
+│   ├── auth.ts          # NextAuth configuration
+│   └── db/              # Database connection
+└── models/              # MongoDB models
+```
+
+## Authentication Routes
+
+- **Recipients**: `/auth/login`, `/auth/signup`
+- **Issuers**: `/auth/issuer/login`, `/auth/issuer/signup`
+- **Admin**: `/auth/admin/login` (no public signup - admin accounts created manually)
+- **Dashboards**: 
+  - `/dashboard/recipient` - Recipient dashboard
+  - `/dashboard/issuer` - Issuer dashboard
+  - `/dashboard/admin` - Admin dashboard (hidden from navigation)
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Submit a pull request
+
+## License
+
+MIT

@@ -1,0 +1,177 @@
+"use client"
+
+import { useSession } from "next-auth/react"
+import { useRouter } from "next/navigation"
+import { useEffect } from "react"
+import { DashboardHeader } from "@/components/dashboard-header"
+import { DashboardSidebar } from "@/components/dashboard-sidebar"
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
+import { FileText, Users, Upload, Plus } from "lucide-react"
+import Link from "next/link"
+
+export default function IssuerDashboard() {
+  const { data: session, status } = useSession()
+  const router = useRouter()
+
+  useEffect(() => {
+    // Only redirect if we're sure the user is not authenticated (not during loading)
+    if (status === "unauthenticated") {
+      router.push("/auth/issuer/login")
+    } else if (status === "authenticated") {
+      // Only check role and verification after authentication is confirmed
+      if (session?.user?.role !== "issuer") {
+        router.push("/auth/issuer/login")
+      } else if (session?.user?.role === "issuer" && !session.user?.isVerified) {
+        // Redirect to pending page if not verified
+        router.push("/auth/issuer/login?pending=true")
+      }
+    }
+  }, [session, status, router])
+
+  // Show loading state while session is being fetched
+  if (status === "loading") {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-foreground">Loading session...</div>
+      </div>
+    )
+  }
+
+  // If unauthenticated, the useEffect will redirect, but show nothing while redirecting
+  if (status === "unauthenticated") {
+    return null
+  }
+
+  // Only check role if we have a session
+  if (status === "authenticated" && (!session || session.user?.role !== "issuer" || !session.user?.isVerified)) {
+    return null
+  }
+
+  // If we reach here without a session, something is wrong
+  if (!session) {
+    return null
+  }
+
+  return (
+    <div className="min-h-screen w-full bg-background">
+      <DashboardHeader userRole="issuer" userName={session.user?.name || undefined} />
+
+      <div className="flex">
+        <DashboardSidebar userRole="issuer" />
+
+        <main className="flex-1 md:ml-80 p-4 md:p-8">
+          <div className="space-y-8">
+            {/* Header */}
+            <div className="space-y-2">
+              <h1 className="text-3xl font-bold text-foreground">Issuer Dashboard</h1>
+              <p className="text-muted-foreground">Create and manage credential templates and issue certificates</p>
+            </div>
+
+            {/* Action Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Card className="p-6 border border-border/50 bg-gradient-to-br from-card to-card/50 backdrop-blur hover:shadow-lg transition-all duration-300 cursor-pointer group">
+                <Link href="/dashboard/issuer/templates/create" className="space-y-4">
+                  <div className="p-3 rounded-lg bg-primary/10 w-fit group-hover:bg-primary/20 transition-colors">
+                    <Plus className="h-6 w-6 text-primary" />
+                  </div>
+                  <div className="space-y-2">
+                    <h3 className="font-semibold text-foreground">Create Template</h3>
+                    <p className="text-sm text-muted-foreground">Design a new credential template with custom fields</p>
+                  </div>
+                </Link>
+              </Card>
+
+              <Card className="p-6 border border-border/50 bg-gradient-to-br from-card to-card/50 backdrop-blur hover:shadow-lg transition-all duration-300 cursor-pointer group">
+                <Link href="/dashboard/issuer/issue" className="space-y-4">
+                  <div className="p-3 rounded-lg bg-secondary/10 w-fit group-hover:bg-secondary/20 transition-colors">
+                    <Users className="h-6 w-6 text-secondary" />
+                  </div>
+                  <div className="space-y-2">
+                    <h3 className="font-semibold text-foreground">Issue Credential</h3>
+                    <p className="text-sm text-muted-foreground">Issue a single credential to a recipient</p>
+                  </div>
+                </Link>
+              </Card>
+
+              <Card className="p-6 border border-border/50 bg-gradient-to-br from-card to-card/50 backdrop-blur hover:shadow-lg transition-all duration-300 cursor-pointer group">
+                <Link href="/dashboard/issuer/bulk-issuance" className="space-y-4">
+                  <div className="p-3 rounded-lg bg-accent/10 w-fit group-hover:bg-accent/20 transition-colors">
+                    <Upload className="h-6 w-6 text-accent" />
+                  </div>
+                  <div className="space-y-2">
+                    <h3 className="font-semibold text-foreground">Bulk Issuance</h3>
+                    <p className="text-sm text-muted-foreground">Upload CSV file to issue multiple credentials</p>
+                  </div>
+                </Link>
+              </Card>
+            </div>
+
+            {/* Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Card className="p-6 border border-border/50 bg-card/50 backdrop-blur">
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">Active Templates</p>
+                  <p className="text-2xl font-bold text-foreground">8</p>
+                </div>
+              </Card>
+
+              <Card className="p-6 border border-border/50 bg-card/50 backdrop-blur">
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">Credentials Issued</p>
+                  <p className="text-2xl font-bold text-foreground">1,234</p>
+                </div>
+              </Card>
+
+              <Card className="p-6 border border-border/50 bg-card/50 backdrop-blur">
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">On Blockchain</p>
+                  <p className="text-2xl font-bold text-foreground">456</p>
+                </div>
+              </Card>
+            </div>
+
+            {/* Templates List */}
+            <Card className="p-6 border border-border/50 bg-card/50 backdrop-blur">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-foreground">Recent Templates</h3>
+                <Link href="/dashboard/issuer/templates">
+                  <Button variant="outline" size="sm">
+                    View All
+                  </Button>
+                </Link>
+              </div>
+              <div className="space-y-3">
+                {[
+                  { name: "Completion Certificate", issued: 120, created: "5 days ago" },
+                  { name: "Participation Badge", issued: 89, created: "2 weeks ago" },
+                  { name: "Professional License", issued: 34, created: "1 month ago" },
+                ].map((template, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center justify-between p-3 rounded-lg bg-background/50 hover:bg-background/80 transition-colors group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
+                        <FileText className="h-5 w-5 text-primary" />
+                      </div>
+                      <div className="space-y-1">
+                        <p className="font-medium text-foreground">{template.name}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {template.issued} issued • {template.created}
+                        </p>
+                      </div>
+                    </div>
+                    <Button variant="outline" size="sm">
+                      Manage
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          </div>
+        </main>
+      </div>
+    </div>
+  )
+}

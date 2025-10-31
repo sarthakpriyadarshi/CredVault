@@ -1,0 +1,196 @@
+"use client"
+
+import type React from "react"
+import { useState } from "react"
+import { signIn } from "next-auth/react"
+import { useRouter } from "next/navigation"
+import { motion } from "framer-motion"
+import Link from "next/link"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+
+export default function AdminLoginPage() {
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState("")
+  const router = useRouter()
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsLoading(true)
+    setError("")
+
+    try {
+      // First, check if the user's role matches via API (for better error handling)
+      const checkResponse = await fetch("/api/v1/auth/check-role", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password, role: "admin" }),
+      })
+
+      if (!checkResponse.ok) {
+        const checkData = await checkResponse.json()
+        if (checkData.error) {
+          setError(checkData.error)
+          return
+        }
+      }
+
+      // Role check passed, now sign in with NextAuth
+      const result = await signIn("credentials", {
+        email,
+        password,
+        role: "admin",
+        redirect: false,
+      })
+
+      if (result?.error) {
+        // Fallback error handling if check-role didn't catch it
+        const errorStr = String(result.error)
+        let errorMessage = "Invalid email or password"
+        
+        if (errorStr.includes("Invalid role") || errorStr.includes("registered as")) {
+          const parts = errorStr.match(/registered as (\w+), not (\w+)/i)
+          if (parts) {
+            errorMessage = `This account is registered as ${parts[1]}, not ${parts[2]}. Please use the ${parts[1]} login page.`
+          } else {
+            errorMessage = "Invalid role for this login page. Please use the correct login page."
+          }
+        } else if (errorStr) {
+          const cleaned = errorStr
+            .replace("CredentialsSignin: ", "")
+            .replace("CallbackRouteError: ", "")
+            .replace("CredentialsSignin", "")
+            .trim()
+          
+          if (cleaned && cleaned.length > 0 && cleaned !== "CallbackRouteError") {
+            errorMessage = cleaned
+          }
+        }
+        
+        setError(errorMessage)
+        return
+      }
+
+      if (result?.ok) {
+        router.push("/dashboard/admin")
+      } else {
+        setError("Login failed. Please try again.")
+      }
+    } catch (err: unknown) {
+      const errorMessage = err && typeof err === "object" && "message" in err && typeof err.message === "string"
+        ? err.message
+        : "An error occurred. Please try again."
+      setError(errorMessage)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-black flex items-center justify-center relative overflow-x-hidden">
+      {/* Background gradient - fixed to viewport */}
+      <div className="fixed inset-0 bg-gradient-to-br from-zinc-900 via-black to-zinc-900 z-0" />
+
+      {/* Decorative elements - fixed to viewport */}
+      <div className="fixed top-20 left-20 w-72 h-72 bg-primary/10 rounded-full blur-3xl z-0" />
+      <div className="fixed bottom-20 right-20 w-96 h-96 bg-primary/5 rounded-full blur-3xl z-0" />
+
+      <div className="container mx-auto px-4 w-full flex items-center justify-center py-8 relative z-10">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="relative z-10 w-full max-w-md"
+        >
+        {/* Header */}
+        <div className="text-center mb-8">
+          <Link href="/" className="inline-block mb-6">
+            <div className="flex items-center justify-center space-x-2">
+              <img src="/logo.svg" alt="Logo" className="rounded-full size-8 w-8 h-8 object-contain" />
+            </div>
+          </Link>
+          <h1 className="text-3xl font-bold text-white mb-2">Admin Login</h1>
+          <p className="text-zinc-400">Sign in to access the admin panel</p>
+        </div>
+
+        {/* Login Form */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+          className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-8"
+        >
+          {error && (
+            <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="email" className="text-white">
+                Email
+              </Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="Enter your admin email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="bg-zinc-800/50 border-zinc-700 text-white placeholder:text-zinc-500 focus:border-primary focus:ring-primary/20"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="password" className="text-white">
+                Password
+              </Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="Enter your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="bg-zinc-800/50 border-zinc-700 text-white placeholder:text-zinc-500 focus:border-primary focus:ring-primary/20"
+                required
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <label className="flex items-center space-x-2 text-sm">
+                <input
+                  type="checkbox"
+                  className="rounded border-zinc-700 bg-zinc-800 text-primary focus:ring-primary/20"
+                />
+                <span className="text-zinc-300">Remember me</span>
+              </label>
+              <Link href="#" className="text-sm text-primary hover:text-primary/80">
+                Forgot password?
+              </Link>
+            </div>
+
+            <Button
+              type="submit"
+              disabled={isLoading}
+              className="w-full bg-primary hover:bg-primary/90 text-white font-medium py-3 rounded-xl transition-colors"
+            >
+              {isLoading ? "Signing in..." : "Sign in"}
+            </Button>
+          </form>
+
+          <div className="mt-6 text-center">
+            <p className="text-sm text-zinc-500">
+              Admin access only. Contact system administrator if you need access.
+            </p>
+          </div>
+        </motion.div>
+      </motion.div>
+      </div>
+    </div>
+  )
+}
+

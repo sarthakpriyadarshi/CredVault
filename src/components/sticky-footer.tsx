@@ -138,7 +138,7 @@ export function StickyFooter() {
                     target.style.color = "#121113"
                   }}
                 >
-                  <a href="/login" style={{ color: "inherit", textDecoration: "none" }}>Login</a>
+                  <a href="/auth/login" style={{ color: "inherit", textDecoration: "none" }}>Login</a>
                 </li>
                 <li
                   className="hover:underline cursor-pointer transition-colors"
@@ -152,7 +152,7 @@ export function StickyFooter() {
                     target.style.color = "#121113"
                   }}
                 >
-                  <a href="/signup" style={{ color: "inherit", textDecoration: "none" }}>Sign Up</a>
+                  <a href="/auth/signup" style={{ color: "inherit", textDecoration: "none" }}>Sign Up</a>
                 </li>
               </ul>
             </motion.div>

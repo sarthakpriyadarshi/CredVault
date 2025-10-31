@@ -1,66 +1,149 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
+import { signIn } from "next-auth/react"
+import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Building2, User } from "lucide-react"
 
-export default function LoginPage() {
+export default function RecipientLoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState("")
+  const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
-    // Simulate login process
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-    setIsLoading(false)
-    console.log("[v0] Login attempt:", { email, password })
+    setError("")
+
+    try {
+      // First, check if the user's role matches via API (for better error handling)
+      const checkResponse = await fetch("/api/v1/auth/check-role", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password, role: "recipient" }),
+      })
+
+      if (!checkResponse.ok) {
+        const checkData = await checkResponse.json()
+        if (checkData.error) {
+          setError(checkData.error)
+          return
+        }
+      }
+
+      // Role check passed, now sign in with NextAuth
+      const result = await signIn("credentials", {
+        email,
+        password,
+        role: "recipient",
+        redirect: false,
+      })
+
+      if (result?.error) {
+        // Fallback error handling if check-role didn't catch it
+        const errorStr = String(result.error)
+        let errorMessage = "Invalid email or password"
+        
+        if (errorStr.includes("VERIFICATION_PENDING") || errorStr.includes("verification")) {
+          errorMessage = "Your organization is pending verification. Please wait for admin approval."
+        } else if (errorStr.includes("Invalid role") || errorStr.includes("registered as")) {
+          const parts = errorStr.match(/registered as (\w+), not (\w+)/i)
+          if (parts) {
+            errorMessage = `This account is registered as ${parts[1]}, not ${parts[2]}. Please use the ${parts[1]} login page.`
+          } else {
+            errorMessage = "Invalid role for this login page. Please use the correct login page."
+          }
+        } else if (errorStr) {
+          const cleaned = errorStr
+            .replace("CredentialsSignin: ", "")
+            .replace("CallbackRouteError: ", "")
+            .replace("CredentialsSignin", "")
+            .trim()
+          
+          if (cleaned && cleaned.length > 0 && cleaned !== "CallbackRouteError") {
+            errorMessage = cleaned
+          }
+        }
+        
+        setError(errorMessage)
+        return
+      }
+
+      if (result?.ok) {
+        router.push("/dashboard/recipient")
+      } else {
+        setError("Login failed. Please try again.")
+      }
+    } catch (err: unknown) {
+      const errorMessage = err && typeof err === "object" && "message" in err && typeof err.message === "string"
+        ? err.message
+        : "An error occurred. Please try again."
+      setError(errorMessage)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleOAuth = (provider: "google" | "github") => {
+    signIn(provider, { callbackUrl: "/dashboard/recipient", role: "recipient" })
   }
 
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center p-4">
-      <Link
-        href="/"
-        className="absolute top-6 left-6 z-20 text-zinc-400 hover:text-primary transition-colors duration-200 flex items-center space-x-2"
-      >
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-        </svg>
-        <span>Back to Home</span>
-      </Link>
+    <div className="min-h-screen bg-black flex items-center justify-center relative overflow-x-hidden">
+      {/* Background gradient - fixed to viewport */}
+      <div className="fixed inset-0 bg-gradient-to-br from-zinc-900 via-black to-zinc-900 z-0" />
 
-      {/* Background gradient */}
-      <div className="absolute inset-0 bg-gradient-to-br from-zinc-900 via-black to-zinc-900" />
+      {/* Decorative elements - fixed to viewport */}
+      <div className="fixed top-20 left-20 w-72 h-72 bg-primary/10 rounded-full blur-3xl z-0" />
+      <div className="fixed bottom-20 right-20 w-96 h-96 bg-primary/5 rounded-full blur-3xl z-0" />
 
-      {/* Decorative elements */}
-      <div className="absolute top-20 left-20 w-72 h-72 bg-primary/10 rounded-full blur-3xl" />
-      <div className="absolute bottom-20 right-20 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
+      <div className="container mx-auto px-4 w-full flex items-center justify-center py-8 relative z-10">
+        <div className="flex gap-6 w-full max-w-4xl">
+          {/* Vertical Tabs */}
+          <div className="shrink-0 w-64">
+            <div className="bg-zinc-900/50 border border-zinc-800 rounded-lg p-2 sticky top-24">
+              <Link
+                href="/auth/login"
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors bg-primary/20 border border-primary/50 text-white"
+              >
+                <User className="w-5 h-5" />
+                <span className="font-medium">Recipient</span>
+              </Link>
+              <Link
+                href="/auth/issuer/login"
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-lg mt-2 transition-colors text-zinc-400 hover:text-white hover:bg-zinc-800/50"
+              >
+                <Building2 className="w-5 h-5" />
+                <span className="font-medium">Organization</span>
+              </Link>
+            </div>
+          </div>
 
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="relative z-10 w-full max-w-md"
-      >
+          {/* Login Form */}
+          <div className="flex-1">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="relative z-10 w-full"
+            >
         {/* Header */}
         <div className="text-center mb-8">
           <Link href="/" className="inline-block mb-6">
             <div className="flex items-center justify-center space-x-2">
-              <img
-                src="/logo.svg"
-                alt="Logo"
-                className="rounded-full size-8 w-8 h-8 object-contain"
-              />
+              <img src="/logo.svg" alt="Logo" className="rounded-full size-8 w-8 h-8 object-contain" />
             </div>
           </Link>
           <h1 className="text-3xl font-bold text-white mb-2">Welcome back</h1>
-          <p className="text-zinc-400">Sign in to your account to continue</p>
+          <p className="text-zinc-400">Sign in to access your credentials</p>
         </div>
 
         {/* Login Form */}
@@ -70,6 +153,12 @@ export default function LoginPage() {
           transition={{ duration: 0.5, delay: 0.1 }}
           className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-8"
         >
+          {error && (
+            <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
+              {error}
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="email" className="text-white">
@@ -125,8 +214,8 @@ export default function LoginPage() {
 
           <div className="mt-6 text-center">
             <p className="text-zinc-400">
-              Don't have an account?{" "}
-              <Link href="/signup" className="text-primary hover:text-primary/80 font-medium">
+              Don&apos;t have an account?{" "}
+              <Link href="/auth/signup" className="text-primary hover:text-primary/80 font-medium">
                 Sign up
               </Link>
             </p>
@@ -151,7 +240,9 @@ export default function LoginPage() {
 
           <div className="mt-6 grid grid-cols-2 gap-3">
             <Button
+              type="button"
               variant="outline"
+              onClick={() => handleOAuth("google")}
               className="bg-zinc-900/50 border-zinc-800 text-zinc-300 hover:bg-white hover:text-black hover:border-white transition-all duration-200 group"
             >
               <svg
@@ -178,7 +269,9 @@ export default function LoginPage() {
               Google
             </Button>
             <Button
+              type="button"
               variant="outline"
+              onClick={() => handleOAuth("github")}
               className="bg-zinc-900/50 border-zinc-800 text-zinc-300 hover:bg-white hover:text-black hover:border-white transition-all duration-200 group"
             >
               <svg
@@ -192,7 +285,11 @@ export default function LoginPage() {
             </Button>
           </div>
         </motion.div>
-      </motion.div>
+            </motion.div>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
+
