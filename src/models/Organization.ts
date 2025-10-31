@@ -6,6 +6,7 @@ export interface IOrganization extends Document {
   description?: string
   website?: string
   logo?: string
+  verificationProof?: string // URL or path to verification proof image
   verificationStatus: "pending" | "approved" | "rejected"
   verifiedBy?: mongoose.Types.ObjectId // Admin user who verified
   verifiedAt?: Date
@@ -29,9 +30,24 @@ const OrganizationSchema = new Schema<IOrganization>(
     website: {
       type: String,
       trim: true,
-      match: [/^https?:\/\/.+/, "Please provide a valid website URL"],
+      validate: {
+        validator: (v: string | null | undefined): boolean => {
+          // If website is not provided (empty/undefined), it's valid (optional field)
+          if (!v || typeof v !== "string" || v.trim() === "") {
+            return true
+          }
+          // If provided, it should be a valid URL (with or without protocol)
+          const urlPattern = /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/
+          return urlPattern.test(v) || v.startsWith("http://") || v.startsWith("https://")
+        },
+        message: "Please provide a valid website URL",
+      },
     },
     logo: {
+      type: String,
+      default: null,
+    },
+    verificationProof: {
       type: String,
       default: null,
     },

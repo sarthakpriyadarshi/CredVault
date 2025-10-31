@@ -2,16 +2,34 @@
 
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
+import Link from "next/link"
 import { DashboardHeader } from "@/components/dashboard-header"
 import { DashboardSidebar } from "@/components/dashboard-sidebar"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Download, Eye, Share2, CheckCircle, Clock, Shield } from "lucide-react"
 
+interface Credential {
+  id: string
+  title: string
+  issuer: string
+  date: string
+  verified: boolean
+}
+
+interface Stats {
+  total: number
+  blockchainVerified: number
+  aboutToExpire: number
+}
+
 export default function RecipientDashboard() {
   const { data: session, status } = useSession()
   const router = useRouter()
+  const [stats, setStats] = useState<Stats | null>(null)
+  const [credentials, setCredentials] = useState<Credential[]>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     // Only redirect if we're sure the user is not authenticated (not during loading)
@@ -20,8 +38,50 @@ export default function RecipientDashboard() {
     } else if (status === "authenticated" && session?.user?.role !== "recipient") {
       // Only check role after authentication is confirmed
       router.push("/auth/login")
+    } else if (status === "authenticated" && session?.user?.role === "recipient") {
+      loadData()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, status, router])
+
+  const loadData = async () => {
+    setLoading(true)
+    try {
+      const fetchOptions: RequestInit = {
+        credentials: "include",
+      }
+
+      // Load stats
+      const statsRes = await fetch("/api/v1/recipient/stats", fetchOptions)
+      if (!statsRes.ok) {
+        if (statsRes.status === 401) {
+          router.push("/auth/login")
+          return
+        }
+        console.error("Failed to fetch stats:", statsRes.statusText)
+      } else {
+        const statsData = await statsRes.json()
+        setStats(statsData)
+      }
+
+      // Load credentials
+      const credentialsRes = await fetch("/api/v1/recipient/credentials?limit=20", fetchOptions)
+      if (!credentialsRes.ok) {
+        if (credentialsRes.status === 401) {
+          router.push("/auth/login")
+          return
+        }
+        console.error("Failed to fetch credentials:", credentialsRes.statusText)
+      } else {
+        const credentialsData = await credentialsRes.json()
+        setCredentials(credentialsData.data || credentialsData || [])
+      }
+    } catch (error) {
+      console.error("Error loading data:", error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   // Show loading state while session is being fetched
   if (status === "loading") {
@@ -48,11 +108,24 @@ export default function RecipientDashboard() {
   }
 
   return (
-    <div className="min-h-screen w-full bg-background">
-      <DashboardHeader userRole="recipient" userName={session.user?.name || undefined} />
+    <div className="min-h-screen w-full bg-black relative">
+      {/* Background gradient - fixed to viewport */}
+      <div className="fixed inset-0 bg-gradient-to-br from-zinc-900 via-black to-zinc-900 z-0" />
 
-      <div className="flex">
-        <DashboardSidebar userRole="recipient" />
+      {/* Decorative elements - fixed to viewport */}
+      <div className="fixed top-20 left-20 w-72 h-72 bg-primary/10 rounded-full blur-3xl z-0" />
+      <div className="fixed bottom-20 right-20 w-96 h-96 bg-primary/5 rounded-full blur-3xl z-0" />
+
+      <div className="relative z-10 overflow-x-hidden pt-20">
+        <DashboardHeader userRole="recipient" userName={session.user?.name || undefined} />
+
+        <div className="flex mt-4">
+        <DashboardSidebar 
+          userRole="recipient" 
+          badgeCounts={{
+            expiringCredentials: stats?.aboutToExpire,
+          }}
+        />
 
         <main className="flex-1 md:ml-80 p-4 md:p-8">
           <div className="space-y-8">
@@ -68,7 +141,9 @@ export default function RecipientDashboard() {
                 <div className="flex items-center justify-between">
                   <div className="space-y-2">
                     <p className="text-sm text-muted-foreground">Total Credentials</p>
-                    <p className="text-2xl font-bold text-foreground">12</p>
+                    <p className="text-2xl font-bold text-foreground">
+                      {loading ? "..." : stats?.total || 0}
+                    </p>
                   </div>
                   <div className="p-3 rounded-lg bg-primary/10">
                     <CheckCircle className="h-6 w-6 text-primary" />
@@ -80,7 +155,9 @@ export default function RecipientDashboard() {
                 <div className="flex items-center justify-between">
                   <div className="space-y-2">
                     <p className="text-sm text-muted-foreground">Blockchain Verified</p>
-                    <p className="text-2xl font-bold text-foreground">8</p>
+                    <p className="text-2xl font-bold text-foreground">
+                      {loading ? "..." : stats?.blockchainVerified || 0}
+                    </p>
                   </div>
                   <div className="p-3 rounded-lg bg-secondary/10">
                     <Shield className="h-6 w-6 text-secondary" />
@@ -92,7 +169,9 @@ export default function RecipientDashboard() {
                 <div className="flex items-center justify-between">
                   <div className="space-y-2">
                     <p className="text-sm text-muted-foreground">About to Expire</p>
-                    <p className="text-2xl font-bold text-foreground">2</p>
+                    <p className="text-2xl font-bold text-foreground">
+                      {loading ? "..." : stats?.aboutToExpire || 0}
+                    </p>
                   </div>
                   <div className="p-3 rounded-lg bg-destructive/10">
                     <Clock className="h-6 w-6 text-destructive" />
@@ -104,35 +183,17 @@ export default function RecipientDashboard() {
             {/* Credentials List */}
             <Card className="p-6 border border-border/50 bg-card/50 backdrop-blur">
               <h3 className="text-lg font-semibold text-foreground mb-4">Your Credentials</h3>
+              {loading ? (
+                <div className="text-muted-foreground text-sm">Loading...</div>
+              ) : credentials.length === 0 ? (
+                <div className="text-muted-foreground text-sm">
+                  No credentials yet. You&apos;ll see credentials here once they&apos;re issued to you.
+                </div>
+              ) : (
               <div className="space-y-3">
-                {[
-                  {
-                    title: "AWS Solutions Architect",
-                    issuer: "Amazon Web Services",
-                    date: "Issued Dec 15, 2024",
-                    verified: true,
-                  },
-                  {
-                    title: "React Developer Badge",
-                    issuer: "Tech Academy",
-                    date: "Issued Nov 20, 2024",
-                    verified: true,
-                  },
-                  {
-                    title: "Project Management Certificate",
-                    issuer: "PMI",
-                    date: "Issued Oct 10, 2024",
-                    verified: false,
-                  },
-                  {
-                    title: "Data Science Specialization",
-                    issuer: "Coursera",
-                    date: "Issued Sep 5, 2024",
-                    verified: true,
-                  },
-                ].map((credential, i) => (
+                {credentials.map((credential) => (
                   <div
-                    key={i}
+                    key={credential.id}
                     className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 p-4 rounded-lg bg-background/50 hover:bg-background/80 transition-colors group border border-border/30 hover:border-border/60"
                   >
                     <div className="space-y-1 flex-1">
@@ -149,10 +210,12 @@ export default function RecipientDashboard() {
                       <p className="text-xs text-muted-foreground/70">{credential.date}</p>
                     </div>
                     <div className="flex gap-2 flex-wrap md:flex-nowrap">
-                      <Button variant="outline" size="sm" className="gap-2 bg-transparent">
-                        <Eye className="h-4 w-4" />
-                        <span className="hidden md:inline">View</span>
-                      </Button>
+                      <Link href={`/dashboard/recipient/credentials/${credential.id}/verify`}>
+                        <Button variant="outline" size="sm" className="gap-2 bg-transparent">
+                          <Eye className="h-4 w-4" />
+                          <span className="hidden md:inline">Verify</span>
+                        </Button>
+                      </Link>
                       <Button variant="outline" size="sm" className="gap-2 bg-transparent">
                         <Share2 className="h-4 w-4" />
                         <span className="hidden md:inline">Share</span>
@@ -168,9 +231,11 @@ export default function RecipientDashboard() {
                   </div>
                 ))}
               </div>
+              )}
             </Card>
           </div>
         </main>
+        </div>
       </div>
     </div>
   )

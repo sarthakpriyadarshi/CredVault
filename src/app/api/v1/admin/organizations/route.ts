@@ -57,6 +57,7 @@ async function handler(
         description: org.description,
         website: org.website,
         logo: org.logo,
+        verificationProof: org.verificationProof || null,
         verificationStatus: org.verificationStatus,
         verifiedBy: org.verifiedBy
           ? {

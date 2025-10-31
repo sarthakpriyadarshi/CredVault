@@ -18,9 +18,11 @@ async function handler(req: NextRequest) {
       password: string
       role: "recipient" | "issuer"
       organizationName?: string
+      website?: string
+      verificationProof?: string
     }>(req)
 
-    const { name, email, password, role, organizationName } = body
+    const { name, email, password, role, organizationName, website, verificationProof } = body
 
     // Validation
     if (!name || !email || !password) {
@@ -59,7 +61,9 @@ async function handler(req: NextRequest) {
 
       const organization = await Organization.create({
         name: organizationName,
+        website: website || undefined,
         verificationStatus: "pending",
+        verificationProof: verificationProof || null,
       })
 
       organizationId = organization._id

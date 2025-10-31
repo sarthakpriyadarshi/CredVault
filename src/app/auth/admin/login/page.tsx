@@ -6,7 +6,7 @@ import { signIn } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import Link from "next/link"
-import { Button } from "@/components/ui/button"
+import { PrimaryButton } from "@/components/ui/primary-button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
@@ -161,11 +161,25 @@ export default function AdminLoginPage() {
             </div>
 
             <div className="flex items-center justify-between">
-              <label className="flex items-center space-x-2 text-sm">
-                <input
-                  type="checkbox"
-                  className="rounded border-zinc-700 bg-zinc-800 text-primary focus:ring-primary/20"
-                />
+              <label htmlFor="remember-admin" className="flex items-center space-x-2 text-sm cursor-pointer">
+                <div className="relative">
+                  <input
+                    type="checkbox"
+                    id="remember-admin"
+                    className="peer sr-only"
+                  />
+                  <div className="flex h-5 w-5 items-center justify-center rounded-md border-2 transition-all duration-200 border-zinc-700 bg-zinc-800/50 peer-checked:border-primary peer-checked:bg-primary peer-focus-visible:ring-2 peer-focus-visible:ring-primary/50 peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-transparent">
+                    <svg
+                      className="h-3.5 w-3.5 text-primary-foreground opacity-0 peer-checked:opacity-100 transition-opacity duration-200"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={3}
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                </div>
                 <span className="text-zinc-300">Remember me</span>
               </label>
               <Link href="#" className="text-sm text-primary hover:text-primary/80">
@@ -173,13 +187,13 @@ export default function AdminLoginPage() {
               </Link>
             </div>
 
-            <Button
+            <PrimaryButton
               type="submit"
               disabled={isLoading}
-              className="w-full bg-primary hover:bg-primary/90 text-white font-medium py-3 rounded-xl transition-colors"
+              className="w-full"
             >
               {isLoading ? "Signing in..." : "Sign in"}
-            </Button>
+            </PrimaryButton>
           </form>
 
           <div className="mt-6 text-center">

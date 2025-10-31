@@ -7,17 +7,17 @@ import { DashboardHeader } from "@/components/dashboard-header"
 import { DashboardSidebar } from "@/components/dashboard-sidebar"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import { BarChart3, Users, FileText, CheckCircle } from "lucide-react"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts"
 
-const chartData = [
-  { month: "Jan", organizations: 45, credentials: 320 },
-  { month: "Feb", organizations: 52, credentials: 420 },
-  { month: "Mar", organizations: 48, credentials: 380 },
-  { month: "Apr", organizations: 61, credentials: 550 },
-  { month: "May", organizations: 55, credentials: 480 },
-  { month: "Jun", organizations: 67, credentials: 620 },
-]
+interface ChartData {
+  month: string
+  organizations: number
+  credentials: number
+}
 
 interface Organization {
   id: string
@@ -68,6 +68,12 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState<Stats | null>(null)
   const [processingOrg, setProcessingOrg] = useState<string | null>(null)
+  const [chartData, setChartData] = useState<ChartData[]>([])
+  const [showApproveModal, setShowApproveModal] = useState(false)
+  const [showRejectModal, setShowRejectModal] = useState(false)
+  const [pendingOrgId, setPendingOrgId] = useState<string | null>(null)
+  const [rejectReason, setRejectReason] = useState("")
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     // Only redirect if we're sure the user is not authenticated (not during loading)
@@ -120,6 +126,19 @@ export default function AdminDashboard() {
         const statsData = await statsRes.json()
         setStats(statsData)
       }
+
+      // Load chart data
+      const chartRes = await fetch("/api/v1/admin/chart-data", fetchOptions)
+      if (!chartRes.ok) {
+        if (chartRes.status === 401) {
+          router.push("/auth/admin/login")
+          return
+        }
+        console.error("Failed to fetch chart data:", chartRes.statusText)
+      } else {
+        const chartDataResponse = await chartRes.json()
+        setChartData(chartDataResponse || [])
+      }
     } catch (error) {
       console.error("Error loading data:", error)
       setOrganizations([])
@@ -128,54 +147,75 @@ export default function AdminDashboard() {
     }
   }
 
-  const handleApprove = async (orgId: string) => {
-    if (!confirm("Are you sure you want to approve this organization?")) return
+  const handleApproveClick = (orgId: string) => {
+    setPendingOrgId(orgId)
+    setShowApproveModal(true)
+  }
 
-    setProcessingOrg(orgId)
+  const handleApprove = async () => {
+    if (!pendingOrgId) return
+
+    setProcessingOrg(pendingOrgId)
+    setError(null)
     try {
-      const res = await fetch(`/api/v1/admin/organizations/${orgId}/approve`, {
+      const res = await fetch(`/api/v1/admin/organizations/${pendingOrgId}/approve`, {
         method: "POST",
         credentials: "include",
       })
 
       if (res.ok) {
+        setShowApproveModal(false)
+        setPendingOrgId(null)
         await loadData()
       } else {
-        const error = await res.json()
-        alert(error.error || "Failed to approve organization")
+        const errorData = await res.json()
+        setError(errorData.error || "Failed to approve organization")
       }
     } catch (error) {
       console.error("Error approving organization:", error)
-      alert("An error occurred while approving the organization")
+      setError("An error occurred while approving the organization")
     } finally {
       setProcessingOrg(null)
     }
   }
 
-  const handleReject = async (orgId: string) => {
-    const reason = prompt("Please provide a reason for rejection:")
-    if (!reason) return
+  const handleRejectClick = (orgId: string) => {
+    setPendingOrgId(orgId)
+    setRejectReason("")
+    setError(null)
+    setShowRejectModal(true)
+  }
 
-    setProcessingOrg(orgId)
+  const handleReject = async () => {
+    if (!pendingOrgId || !rejectReason.trim()) {
+      setError("Please provide a reason for rejection")
+      return
+    }
+
+    setProcessingOrg(pendingOrgId)
+    setError(null)
     try {
-      const res = await fetch(`/api/v1/admin/organizations/${orgId}/reject`, {
+      const res = await fetch(`/api/v1/admin/organizations/${pendingOrgId}/reject`, {
         method: "POST",
         credentials: "include",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ reason }),
+        body: JSON.stringify({ reason: rejectReason.trim() }),
       })
 
       if (res.ok) {
+        setShowRejectModal(false)
+        setPendingOrgId(null)
+        setRejectReason("")
         await loadData()
       } else {
-        const error = await res.json()
-        alert(error.error || "Failed to reject organization")
+        const errorData = await res.json()
+        setError(errorData.error || "Failed to reject organization")
       }
     } catch (error) {
       console.error("Error rejecting organization:", error)
-      alert("An error occurred while rejecting the organization")
+      setError("An error occurred while rejecting the organization")
     } finally {
       setProcessingOrg(null)
     }
@@ -206,11 +246,25 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen w-full bg-background">
-      <DashboardHeader userRole="admin" userName={session.user?.name || undefined} />
+    <div className="min-h-screen w-full bg-black relative">
+      {/* Background gradient - fixed to viewport */}
+      <div className="fixed inset-0 bg-gradient-to-br from-zinc-900 via-black to-zinc-900 z-0" />
 
-      <div className="flex">
-        <DashboardSidebar userRole="admin" />
+      {/* Decorative elements - fixed to viewport */}
+      <div className="fixed top-20 left-20 w-72 h-72 bg-primary/10 rounded-full blur-3xl z-0" />
+      <div className="fixed bottom-20 right-20 w-96 h-96 bg-primary/5 rounded-full blur-3xl z-0" />
+
+      <div className="relative z-10 overflow-x-hidden pt-20">
+        <DashboardHeader userRole="admin" userName={session.user?.name || undefined} />
+
+        <div className="flex mt-4">
+        <DashboardSidebar 
+          userRole="admin" 
+          badgeCounts={{
+            organizations: stats?.organizations?.total,
+            verificationRequests: stats?.organizations?.pending,
+          }}
+        />
 
         <main className="flex-1 md:ml-80 p-4 md:p-8">
           <div className="space-y-8">
@@ -285,53 +339,97 @@ export default function AdminDashboard() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card className="p-6 border border-border/50 bg-card/50 backdrop-blur">
                 <h3 className="text-lg font-semibold text-foreground mb-4">Growth Trend</h3>
+                {loading || chartData.length === 0 ? (
+                  <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+                    {loading ? "Loading chart data..." : "No data available"}
+                  </div>
+                ) : (
                 <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={chartData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis stroke="hsl(var(--muted-foreground))" dataKey="month" />
-                    <YAxis stroke="hsl(var(--muted-foreground))" />
+                  <LineChart data={chartData} style={{ color: "#ffffff" }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#3f3f46" />
+                    <XAxis 
+                      stroke="#a1a1aa" 
+                      dataKey="month"
+                      tick={{ fill: "#a1a1aa", fontSize: 12 }}
+                    />
+                    <YAxis 
+                      stroke="#a1a1aa"
+                      tick={{ fill: "#a1a1aa", fontSize: 12 }}
+                    />
                     <Tooltip
                       contentStyle={{
-                        backgroundColor: "hsl(var(--card))",
-                        border: "1px solid hsl(var(--border))",
+                        backgroundColor: "#18181b",
+                        border: "1px solid #3f3f46",
                         borderRadius: "8px",
+                        color: "#ffffff",
                       }}
+                      labelStyle={{
+                        color: "#ffffff",
+                      }}
+                      itemStyle={{
+                        color: "#ffffff",
+                      }}
+                      cursor={{ stroke: "#3f3f46" }}
                     />
                     <Line
                       type="monotone"
                       dataKey="organizations"
-                      stroke="hsl(var(--primary))"
+                      stroke="#db2777"
                       strokeWidth={2}
                       dot={false}
+                      activeDot={{ r: 4, fill: "#db2777" }}
                     />
                     <Line
                       type="monotone"
                       dataKey="credentials"
-                      stroke="hsl(var(--secondary))"
+                      stroke="#a855f7"
                       strokeWidth={2}
                       dot={false}
+                      activeDot={{ r: 4, fill: "#a855f7" }}
                     />
                   </LineChart>
                 </ResponsiveContainer>
+                )}
               </Card>
 
               <Card className="p-6 border border-border/50 bg-card/50 backdrop-blur">
                 <h3 className="text-lg font-semibold text-foreground mb-4">Monthly Activity</h3>
+                {loading || chartData.length === 0 ? (
+                  <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+                    {loading ? "Loading chart data..." : "No data available"}
+                  </div>
+                ) : (
                 <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={chartData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis stroke="hsl(var(--muted-foreground))" dataKey="month" />
-                    <YAxis stroke="hsl(var(--muted-foreground))" />
+                  <BarChart data={chartData} style={{ color: "#ffffff" }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#3f3f46" />
+                    <XAxis 
+                      stroke="#a1a1aa" 
+                      dataKey="month"
+                      tick={{ fill: "#a1a1aa", fontSize: 12 }}
+                    />
+                    <YAxis 
+                      stroke="#a1a1aa"
+                      tick={{ fill: "#a1a1aa", fontSize: 12 }}
+                    />
                     <Tooltip
                       contentStyle={{
-                        backgroundColor: "hsl(var(--card))",
-                        border: "1px solid hsl(var(--border))",
+                        backgroundColor: "#18181b",
+                        border: "1px solid #3f3f46",
                         borderRadius: "8px",
+                        color: "#ffffff",
                       }}
+                      labelStyle={{
+                        color: "#ffffff",
+                      }}
+                      itemStyle={{
+                        color: "#ffffff",
+                      }}
+                      cursor={{ fill: "rgba(219, 39, 119, 0.1)" }}
                     />
-                    <Bar dataKey="organizations" fill="hsl(var(--primary))" />
+                    <Bar dataKey="organizations" fill="#db2777" radius={[8, 8, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
+                )}
               </Card>
             </div>
 
@@ -370,7 +468,7 @@ export default function AdminDashboard() {
                         <Button
                           size="sm"
                           className="bg-gradient-to-b from-primary to-primary/80 text-primary-foreground shadow-[0px_2px_0px_0px_rgba(255,255,255,0.3)_inset]"
-                          onClick={() => handleApprove(org.id)}
+                          onClick={() => handleApproveClick(org.id)}
                           disabled={processingOrg === org.id}
                         >
                           {processingOrg === org.id ? "Processing..." : "Approve"}
@@ -379,7 +477,7 @@ export default function AdminDashboard() {
                           variant="outline"
                           size="sm"
                           className="border-destructive text-destructive hover:bg-destructive/10"
-                          onClick={() => handleReject(org.id)}
+                          onClick={() => handleRejectClick(org.id)}
                           disabled={processingOrg === org.id}
                         >
                           {processingOrg === org.id ? "Processing..." : "Reject"}
@@ -392,7 +490,109 @@ export default function AdminDashboard() {
             </Card>
           </div>
         </main>
+        </div>
       </div>
+
+      {/* Approve Confirmation Modal */}
+      <Dialog open={showApproveModal} onOpenChange={(open) => {
+        setShowApproveModal(open)
+        if (!open) {
+          setPendingOrgId(null)
+          setError(null)
+        }
+      }}>
+        <DialogContent className="bg-card border-border/50">
+          <DialogHeader>
+            <DialogTitle>Approve Organization</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to approve this organization? This action will verify the organization and allow them to issue credentials.
+            </DialogDescription>
+          </DialogHeader>
+          {error && (
+            <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+              <p className="text-sm text-destructive">{error}</p>
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowApproveModal(false)
+                setPendingOrgId(null)
+                setError(null)
+              }}
+              disabled={processingOrg !== null}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="bg-gradient-to-b from-primary to-primary/80 text-primary-foreground shadow-[0px_2px_0px_0px_rgba(255,255,255,0.3)_inset]"
+              onClick={handleApprove}
+              disabled={processingOrg !== null}
+            >
+              {processingOrg ? "Processing..." : "Approve"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reject Confirmation Modal */}
+      <Dialog open={showRejectModal} onOpenChange={(open) => {
+        setShowRejectModal(open)
+        if (!open) {
+          setPendingOrgId(null)
+          setRejectReason("")
+          setError(null)
+        }
+      }}>
+        <DialogContent className="bg-card border-border/50">
+          <DialogHeader>
+            <DialogTitle>Reject Organization</DialogTitle>
+            <DialogDescription>
+              Please provide a reason for rejecting this organization. This reason will be communicated to the organization.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="reject-reason">Reason for Rejection *</Label>
+              <Textarea
+                id="reject-reason"
+                value={rejectReason}
+                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setRejectReason(e.target.value)}
+                placeholder="Enter the reason for rejection..."
+                className="min-h-[100px] bg-background/50"
+                disabled={processingOrg !== null}
+              />
+            </div>
+            {error && (
+              <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+                <p className="text-sm text-destructive">{error}</p>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowRejectModal(false)
+                setPendingOrgId(null)
+                setRejectReason("")
+                setError(null)
+              }}
+              disabled={processingOrg !== null}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleReject}
+              disabled={processingOrg !== null || !rejectReason.trim()}
+            >
+              {processingOrg ? "Processing..." : "Reject"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

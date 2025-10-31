@@ -18,9 +18,14 @@ interface SidebarItem {
 
 interface DashboardSidebarProps {
   userRole: "admin" | "issuer" | "recipient"
+  badgeCounts?: {
+    organizations?: number
+    verificationRequests?: number
+    expiringCredentials?: number
+  }
 }
 
-export function DashboardSidebar({ userRole }: DashboardSidebarProps) {
+export function DashboardSidebar({ userRole, badgeCounts }: DashboardSidebarProps) {
   const pathname = usePathname()
   const [expandedItems, setExpandedItems] = useState<string[]>([])
 
@@ -34,13 +39,13 @@ export function DashboardSidebar({ userRole }: DashboardSidebarProps) {
       label: "Organizations",
       href: "/dashboard/admin/organizations",
       icon: <Users className="h-5 w-5" />,
-      badge: 12,
+      badge: badgeCounts?.organizations,
     },
     {
       label: "Verification Requests",
       href: "/dashboard/admin/verification",
       icon: <FileText className="h-5 w-5" />,
-      badge: 5,
+      badge: badgeCounts?.verificationRequests,
     },
     {
       label: "Analytics",
@@ -81,6 +86,11 @@ export function DashboardSidebar({ userRole }: DashboardSidebarProps) {
       icon: <BarChart3 className="h-5 w-5" />,
     },
     {
+      label: "Analytics",
+      href: "/dashboard/issuer/analytics",
+      icon: <BarChart3 className="h-5 w-5" />,
+    },
+    {
       label: "Settings",
       href: "/dashboard/issuer/settings",
       icon: <Settings className="h-5 w-5" />,
@@ -107,7 +117,7 @@ export function DashboardSidebar({ userRole }: DashboardSidebarProps) {
       label: "About to Expire",
       href: "/dashboard/recipient/expiring",
       icon: <BarChart3 className="h-5 w-5" />,
-      badge: 2,
+      badge: badgeCounts?.expiringCredentials,
     },
     {
       label: "Settings",
@@ -126,7 +136,28 @@ export function DashboardSidebar({ userRole }: DashboardSidebarProps) {
     setExpandedItems((prev) => (prev.includes(label) ? prev.filter((item) => item !== label) : [...prev, label]))
   }
 
-  const isActive = (href: string) => pathname === href || pathname.startsWith(href + "/")
+  const isActive = (href: string) => {
+    // Exact match
+    if (pathname === href) {
+      return true
+    }
+    // For base dashboard routes (e.g., /dashboard/admin), only match exact path
+    const isBaseDashboardRoute = href.match(/^\/dashboard\/(admin|issuer|recipient)$/)
+    if (isBaseDashboardRoute) {
+      return false
+    }
+    // For sub-routes, only match if pathname starts with href + "/" 
+    // AND there's no more specific menu item that would match better
+    if (pathname.startsWith(href + "/")) {
+      // Check if there's a more specific menu item that matches the current pathname
+      const moreSpecificItem = items.find((item) => {
+        return item.href !== href && pathname.startsWith(item.href) && item.href.length > href.length
+      })
+      // Only return true if there's no more specific item that matches
+      return !moreSpecificItem
+    }
+    return false
+  }
 
   return (
     <aside className="hidden md:flex fixed left-4 top-24 h-[calc(100vh-120px)] w-64 flex-col rounded-2xl bg-card border border-border/50 shadow-lg overflow-y-auto">
@@ -153,7 +184,7 @@ export function DashboardSidebar({ userRole }: DashboardSidebarProps) {
                 <span className="font-medium text-sm">{item.label}</span>
               </div>
               <div className="flex items-center gap-2">
-                {item.badge && (
+                {item.badge !== undefined && item.badge > 0 && (
                   <span className="text-xs bg-destructive/20 text-destructive px-2 py-1 rounded-full">
                     {item.badge}
                   </span>

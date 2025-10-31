@@ -49,6 +49,7 @@ async function handler(
         description: org.description,
         website: org.website,
         logo: org.logo,
+        verificationProof: org.verificationProof || null,
         verificationStatus: org.verificationStatus,
         createdAt: org.createdAt,
         issuerCount: users.length,

@@ -5,7 +5,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import Link from "next/link"
-import { Button } from "@/components/ui/button"
+import { PrimaryButton } from "@/components/ui/primary-button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Building2, User } from "lucide-react"
@@ -14,9 +14,12 @@ export default function IssuerSignupPage() {
     name: "",
     email: "",
     organizationName: "",
+    website: "",
     password: "",
     confirmPassword: "",
   })
+  const [proofFile, setProofFile] = useState<File | null>(null)
+  const [proofPreview, setProofPreview] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState(false)
@@ -27,6 +30,34 @@ export default function IssuerSignupPage() {
       ...prev,
       [e.target.name]: e.target.value,
     }))
+  }
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      // Validate file type
+      const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp"]
+      if (!allowedTypes.includes(file.type)) {
+        setError("Only image files (JPEG, PNG, GIF, WebP) are allowed")
+        return
+      }
+
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setError("File size must be less than 5MB")
+        return
+      }
+
+      setProofFile(file)
+      setError("")
+
+      // Create preview
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setProofPreview(reader.result as string)
+      }
+      reader.readAsDataURL(file)
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -49,9 +80,39 @@ export default function IssuerSignupPage() {
       return
     }
 
+    if (!proofFile) {
+      setError("Please upload a verification proof document (image)")
+      return
+    }
+
     setIsLoading(true)
 
     try {
+      // First, upload the proof file
+      let proofUrl = null
+      try {
+        const uploadFormData = new FormData()
+        uploadFormData.append("file", proofFile)
+
+        const uploadResponse = await fetch("/api/v1/upload/organization-proof", {
+          method: "POST",
+          body: uploadFormData,
+        })
+
+        if (!uploadResponse.ok) {
+          const uploadError = await uploadResponse.json()
+          setError(uploadError.error || "Failed to upload proof document")
+          return
+        }
+
+        const uploadData = await uploadResponse.json()
+        proofUrl = uploadData.url
+      } catch (uploadErr) {
+        console.error("Upload error:", uploadErr)
+        setError("Failed to upload proof document. Please try again.")
+        return
+      }
+
       // Create user account via API route (issuer, not verified yet)
       const response = await fetch("/api/v1/auth/register", {
         method: "POST",
@@ -64,6 +125,8 @@ export default function IssuerSignupPage() {
           password: formData.password,
           role: "issuer",
           organizationName: formData.organizationName,
+          website: formData.website || undefined,
+          verificationProof: proofUrl,
         }),
       })
 
@@ -217,6 +280,21 @@ export default function IssuerSignupPage() {
             </div>
 
             <div className="space-y-2">
+              <Label htmlFor="website" className="text-white">
+                Website <span className="text-zinc-400 text-sm">(optional)</span>
+              </Label>
+              <Input
+                id="website"
+                name="website"
+                type="url"
+                placeholder="https://your-organization.com"
+                value={formData.website}
+                onChange={handleChange}
+                className="bg-zinc-800/50 border-zinc-700 text-white placeholder:text-zinc-500 focus:border-primary focus:ring-primary/20"
+              />
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="email" className="text-white">
                 Email
               </Label>
@@ -264,36 +342,79 @@ export default function IssuerSignupPage() {
               />
             </div>
 
+            <div className="space-y-2">
+              <Label htmlFor="proof" className="text-white">
+                Verification Proof (Image Only) <span className="text-red-400">*</span>
+              </Label>
+              <div className="space-y-2">
+                <input
+                  id="proof"
+                  name="proof"
+                  type="file"
+                  accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                  onChange={handleFileChange}
+                  className="block w-full text-sm text-zinc-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary/20 file:text-primary hover:file:bg-primary/30 file:cursor-pointer bg-zinc-800/50 border border-zinc-700 rounded-lg focus:outline-none focus:border-primary"
+                  required
+                />
+                <p className="text-xs text-zinc-400">Upload a proof document for organization verification (Max 5MB, Images only)</p>
+              </div>
+              {proofPreview && (
+                <div className="mt-2">
+                  <p className="text-xs text-zinc-400 mb-2">Preview:</p>
+                  <img
+                    src={proofPreview}
+                    alt="Proof preview"
+                    className="max-h-32 w-auto rounded-lg border border-zinc-700"
+                  />
+                </div>
+              )}
+            </div>
+
             <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg text-yellow-400 text-sm">
               <strong>Note:</strong> Your organization will need admin verification before you can issue credentials.
             </div>
 
             <div className="flex items-start space-x-2">
-              <input
-                type="checkbox"
-                id="terms"
-                className="mt-1 rounded border-zinc-700 bg-zinc-800 text-primary focus:ring-primary/20"
-                required
-              />
-              <label htmlFor="terms" className="text-sm text-zinc-300">
-                I agree to the{" "}
-                <Link href="#" className="text-primary hover:text-primary/80">
-                  Terms of Service
-                </Link>{" "}
-                and{" "}
-                <Link href="#" className="text-primary hover:text-primary/80">
-                  Privacy Policy
-                </Link>
+              <label htmlFor="terms-issuer" className="flex items-start space-x-2 text-sm cursor-pointer">
+                <div className="relative mt-0.5">
+                  <input
+                    type="checkbox"
+                    id="terms-issuer"
+                    className="peer sr-only"
+                    required
+                  />
+                  <div className="flex h-5 w-5 items-center justify-center rounded-md border-2 transition-all duration-200 border-zinc-700 bg-zinc-800/50 peer-checked:border-primary peer-checked:bg-primary peer-focus-visible:ring-2 peer-focus-visible:ring-primary/50 peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-transparent">
+                    <svg
+                      className="h-3.5 w-3.5 text-primary-foreground opacity-0 peer-checked:opacity-100 transition-opacity duration-200"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={3}
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                </div>
+                <span className="text-zinc-300">
+                  I agree to the{" "}
+                  <Link href="#" className="text-primary hover:text-primary/80">
+                    Terms of Service
+                  </Link>{" "}
+                  and{" "}
+                  <Link href="#" className="text-primary hover:text-primary/80">
+                    Privacy Policy
+                  </Link>
+                </span>
               </label>
             </div>
 
-            <Button
+            <PrimaryButton
               type="submit"
               disabled={isLoading || success}
-              className="w-full bg-primary hover:bg-primary/90 text-white font-medium py-3 rounded-xl transition-colors"
+              className="w-full"
             >
               {isLoading ? "Registering..." : success ? "Registered!" : "Register Organization"}
-            </Button>
+            </PrimaryButton>
           </form>
 
           <div className="mt-6 text-center">
@@ -323,50 +444,53 @@ export default function IssuerSignupPage() {
           </div>
 
           <div className="mt-6 grid grid-cols-2 gap-3">
-            <Button
+            <PrimaryButton
               type="button"
               variant="outline"
               onClick={() => handleOAuth("google")}
-              className="bg-zinc-900/50 border-zinc-800 text-zinc-300 hover:bg-white hover:text-black hover:border-white transition-all duration-200 group"
+              className="w-full"
             >
               <svg
-                className="w-5 h-5 mr-2 text-zinc-300 group-hover:text-black transition-colors duration-200"
+                className="w-5 h-5"
                 viewBox="0 0 24 24"
               >
                 <path
-                  fill="currentColor"
+                  fill="#4285F4"
                   d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
                 />
                 <path
-                  fill="currentColor"
+                  fill="#34A853"
                   d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
                 />
                 <path
-                  fill="currentColor"
+                  fill="#FBBC05"
                   d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
                 />
                 <path
-                  fill="currentColor"
+                  fill="#EA4335"
                   d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                 />
               </svg>
               Google
-            </Button>
-            <Button
+            </PrimaryButton>
+            <PrimaryButton
               type="button"
               variant="outline"
               onClick={() => handleOAuth("github")}
-              className="bg-zinc-900/50 border-zinc-800 text-zinc-300 hover:bg-white hover:text-black hover:border-white transition-all duration-200 group"
+              className="w-full"
             >
               <svg
-                className="w-5 h-5 mr-2 text-zinc-300 group-hover:text-black transition-colors duration-200"
+                className="w-5 h-5"
                 fill="currentColor"
                 viewBox="0 0 24 24"
               >
-                <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
+                <path
+                  fill="#ffffff"
+                  d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"
+                />
               </svg>
               GitHub
-            </Button>
+            </PrimaryButton>
           </div>
         </motion.div>
             </motion.div>

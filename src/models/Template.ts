@@ -3,8 +3,8 @@ import mongoose, { Schema, Document, Model } from "mongoose"
 export interface IPlaceholder {
   fieldName: string
   type: "text" | "number" | "date" | "email" | "id" | "custom"
-  x: number
-  y: number
+  x?: number // Optional - email fields may not have coordinates if not displayed
+  y?: number // Optional - email fields may not have coordinates if not displayed
   fontSize?: number
   fontFamily?: string
   color?: string
@@ -40,11 +40,11 @@ const PlaceholderSchema = new Schema<IPlaceholder>(
     },
     x: {
       type: Number,
-      required: [true, "X coordinate is required"],
+      required: false, // Explicitly optional - email fields may not be displayed
     },
     y: {
       type: Number,
-      required: [true, "Y coordinate is required"],
+      required: false, // Explicitly optional - email fields may not be displayed
     },
     fontSize: {
       type: Number,
@@ -112,10 +112,60 @@ const TemplateSchema = new Schema<ITemplate>(
       default: [],
       validate: {
         validator: function (this: ITemplate, placeholders: IPlaceholder[]) {
-          // Must have at least one placeholder for email
-          return placeholders.some((p) => p.fieldName.toLowerCase() === "email")
+          // Use console.error to ensure logs appear
+          console.error("[TEMPLATE VALIDATOR] Called with placeholders:", JSON.stringify(placeholders, null, 2))
+          console.error("[TEMPLATE VALIDATOR] Placeholders array type:", typeof placeholders, Array.isArray(placeholders))
+          
+          if (!placeholders || !Array.isArray(placeholders) || placeholders.length === 0) {
+            console.error("[TEMPLATE VALIDATOR] Failed: placeholders is empty or not an array")
+            return false
+          }
+          
+          // Log each placeholder for debugging
+          placeholders.forEach((p, idx) => {
+            console.error(`[TEMPLATE VALIDATOR] Placeholder ${idx}:`, JSON.stringify({
+              fieldName: p?.fieldName,
+              type: p?.type,
+              typeOf: typeof p?.type,
+              hasX: p?.x !== undefined && p?.x !== null,
+              hasY: p?.y !== undefined && p?.y !== null,
+              x: p?.x,
+              y: p?.y,
+            }, null, 2))
+          })
+          
+          // Must have at least one placeholder with email type (email field is required but may not have coordinates if not displayed)
+          const emailFields = placeholders.filter((p) => {
+            if (!p) return false
+            const typeStr = String(p.type || "").toLowerCase().trim()
+            const isEmail = typeStr === "email"
+            console.error(`[TEMPLATE VALIDATOR] Checking placeholder "${p.fieldName}": type="${p.type}" (${typeof p.type}), isEmail=${isEmail}`)
+            return isEmail
+          })
+          
+          console.error("[TEMPLATE VALIDATOR] Email fields found:", emailFields.length, emailFields.map(e => e.fieldName))
+          
+          if (emailFields.length === 0) {
+            console.error("[TEMPLATE VALIDATOR] Failed: no email field found")
+            return false
+          }
+          
+          // For non-email fields, x and y are required
+          const nonEmailFields = placeholders.filter((p) => p && String(p.type || "").toLowerCase().trim() !== "email")
+          if (nonEmailFields.length > 0) {
+            const allNonEmailFieldsHaveCoords = nonEmailFields.every(
+              (p) => p.x !== undefined && p.x !== null && p.y !== undefined && p.y !== null
+            )
+            if (!allNonEmailFieldsHaveCoords) {
+              console.error("[TEMPLATE VALIDATOR] Failed: non-email fields missing coordinates")
+              return false
+            }
+          }
+          
+          console.error("[TEMPLATE VALIDATOR] Passed validation")
+          return true
         },
-        message: "Template must have at least one email field",
+        message: "Template must have at least one email field, and all non-email fields must have coordinates",
       },
     },
     isActive: {
@@ -129,6 +179,16 @@ const TemplateSchema = new Schema<ITemplate>(
     toObject: { virtuals: true },
   }
 )
+
+// Pre-save hook to debug validation
+TemplateSchema.pre("save", function (next) {
+  console.error("[PRE-SAVE] Hook triggered - placeholders:", JSON.stringify(this.placeholders, null, 2))
+  if (this.placeholders && Array.isArray(this.placeholders)) {
+    const emailCount = this.placeholders.filter(p => p && String(p.type || "").toLowerCase().trim() === "email").length
+    console.error("[PRE-SAVE] Email fields found:", emailCount)
+  }
+  next()
+})
 
 // Indexes
 TemplateSchema.index({ organizationId: 1 })

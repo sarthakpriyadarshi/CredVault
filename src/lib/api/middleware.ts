@@ -20,7 +20,12 @@ export function withDB(handler: Handler) {
       if (context?.params && context.params instanceof Promise) {
         context.params = await context.params
       }
-      return handler(req, context)
+      const result = await handler(req, context)
+      if (!result || !(result instanceof NextResponse)) {
+        console.error("Handler did not return a NextResponse:", result)
+        return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+      }
+      return result
     } catch (error: unknown) {
       console.error("Database connection error:", error)
       return NextResponse.json({ error: "Database connection failed" }, { status: 500 })
@@ -63,9 +68,20 @@ export function withAuth(handler: Handler, options?: { roles?: string[] }) {
       }
 
       // Combine DB connection with auth - execute handler with authenticated user
-      return withDB(async (req, ctx) => {
-        return handler(req, ctx, session.user as Record<string, unknown>)
-      })(req, resolvedContext)
+      const dbHandler = withDB(async (req, ctx) => {
+        const result = await handler(req, ctx, session.user as Record<string, unknown>)
+        if (!result || !(result instanceof NextResponse)) {
+          console.error("Handler did not return a NextResponse:", result)
+          return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+        }
+        return result
+      })
+      const result = await dbHandler(req, resolvedContext)
+      if (!result || !(result instanceof NextResponse)) {
+        console.error("DB handler did not return a NextResponse:", result)
+        return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+      }
+      return result
     } catch (error: unknown) {
       console.error("Auth error:", error)
       return NextResponse.json(
