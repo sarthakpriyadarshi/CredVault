@@ -15,6 +15,13 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Upload, Download, CheckCircle, AlertCircle, FileText } from "lucide-react"
 import { PrimaryButton } from "@/components/ui/primary-button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 
 interface IssuanceRecord {
   recipientName: string
@@ -42,6 +49,9 @@ export default function BulkIssuancePage() {
   const [issuanceRecords, setIssuanceRecords] = useState<IssuanceRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [showPreview, setShowPreview] = useState(false)
+  const [showErrorDialog, setShowErrorDialog] = useState(false)
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false)
+  const [dialogMessage, setDialogMessage] = useState("")
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -127,7 +137,8 @@ export default function BulkIssuancePage() {
       const lines = text.split("\n").filter((line) => line.trim())
       
       if (lines.length < 2) {
-        alert("CSV must have header and at least one data row")
+        setDialogMessage("CSV must have header and at least one data row")
+        setShowErrorDialog(true)
         return
       }
 
@@ -148,18 +159,21 @@ export default function BulkIssuancePage() {
       setShowPreview(true)
     } catch (error) {
       console.error("Error parsing CSV:", error)
-      alert("Failed to parse CSV file")
+      setDialogMessage("Failed to parse CSV file")
+      setShowErrorDialog(true)
     }
   }
 
   const handleProcessBulkIssuance = async () => {
     if (!csvFile || !selectedTemplate) {
-      alert("Please select template and upload CSV file")
+      setDialogMessage("Please select template and upload CSV file")
+      setShowErrorDialog(true)
       return
     }
 
     if (csvPreview.length === 0) {
-      alert("CSV file is empty")
+      setDialogMessage("CSV file is empty")
+      setShowErrorDialog(true)
       return
     }
 
@@ -180,15 +194,19 @@ export default function BulkIssuancePage() {
 
       if (!res.ok) {
         const error = await res.json()
-        alert(error.error || "Failed to process bulk issuance")
+        setDialogMessage(error.error || "Failed to process bulk issuance")
+        setShowErrorDialog(true)
         return
       }
 
       const data = await res.json()
       setIssuanceRecords(data.records || [])
+      setDialogMessage(`Bulk issuance completed! Successfully issued ${successCount} credentials`)
+      setShowSuccessDialog(true)
     } catch (error) {
       console.error("Error processing bulk issuance:", error)
-      alert("An error occurred while processing bulk issuance")
+      setDialogMessage("An error occurred while processing bulk issuance")
+      setShowErrorDialog(true)
     } finally {
       setIsProcessing(false)
     }
@@ -196,7 +214,8 @@ export default function BulkIssuancePage() {
 
   const downloadTemplate = async () => {
     if (!selectedTemplate) {
-      alert("Please select a template first")
+      setDialogMessage("Please select a template first")
+      setShowErrorDialog(true)
       return
     }
 
@@ -205,7 +224,8 @@ export default function BulkIssuancePage() {
       const headers = templateFields.map((f) => f.name)
       
       if (headers.length === 0) {
-        alert("Template has no fields defined")
+        setDialogMessage("Template has no fields defined")
+        setShowErrorDialog(true)
         return
       }
 
@@ -229,7 +249,8 @@ export default function BulkIssuancePage() {
       document.body.removeChild(element)
     } catch (error) {
       console.error("Error downloading CSV template:", error)
-      alert("Failed to download CSV template")
+      setDialogMessage("Failed to download CSV template")
+      setShowErrorDialog(true)
     }
   }
 
@@ -523,6 +544,50 @@ export default function BulkIssuancePage() {
           </main>
         </div>
       </div>
+
+      {/* Success Dialog */}
+      <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-500/10">
+                <CheckCircle className="h-6 w-6 text-green-500" />
+              </div>
+              <DialogTitle>Success</DialogTitle>
+            </div>
+          </DialogHeader>
+          <DialogDescription className="text-base py-4">
+            {dialogMessage}
+          </DialogDescription>
+          <div className="flex justify-end">
+            <PrimaryButton onClick={() => setShowSuccessDialog(false)}>
+              OK
+            </PrimaryButton>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Error Dialog */}
+      <Dialog open={showErrorDialog} onOpenChange={setShowErrorDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-destructive/10">
+                <AlertCircle className="h-6 w-6 text-destructive" />
+              </div>
+              <DialogTitle>Error</DialogTitle>
+            </div>
+          </DialogHeader>
+          <DialogDescription className="text-base py-4">
+            {dialogMessage}
+          </DialogDescription>
+          <div className="flex justify-end">
+            <Button variant="outline" onClick={() => setShowErrorDialog(false)}>
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

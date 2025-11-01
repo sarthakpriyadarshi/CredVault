@@ -64,11 +64,12 @@ export default function RecipientDashboard() {
         console.error("Failed to fetch stats:", statsRes.statusText)
       } else {
         const statsData = await statsRes.json()
+        console.log("Stats data received:", statsData) // Debug log
         setStats(statsData)
       }
 
       // Load credentials
-      const credentialsRes = await fetch("/api/v1/recipient/credentials?limit=20", fetchOptions)
+      const credentialsRes = await fetch("/api/v1/recipient/credentials?limit=10", fetchOptions)
       if (!credentialsRes.ok) {
         if (credentialsRes.status === 401) {
           router.push("/auth/login")
@@ -249,7 +250,14 @@ export default function RecipientDashboard() {
 
             {/* Credentials List */}
             <Card className="p-6 border border-border/50 bg-card/50 backdrop-blur">
-              <h3 className="text-lg font-semibold text-foreground mb-4">Your Credentials</h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-foreground">Your Credentials</h3>
+                <Link href="/dashboard/recipient/all">
+                  <Button variant="outline" size="sm" className="bg-transparent">
+                    View All
+                  </Button>
+                </Link>
+              </div>
               {loading ? (
                 <div className="text-muted-foreground text-sm">Loading...</div>
               ) : credentials.length === 0 ? (

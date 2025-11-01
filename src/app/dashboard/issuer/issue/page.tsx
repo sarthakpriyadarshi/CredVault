@@ -11,8 +11,15 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Send } from "lucide-react"
+import { Send, CheckCircle, AlertCircle } from "lucide-react"
 import { PrimaryButton } from "@/components/ui/primary-button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 
 interface Template {
   id: string
@@ -29,6 +36,9 @@ export default function IssuePage() {
   const [useBlockchain, setUseBlockchain] = useState(false)
   const [loading, setLoading] = useState(true)
   const [issuing, setIssuing] = useState(false)
+  const [showErrorDialog, setShowErrorDialog] = useState(false)
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false)
+  const [dialogMessage, setDialogMessage] = useState("")
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -82,7 +92,8 @@ export default function IssuePage() {
 
   const handleIssue = async () => {
     if (!selectedTemplate || !currentTemplate) {
-      alert("Please select a template")
+      setDialogMessage("Please select a template")
+      setShowErrorDialog(true)
       return
     }
 
@@ -90,7 +101,8 @@ export default function IssuePage() {
     const emailFields = currentTemplate.fields.filter((f) => f.type === "email")
     const hasEmail = emailFields.some((f) => formData[f.name] && formData[f.name].trim())
     if (!hasEmail) {
-      alert("Please fill in at least one email field")
+      setDialogMessage("Please fill in at least one email field")
+      setShowErrorDialog(true)
       return
     }
 
@@ -112,17 +124,20 @@ export default function IssuePage() {
 
       if (!res.ok) {
         const error = await res.json()
-        alert(error.error || "Failed to issue credential")
+        setDialogMessage(error.error || "Failed to issue credential")
+        setShowErrorDialog(true)
         return
       }
 
-      alert("Credential issued successfully!")
+      setDialogMessage("Credential issued successfully!")
+      setShowSuccessDialog(true)
       setFormData({})
       setSelectedTemplate("")
       setUseBlockchain(false)
     } catch (error) {
       console.error("Error issuing credential:", error)
-      alert("An error occurred while issuing the credential")
+      setDialogMessage("An error occurred while issuing the credential")
+      setShowErrorDialog(true)
     } finally {
       setIssuing(false)
     }
@@ -274,6 +289,50 @@ export default function IssuePage() {
           </main>
         </div>
       </div>
+
+      {/* Success Dialog */}
+      <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-500/10">
+                <CheckCircle className="h-6 w-6 text-green-500" />
+              </div>
+              <DialogTitle>Success</DialogTitle>
+            </div>
+          </DialogHeader>
+          <DialogDescription className="text-base py-4">
+            {dialogMessage}
+          </DialogDescription>
+          <div className="flex justify-end">
+            <PrimaryButton onClick={() => setShowSuccessDialog(false)}>
+              OK
+            </PrimaryButton>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Error Dialog */}
+      <Dialog open={showErrorDialog} onOpenChange={setShowErrorDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-destructive/10">
+                <AlertCircle className="h-6 w-6 text-destructive" />
+              </div>
+              <DialogTitle>Error</DialogTitle>
+            </div>
+          </DialogHeader>
+          <DialogDescription className="text-base py-4">
+            {dialogMessage}
+          </DialogDescription>
+          <div className="flex justify-end">
+            <Button variant="outline" onClick={() => setShowErrorDialog(false)}>
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

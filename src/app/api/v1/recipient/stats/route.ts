@@ -23,11 +23,21 @@ async function handler(
     }
 
     // Build query to find credentials for this recipient
-    const query: any = {}
+    const query: any = {
+      $or: [] as any[],
+      status: { $ne: "revoked" }, // Exclude revoked credentials
+    }
+    
     if (userId) {
-      query.recipientId = userId
-    } else if (userEmail) {
-      query.recipientEmail = userEmail.toLowerCase()
+      query.$or.push({ recipientId: userId })
+    }
+    if (userEmail) {
+      query.$or.push({ recipientEmail: userEmail.toLowerCase() })
+    }
+    
+    // If no OR conditions, this shouldn't happen but handle gracefully
+    if (query.$or.length === 0) {
+      return NextResponse.json({ error: "User ID or email not found" }, { status: 400 })
     }
 
     // Get statistics
@@ -36,11 +46,10 @@ async function handler(
       blockchainCredentials,
       expiringCredentials,
     ] = await Promise.all([
-      Credential.countDocuments({ ...query, status: { $ne: "revoked" } }),
+      Credential.countDocuments(query),
       Credential.countDocuments({
         ...query,
         isOnBlockchain: true,
-        status: { $ne: "revoked" },
       }),
       Credential.countDocuments({
         ...query,
@@ -48,15 +57,18 @@ async function handler(
           $gte: new Date(),
           $lte: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // Next 30 days
         },
-        status: { $ne: "revoked" },
       }),
     ])
 
-    return NextResponse.json({
+    const response = {
       total: totalCredentials,
       blockchainVerified: blockchainCredentials,
       aboutToExpire: expiringCredentials,
-    })
+    }
+
+    console.log("Stats response:", response) // Debug log
+
+    return NextResponse.json(response)
   } catch (error: unknown) {
     return handleApiError(error)
   }
