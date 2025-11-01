@@ -1,6 +1,8 @@
 ![CredVault](./public/github-ogimage.png)
 
 <div align="center">
+   
+# CredVault - Credential and Badge Issuance Platform
 
 ### Enterprise-Grade Credential & Badge Issuance Platform
 
