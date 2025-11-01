@@ -402,38 +402,6 @@ mongo --eval "rs.initiate()"
 
 ---
 
-## Contributing
-
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
-
-### **Quick Contribution Steps**
-1. **Fork** the repository
-2. **Create** a feature branch (`git checkout -b feature/amazing-feature`)
-3. **Commit** your changes (`git commit -m 'feat: add amazing feature'`)
-4. **Push** to branch (`git push origin feature/amazing-feature`)
-5. **Open** a Pull Request
-
-### **Development Setup for Contributors**
-```bash
-# Fork and clone your fork
-git clone https://github.com/YOUR_USERNAME/credvault.git
-cd credvault
-
-# Add upstream remote
-git remote add upstream https://github.com/sarthakpriyadarshi/credvault.git
-
-# Install dependencies
-npm install
-
-# Create feature branch
-git checkout -b feature/your-feature-name
-
-# Start development
-npm run dev
-```
-
----
-
 ## License
 
 This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
@@ -505,14 +473,6 @@ npm run type-check
 - **[Radix UI](https://www.radix-ui.com/)** - Accessible component system
 
 ---
-
-<div align="center">
-
-**Made with by [Sarthak Priyadarshi](https://github.com/sarthakpriyadarshi)**
-
-[Star this repo](https://github.com/sarthakpriyadarshi/credvault) • [Report Bug](https://github.com/sarthakpriyadarshi/credvault/issues) • [Request Feature](https://github.com/sarthakpriyadarshi/credvault/issues/new)
-
-</div>
 ```
 
 > **Note**: For blockchain features, you need to set up VAULT Protocol. See [VAULT Protocol Integration Guide](./docs/VAULT_PROTOCOL_INTEGRATION.md)
@@ -574,103 +534,12 @@ The API follows a scalable, versioned structure:
 - `withAdmin` - Admin-only middleware
 - `withIssuer` - Issuer/admin middleware
 
-## Project Structure
+---
 
-```
-src/
-├── app/
-│   ├── api/v1/          # Versioned API routes
-│   ├── auth/             # Authentication pages
-│   ├── dashboard/         # Dashboard pages
-│   └── page.tsx          # Home page
-├── components/            # React components
-├── lib/
-│   ├── api/             # API utilities and middleware
-│   ├── auth.ts          # NextAuth configuration
-│   └── db/              # Database connection
-└── models/              # MongoDB models
-```
+<div align="center">
 
-## Authentication Routes
+**Made with ❤️ by [Sarthak Priyadarshi](https://github.com/sarthakpriyadarshi)**
 
-- **Recipients**: `/auth/login`, `/auth/signup`
-- **Issuers**: `/auth/issuer/login`, `/auth/issuer/signup`
-- **Admin**: `/auth/admin/login` (no public signup - admin accounts created manually)
-- **Dashboards**: 
-  - `/dashboard/recipient` - Recipient dashboard
-  - `/dashboard/issuer` - Issuer dashboard
-  - `/dashboard/admin` - Admin dashboard (hidden from navigation)
+[Star this repo](https://github.com/sarthakpriyadarshi/credvault) • [Report Bug](https://github.com/sarthakpriyadarshi/credvault/issues) • [Request Feature](https://github.com/sarthakpriyadarshi/credvault/issues/new)
 
-## 🔐 VAULT Protocol Integration
-
-CredVault integrates with [VAULT Protocol](https://github.com/sarthakpriyadarshi/VaultProtocol) for blockchain-based credential verification and encrypted storage.
-
-### Features
-
-- **Blockchain Verification**: Immutable credential records on Quorum blockchain
-- **Encrypted Storage**: AES-256-GCM encryption before IPFS storage
-- **Decentralized Files**: IPFS for distributed certificate storage
-- **Custom Protocol**: `vault://` URLs for secure access
-- **Automatic Decryption**: Files decrypted on retrieval
-
-### Setup
-
-1. Install VAULT Protocol dependencies:
-```bash
-# Clone VAULT Protocol
-git clone https://github.com/sarthakpriyadarshi/VaultProtocol.git
-cd VaultProtocol
-npm install
-
-# Start IPFS
-ipfs daemon
-
-# Start Quorum (in separate terminal)
-npx quorum-dev-quickstart
-cd quorum-dev-quickstart && ./start.sh
-
-# Start VAULT Protocol API
-npm run dev:encrypted
-```
-
-2. Configure environment variables in `.env.local`:
-```env
-VAULT_PROTOCOL_URL=http://localhost:3001
-FILE_ENCRYPTION_KEY=9c69b7c1996a8cbb37bd218fc147a0e275444aeb83dc30d8d2992a42321395f6
-```
-
-3. Enable "Register on Blockchain" when issuing credentials
-
-For detailed setup instructions, see [VAULT Protocol Integration Guide](./docs/VAULT_PROTOCOL_INTEGRATION.md)
-
-### How It Works
-
-1. **Issuance**: Certificate → Encrypt → IPFS → Blockchain → MongoDB
-2. **Verification**: Query MongoDB → Verify Blockchain → Retrieve from IPFS → Decrypt
-3. **Storage**: 
-   - **CredVault DB**: Credential metadata, user data
-   - **VAULT Protocol**: Encrypted files, blockchain records
-   - **IPFS**: Distributed file storage
-
-### Credential Fields (with Blockchain)
-
-| Field | Description |
-|-------|-------------|
-| `vaultFid` | VAULT Protocol File ID |
-| `vaultCid` | IPFS Content ID (encrypted) |
-| `vaultUrl` | vault://fid/cid URL |
-| `vaultGatewayUrl` | IPFS Gateway URL |
-| `blockchainTxId` | Transaction hash |
-| `vaultIssuer` | Blockchain issuer address |
-
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Submit a pull request
-
-## License
-
-MIT
+</div>
