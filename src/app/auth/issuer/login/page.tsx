@@ -10,6 +10,7 @@ import { PrimaryButton } from "@/components/ui/primary-button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Building2, User } from "lucide-react"
+import { LoadingScreen } from "@/components/loading-screen"
 
 function IssuerLoginForm() {
   const [email, setEmail] = useState("")
@@ -332,11 +333,7 @@ function IssuerLoginForm() {
 
 export default function IssuerLoginPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="text-white">Loading...</div>
-      </div>
-    }>
+    <Suspense fallback={<LoadingScreen />}>
       <IssuerLoginForm />
     </Suspense>
   )

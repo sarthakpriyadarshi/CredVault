@@ -14,6 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { LoadingScreen } from "@/components/loading-screen"
 
 export default function SetupPage() {
   const router = useRouter()
@@ -94,12 +95,12 @@ export default function SetupPage() {
         return
       }
 
-      // Success! Show modal then redirect
+      // Success! Show modal then redirect to admin login
       setShowSuccessModal(true)
       
-      // Redirect after 2 seconds
+      // Redirect to admin login after 2 seconds - user must sign in
       setTimeout(() => {
-        router.push("/")
+        router.push("/auth/admin/login")
       }, 2000)
     } catch (error) {
       console.error("Error creating admin:", error)
@@ -110,11 +111,7 @@ export default function SetupPage() {
   }
 
   if (loading) {
-    return (
-      <div className="min-h-screen w-full bg-black flex items-center justify-center">
-        <div className="text-white">Loading...</div>
-      </div>
-    )
+    return <LoadingScreen />
   }
 
   return (
@@ -255,7 +252,7 @@ export default function SetupPage() {
               Admin Account Created Successfully!
             </DialogTitle>
             <DialogDescription className="text-zinc-400 pt-2">
-              Your admin account has been created successfully. You will be redirected to the home page shortly.
+              Your admin account has been created successfully. Please sign in to access the admin dashboard.
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-center py-4">
@@ -263,7 +260,7 @@ export default function SetupPage() {
               <div className="h-12 w-12 rounded-full bg-green-500/20 flex items-center justify-center">
                 <CheckCircle2 className="h-8 w-8 text-green-500" />
               </div>
-              <p className="text-sm text-zinc-400 mt-2">Redirecting to home page...</p>
+              <p className="text-sm text-zinc-400 mt-2">Redirecting to login page...</p>
             </div>
           </div>
         </DialogContent>

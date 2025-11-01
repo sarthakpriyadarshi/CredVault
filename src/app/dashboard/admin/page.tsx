@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { BarChart3, Users, FileText, CheckCircle } from "lucide-react"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts"
+import { LoadingScreen } from "@/components/loading-screen"
 
 interface ChartData {
   month: string
@@ -223,11 +224,7 @@ export default function AdminDashboard() {
 
   // Show loading state while session is being fetched
   if (status === "loading") {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-foreground">Loading session...</div>
-      </div>
-    )
+    return <LoadingScreen message="Loading session..." />
   }
 
   // If unauthenticated, the useEffect will redirect, but show nothing while redirecting

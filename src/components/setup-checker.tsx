@@ -1,12 +1,12 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useRouter, usePathname } from "next/navigation"
+import { usePathname } from "next/navigation"
+import { LoadingScreen } from "@/components/loading-screen"
 
 export function SetupChecker({ children }: { children: React.ReactNode }) {
-  const router = useRouter()
   const pathname = usePathname()
-  const [isChecking, setIsChecking] = useState(true)
+  const [isChecking, setIsChecking] = useState(pathname !== "/setup")
   const [setupNeeded, setSetupNeeded] = useState(false)
 
   useEffect(() => {
@@ -22,30 +22,24 @@ export function SetupChecker({ children }: { children: React.ReactNode }) {
 
         if (data.setupNeeded) {
           setSetupNeeded(true)
-          router.push("/setup")
+          // Use replace instead of push to avoid adding to history
+          // Use window.location for immediate navigation to ensure page loads
+          window.location.href = "/setup"
+        } else {
+          setIsChecking(false)
         }
       } catch (error) {
         console.error("Error checking setup:", error)
-      } finally {
         setIsChecking(false)
       }
     }
 
     checkSetup()
-  }, [pathname, router])
+  }, [pathname])
 
-  // Show loading while checking (only for a brief moment)
-  if (isChecking && !setupNeeded) {
-    return (
-      <div className="min-h-screen w-full bg-black flex items-center justify-center">
-        <div className="text-white">Loading...</div>
-      </div>
-    )
-  }
-
-  // If setup is needed and we're redirecting, show nothing
-  if (setupNeeded && pathname !== "/setup") {
-    return null
+  // Show loading while checking or during redirect
+  if (isChecking || (setupNeeded && pathname !== "/setup")) {
+    return <LoadingScreen />
   }
 
   return <>{children}</>

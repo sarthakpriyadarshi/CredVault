@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/dialog"
 import { ChevronRight, Save, User, Lock, Bell, Edit2, Upload } from "lucide-react"
 import { PrimaryButton } from "@/components/ui/primary-button"
+import { LoadingScreen } from "@/components/loading-screen"
 
 export default function RecipientSettingsPage() {
   const { data: session, status } = useSession()
@@ -226,11 +227,7 @@ export default function RecipientSettingsPage() {
         : `/profile/${encodeURIComponent(profile.email)}`)
 
   if (status === "loading") {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-foreground">Loading session...</div>
-      </div>
-    )
+    return <LoadingScreen message="Loading session..." />
   }
 
   if (status === "unauthenticated" || (status === "authenticated" && (!session || session.user?.role !== "recipient"))) {

@@ -18,6 +18,7 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog"
+import { LoadingScreen } from "@/components/loading-screen"
 import { Clock, CheckCircle, XCircle, FileText, Image as ImageIcon, Edit2 } from "lucide-react"
 import { PrimaryButton } from "@/components/ui/primary-button"
 import Image from "next/image"
@@ -272,11 +273,7 @@ export default function VerificationPage() {
   const rejectedCount = requests.filter((r) => r.verificationStatus === "rejected").length
 
   if (status === "loading") {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-foreground">Loading session...</div>
-      </div>
-    )
+    return <LoadingScreen message="Loading session..." />
   }
 
   if (status === "unauthenticated" || (status === "authenticated" && (!session || session.user?.role !== "admin"))) {

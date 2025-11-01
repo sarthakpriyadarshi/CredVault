@@ -13,6 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { LoadingScreen } from "@/components/loading-screen"
 
 interface VerificationResult {
   verified: boolean
@@ -184,11 +185,7 @@ export default function PublicVerifyCredentialPage() {
   }
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-foreground">Loading...</div>
-      </div>
-    )
+    return <LoadingScreen />
   }
 
   if (error || !credential || !verification) {

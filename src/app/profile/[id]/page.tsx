@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Download, ExternalLink, Linkedin, Github, Twitter, Globe, Mail } from "lucide-react"
 import Link from "next/link"
+import { LoadingScreen } from "@/components/loading-screen"
 
 interface Credential {
   id: string
@@ -82,11 +83,7 @@ export default function PublicProfilePage() {
   }
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-foreground">Loading...</div>
-      </div>
-    )
+    return <LoadingScreen />
   }
 
   if (error || !profile) {

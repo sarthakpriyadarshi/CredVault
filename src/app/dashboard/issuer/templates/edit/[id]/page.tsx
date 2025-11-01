@@ -23,6 +23,7 @@ import {
 import { Upload, Trash2, Save, Loader2 } from "lucide-react"
 import { PrimaryButton } from "@/components/ui/primary-button"
 import { GOOGLE_FONTS } from "@/lib/fonts"
+import { LoadingScreen } from "@/components/loading-screen"
 
 interface TemplateField {
   id: string
@@ -663,14 +664,7 @@ export default function EditTemplatePage() {
   }
 
   if (status === "loading" || loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="flex items-center gap-2 text-foreground">
-          <Loader2 className="h-5 w-5 animate-spin" />
-          {loading ? "Loading template..." : "Loading session..."}
-        </div>
-      </div>
-    )
+    return <LoadingScreen message={loading ? "Loading template..." : "Loading session..."} />
   }
 
   if (status === "unauthenticated" || (status === "authenticated" && (!session || session.user?.role !== "issuer"))) {

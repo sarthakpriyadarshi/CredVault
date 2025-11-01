@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Building2 } from "lucide-react"
 import Link from "next/link"
+import { LoadingScreen } from "@/components/loading-screen"
 
 export default function IssuerCompleteRegistrationPage() {
   const [formData, setFormData] = useState({
@@ -165,11 +166,7 @@ export default function IssuerCompleteRegistrationPage() {
 
   // Show loading state while checking session
   if (status === "loading") {
-    return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="text-white">Loading...</div>
-      </div>
-    )
+    return <LoadingScreen />
   }
 
   return (

@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { FileText, Users, Upload, Plus } from "lucide-react"
 import Link from "next/link"
+import { LoadingScreen } from "@/components/loading-screen"
 
 interface Template {
   id: string
@@ -97,11 +98,7 @@ export default function IssuerDashboard() {
 
   // Show loading state while session is being fetched
   if (status === "loading") {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-foreground">Loading session...</div>
-      </div>
-    )
+    return <LoadingScreen message="Loading session..." />
   }
 
   // If unauthenticated, the useEffect will redirect, but show nothing while redirecting

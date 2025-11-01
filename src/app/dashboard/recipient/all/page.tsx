@@ -8,6 +8,7 @@ import { DashboardSidebar } from "@/components/dashboard-sidebar"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Download, Eye, Share2, Shield, Loader2 } from "lucide-react"
+import { LoadingScreen } from "@/components/loading-screen"
 import {
   Dialog,
   DialogContent,
@@ -220,11 +221,7 @@ export default function AllCredentialsPage() {
   }
 
   if (status === "loading") {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-foreground">Loading session...</div>
-      </div>
-    )
+    return <LoadingScreen message="Loading session..." />
   }
 
   if (status === "unauthenticated" || (status === "authenticated" && (!session || session.user?.role !== "recipient"))) {
