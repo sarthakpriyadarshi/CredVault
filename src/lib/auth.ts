@@ -212,6 +212,7 @@ export const authOptions: NextAuthConfig = {
         token.isVerified = (user as User).isVerified
         token.email = (user as User).email
         token.name = (user as User).name
+        token.lastUpdated = Date.now() // Track when user data was last updated
         
         // Store OAuth image URL if present (OAuth providers give URLs, not base64)
         if ("image" in user && user.image !== undefined) {
@@ -229,10 +230,15 @@ export const authOptions: NextAuthConfig = {
         }
       }
       
-      // Always refresh user data from database if we have a token ID
-      // This ensures organizationId is up-to-date after organization creation
-      // NOTE: Do NOT store large base64 images in token - only store metadata
-      if (token.id) {
+      // Only refresh user data from database if:
+      // 1. Explicitly triggered by update, OR
+      // 2. More than 10 minutes have passed since last update (to reduce API calls)
+      const shouldRefreshFromDB = trigger === "update" || 
+        !token.lastUpdated || 
+        (Date.now() - (token.lastUpdated as number)) > (10 * 60 * 1000) // 10 minutes
+      
+      if (token.id && shouldRefreshFromDB) {
+        console.log(`[JWT] Refreshing user data from DB (trigger: ${trigger || 'interval'})`)
         try {
           await connectDB()
           const dbUser = await User.findById(token.id)
@@ -240,6 +246,8 @@ export const authOptions: NextAuthConfig = {
             token.role = dbUser.role
             token.organizationId = dbUser.organizationId?.toString()
             token.isVerified = dbUser.isVerified
+            token.lastUpdated = Date.now() // Update timestamp
+            
             // Only store image URL if it's a URL (not base64), otherwise omit to keep token small
             // Base64 images can be several MB and will exceed cookie size limits
             // OAuth providers (Google, GitHub) provide URLs starting with http/https
@@ -264,33 +272,6 @@ export const authOptions: NextAuthConfig = {
               if (!existingImage || (!existingImage.startsWith("http://") && !existingImage.startsWith("https://"))) {
                 token.image = undefined
               }
-            }
-          }
-        } catch (error) {
-          console.error("Error refreshing user data:", error)
-        }
-      }
-      
-      // Also handle explicit update trigger
-      if (trigger === "update" && token.id) {
-        try {
-          await connectDB()
-          const dbUser = await User.findById(token.id)
-          if (dbUser) {
-            token.role = dbUser.role
-            token.organizationId = dbUser.organizationId?.toString()
-            token.isVerified = dbUser.isVerified
-            // Only store image URL if it's a URL (not base64)
-            if (dbUser.image) {
-              if (dbUser.image.startsWith("http://") || dbUser.image.startsWith("https://")) {
-                token.image = dbUser.image
-              } else if (!dbUser.image.startsWith("data:") && dbUser.image.length < 500) {
-                token.image = dbUser.image
-              } else {
-                token.image = undefined
-              }
-            } else {
-              token.image = undefined
             }
           }
         } catch (error) {
@@ -336,6 +317,7 @@ export const authOptions: NextAuthConfig = {
   session: {
     strategy: "jwt",
     maxAge: 7 * 24 * 60 * 60, // 7 days
+    updateAge: 24 * 60 * 60, // Update session every 24 hours (instead of on every access)
   },
   secret: process.env.NEXTAUTH_SECRET || "credvault-secret-key-change-in-production",
 }

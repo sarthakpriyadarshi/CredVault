@@ -6,8 +6,9 @@ import type { ReactNode } from "react"
 export function Providers({ children }: { children: ReactNode }) {
   return (
     <SessionProvider
-      refetchInterval={5 * 60} // Refetch session every 5 minutes
-      refetchOnWindowFocus={true} // Refetch when window regains focus
+      refetchInterval={30 * 60} // Refetch session every 30 minutes (instead of 5)
+      refetchOnWindowFocus={false} // Disable refetch on window focus to reduce API calls
+      refetchWhenOffline={false} // Don't refetch when offline
     >
       {children}
     </SessionProvider>

@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   authors: [{ name: "CredVault" }],
   creator: "CredVault",
   publisher: "CredVault",
-  metadataBase: new URL("https://credvault.com"),
+  metadataBase: new URL(process.env.NEXTAUTH_URL || "http://localhost:4300"),
   openGraph: {
     title: "CredVault - Credential & Badge Issuance Platform",
     description: "Issue credentials and badges seamlessly. Create custom templates, issue certificates in bulk, and verify credentials with blockchain integration.",
@@ -26,6 +26,7 @@ export const metadata: Metadata = {
         width: 1200,
         height: 630,
         alt: "CredVault - Credential & Badge Issuance Platform",
+        type: "image/png",
       },
     ],
   },
