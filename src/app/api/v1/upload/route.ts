@@ -1,10 +1,13 @@
 /**
  * Unified file upload endpoint
  * Handles various file upload types: avatar, logo, template-image, organization-proof
+ * 
+ * Note: organization-proof uploads are allowed without authentication (for signup)
+ * All other upload types require authentication
  */
 
 import { NextRequest } from "next/server"
-import { withAuth, handleApiError } from "@/lib/api/middleware"
+import { withAuth, withDB, handleApiError } from "@/lib/api/middleware"
 import { methodNotAllowed, successResponse, errorResponse, validationErrorResponse } from "@/lib/api/responses"
 import { validateFileType, validateFileSize } from "@/lib/api/validation"
 
@@ -14,14 +17,16 @@ const ALLOWED_TEMPLATE_TYPES = [...ALLOWED_IMAGE_TYPES, "application/pdf"]
 async function uploadHandler(
   req: NextRequest,
   _context?: { params?: Promise<Record<string, string>> | Record<string, string> },
-  user?: Record<string, unknown>
+  user?: Record<string, unknown>,
+  parsedFormData?: FormData
 ) {
   if (req.method !== "POST") {
     return methodNotAllowed()
   }
 
   try {
-    const formData = await req.formData()
+    // Use provided formData if available, otherwise parse from request
+    const formData = parsedFormData || await req.formData()
     const file = formData.get("file") as File | null
     const uploadType = formData.get("type") as string | null
 
@@ -35,7 +40,7 @@ async function uploadHandler(
       return errorResponse(`Invalid upload type. Must be one of: ${validTypes.join(", ")}`, 400)
     }
 
-    // Check permissions for issuer-only uploads
+    // Check permissions for issuer-only uploads (only if user is provided, i.e., authenticated)
     const userRole = user?.role as string | undefined
     if ((uploadType === "logo" || uploadType === "template-image") && userRole !== "issuer" && userRole !== "admin") {
       return errorResponse("Forbidden: Only issuers and admins can upload logos and template images", 403)
@@ -118,21 +123,43 @@ async function uploadHandler(
   }
 }
 
-// All uploads require authentication
-// Logo and template-image additionally require issuer/admin role (checked inside handler)
+// Upload handler with conditional authentication:
+// - organization-proof: allowed without authentication (for signup)
+// - avatar, logo, template-image: require authentication
+// - logo and template-image: additionally require issuer/admin role
 export async function POST(
   req: NextRequest,
   context?: { params?: Promise<Record<string, string>> | Record<string, string> }
 ) {
-  async function routeHandler(
+  // Read formData once to check upload type (formData can only be read once from request)
+  // We'll need to recreate the request or pass the formData to handlers
+  const formData = await req.formData()
+  const uploadType = formData.get("type") as string | null
+
+  // organization-proof uploads are allowed without authentication (for signup)
+  if (uploadType === "organization-proof") {
+    async function unauthenticatedHandler(
+      req: NextRequest,
+      ctx?: { params?: Promise<Record<string, string>> | Record<string, string> }
+    ) {
+      // Pass undefined user and pre-parsed formData for organization-proof uploads
+      return uploadHandler(req, ctx, undefined, formData)
+    }
+
+    return withDB(unauthenticatedHandler)(req, context)
+  }
+
+  // All other upload types require authentication
+  async function authenticatedHandler(
     req: NextRequest,
     ctx?: { params?: Promise<Record<string, string>> | Record<string, string> },
     user?: Record<string, unknown>
   ) {
-    // Check permissions inside uploadHandler - it will parse formData
-    return uploadHandler(req, ctx, user)
+    // Use pre-parsed formData since we already read it from the original request
+    return uploadHandler(req, ctx, user, formData)
   }
 
-  return withAuth(routeHandler)(req, context)
+  // withAuth doesn't need to read request body, so we can pass original req
+  return withAuth(authenticatedHandler)(req, context)
 }
 
