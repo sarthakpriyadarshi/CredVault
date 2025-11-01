@@ -9,6 +9,7 @@ import Link from "next/link"
 import { PrimaryButton } from "@/components/ui/primary-button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Building2, User, UserCog } from "lucide-react"
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState("")
@@ -99,12 +100,42 @@ export default function AdminLoginPage() {
       <div className="fixed bottom-20 right-20 w-96 h-96 bg-primary/5 rounded-full blur-3xl z-0" />
 
       <div className="container mx-auto px-4 w-full flex items-center justify-center py-8 relative z-10">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="relative z-10 w-full max-w-md"
-        >
+        <div className="flex gap-6 w-full max-w-4xl">
+          {/* Vertical Tabs */}
+          <div className="shrink-0 w-64">
+            <div className="bg-zinc-900/50 border border-zinc-800 rounded-lg p-2 sticky top-24">
+              <Link
+                href="/auth/login"
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-zinc-400 hover:text-white hover:bg-zinc-800/50"
+              >
+                <User className="w-5 h-5" />
+                <span className="font-medium">Recipient</span>
+              </Link>
+              <Link
+                href="/auth/issuer/login"
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-lg mt-2 transition-colors text-zinc-400 hover:text-white hover:bg-zinc-800/50"
+              >
+                <Building2 className="w-5 h-5" />
+                <span className="font-medium">Organization</span>
+              </Link>
+              <Link
+                href="/auth/admin/login"
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-lg mt-2 transition-colors bg-primary/20 border border-primary/50 text-white"
+              >
+                <UserCog className="w-5 h-5" />
+                <span className="font-medium">Admin</span>
+              </Link>
+            </div>
+          </div>
+
+          {/* Login Form */}
+          <div className="flex-1">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="relative z-10 w-full"
+            >
         {/* Header */}
         <div className="text-center mb-8">
           <Link href="/" className="inline-block mb-6">
@@ -202,7 +233,9 @@ export default function AdminLoginPage() {
             </p>
           </div>
         </motion.div>
-      </motion.div>
+            </motion.div>
+          </div>
+        </div>
       </div>
     </div>
   )

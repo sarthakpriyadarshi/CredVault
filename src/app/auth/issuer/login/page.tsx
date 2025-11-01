@@ -9,7 +9,7 @@ import Link from "next/link"
 import { PrimaryButton } from "@/components/ui/primary-button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Building2, User } from "lucide-react"
+import { Building2, User, UserCog } from "lucide-react"
 import { LoadingScreen } from "@/components/loading-screen"
 
 function IssuerLoginForm() {
@@ -139,6 +139,13 @@ function IssuerLoginForm() {
               >
                 <Building2 className="w-5 h-5" />
                 <span className="font-medium">Organization</span>
+              </Link>
+              <Link
+                href="/auth/admin/login"
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-lg mt-2 transition-colors text-zinc-400 hover:text-white hover:bg-zinc-800/50"
+              >
+                <UserCog className="w-5 h-5" />
+                <span className="font-medium">Admin</span>
               </Link>
             </div>
           </div>
