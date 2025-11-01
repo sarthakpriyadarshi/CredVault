@@ -37,12 +37,43 @@ interface Credential {
   type: "certificate" | "badge" | "both"
   status: "active" | "expired" | "revoked"
   isOnBlockchain: boolean
+  blockchainVerified?: boolean
+  blockchainVerifiedAt?: string
+  vaultFid?: string
+  vaultCid?: string
   issuedAt: string
   expiresAt?: string
   revokedAt?: string
   certificateUrl?: string
   badgeUrl?: string
   credentialData: Record<string, unknown>
+}
+
+// VAULT Protocol Icon Component
+const VaultIcon = ({ verified, size = 32 }: { verified?: boolean, size?: number }) => {
+  const bgColor = verified ? "oklch(0.95 0 0)" : "oklch(0.90 0 0)"
+  const circleColor = verified ? "oklch(0.70 0.20 15)" : "oklch(0.5 0.02 270)"
+  const lockColor = "oklch(0.1797 0.0043 308.1928)"
+  
+  return (
+    <svg 
+      width={size} 
+      height={size} 
+      viewBox="15 15 70 70" 
+      xmlns="http://www.w3.org/2000/svg" 
+      aria-labelledby="Vault Protocol" 
+      role="img" 
+      className="shrink-0"
+      style={{ opacity: verified ? 1 : 0.6 }}
+    >
+      <title id="Vault Protocol">{verified ? "Verified on VAULT Protocol" : "Not verified on blockchain"}</title>
+      <rect x="20" y="20" width="60" height="60" rx="10" ry="10" fill={bgColor}/>
+      <circle cx="50" cy="50" r="22" fill={circleColor}/>
+      <rect x="36" y="45" width="6" height="11" rx="1.5" ry="1.5" fill={lockColor}/>
+      <rect x="58" y="45" width="6" height="11" rx="1.5" ry="1.5" fill={lockColor}/>
+      <rect x="43" y="49" width="14" height="3" rx="0.5" ry="0.5" fill={lockColor}/>
+    </svg>
+  )
 }
 
 export default function ManageCredentialsPage() {
@@ -57,9 +88,15 @@ export default function ManageCredentialsPage() {
   const [showRevokeDialog, setShowRevokeDialog] = useState(false)
   const [showViewDialog, setShowViewDialog] = useState(false)
   const [revoking, setRevoking] = useState(false)
+  const [verifying, setVerifying] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [hasMore, setHasMore] = useState(false)
+
+  // Modal states for error and success messages
+  const [showErrorModal, setShowErrorModal] = useState(false)
+  const [showSuccessModal, setShowSuccessModal] = useState(false)
+  const [modalMessage, setModalMessage] = useState("")
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -114,6 +151,10 @@ export default function ManageCredentialsPage() {
             type?: string
             status?: string
             isOnBlockchain?: boolean
+            blockchainVerified?: boolean
+            blockchainVerifiedAt?: string
+            vaultFid?: string
+            vaultCid?: string
             issuedAt?: string
             expiresAt?: string
             revokedAt?: string
@@ -129,6 +170,10 @@ export default function ManageCredentialsPage() {
             type: cred.type || "certificate",
             status: cred.status || "active",
             isOnBlockchain: cred.isOnBlockchain || false,
+            blockchainVerified: cred.blockchainVerified || false,
+            blockchainVerifiedAt: cred.blockchainVerifiedAt,
+            vaultFid: cred.vaultFid,
+            vaultCid: cred.vaultCid,
             issuedAt: cred.issuedAt ? new Date(cred.issuedAt).toISOString() : new Date().toISOString(),
             expiresAt: cred.expiresAt,
             revokedAt: cred.revokedAt,
@@ -189,6 +234,10 @@ export default function ManageCredentialsPage() {
         type?: string
         status?: string
         isOnBlockchain?: boolean
+        blockchainVerified?: boolean
+        blockchainVerifiedAt?: string
+        vaultFid?: string
+        vaultCid?: string
         issuedAt?: string
         expiresAt?: string
         revokedAt?: string
@@ -204,6 +253,10 @@ export default function ManageCredentialsPage() {
         type: cred.type || "certificate",
         status: cred.status || "active",
         isOnBlockchain: cred.isOnBlockchain || false,
+        blockchainVerified: cred.blockchainVerified || false,
+        blockchainVerifiedAt: cred.blockchainVerifiedAt,
+        vaultFid: cred.vaultFid,
+        vaultCid: cred.vaultCid,
         issuedAt: cred.issuedAt ? new Date(cred.issuedAt).toISOString() : new Date().toISOString(),
         expiresAt: cred.expiresAt,
         revokedAt: cred.revokedAt,
@@ -245,16 +298,20 @@ export default function ManageCredentialsPage() {
 
       if (!res.ok) {
         const error = await res.json()
-        alert(error.error || "Failed to revoke credential")
+        setModalMessage(error.error || "Failed to revoke credential")
+        setShowErrorModal(true)
         return
       }
 
       await loadCredentials()
       setShowRevokeDialog(false)
       setSelectedCredential(null)
+      setModalMessage("Credential revoked successfully")
+      setShowSuccessModal(true)
     } catch (error) {
       console.error("Error revoking credential:", error)
-      alert("An error occurred while revoking credential")
+      setModalMessage("An error occurred while revoking credential")
+      setShowErrorModal(true)
     } finally {
       setRevoking(false)
     }
@@ -262,6 +319,59 @@ export default function ManageCredentialsPage() {
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value)
+  }
+
+  const handleVerifyBlockchain = async (credential: Credential) => {
+    if (!credential.isOnBlockchain || !credential.vaultFid) {
+      setModalMessage("This credential is not registered on blockchain")
+      setShowErrorModal(true)
+      return
+    }
+
+    if (credential.blockchainVerified) {
+      setModalMessage("This credential is already verified on blockchain")
+      setShowSuccessModal(true)
+      return
+    }
+
+    setVerifying(true)
+    try {
+      // Call POST endpoint to trigger blockchain verification
+      const res = await fetch(`/api/v1/credentials/${credential.id}/verify`, {
+        method: "POST",
+        credentials: "include",
+      })
+
+      if (!res.ok) {
+        const errorData = await res.json()
+        setModalMessage(errorData.error || errorData.details || "Failed to verify credential on blockchain")
+        setShowErrorModal(true)
+        return
+      }
+
+      const data = await res.json()
+
+      if (data.verified && data.blockchainVerified) {
+        // Reload credentials to show updated verification status
+        await loadCredentials()
+        setModalMessage("✓ Credential successfully verified on blockchain!")
+        setShowSuccessModal(true)
+      } else if (data.message?.includes("already verified")) {
+        // Already verified - just confirm
+        await loadCredentials()
+        setModalMessage("✓ Credential is verified on blockchain!")
+        setShowSuccessModal(true)
+      } else {
+        setModalMessage("Blockchain verification is still pending. Please try again later.")
+        setShowErrorModal(true)
+      }
+    } catch (error) {
+      console.error("Error verifying credential:", error)
+      setModalMessage("An error occurred while verifying credential on blockchain")
+      setShowErrorModal(true)
+    } finally {
+      setVerifying(false)
+    }
   }
 
   const handleDownload = (url: string, filename: string) => {
@@ -438,7 +548,7 @@ export default function ManageCredentialsPage() {
                             <TableCell>{credential.recipientName}</TableCell>
                             <TableCell className="text-sm text-muted-foreground">{credential.recipientEmail}</TableCell>
                             <TableCell>
-                              <Badge variant="outline" className="text-xs">
+                              <Badge variant="outline" className="text-xs capitalize">
                                 {credential.type}
                               </Badge>
                             </TableCell>
@@ -452,9 +562,12 @@ export default function ManageCredentialsPage() {
                             </TableCell>
                             <TableCell>
                               {credential.isOnBlockchain ? (
-                                <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/50">
-                                  Yes
-                                </Badge>
+                                <div className="flex items-center gap-2">
+                                  <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/50">
+                                    Yes
+                                  </Badge>
+                                  <VaultIcon verified={credential.blockchainVerified} size={20} />
+                                </div>
                               ) : (
                                 <Badge variant="outline" className="text-xs">
                                   No
@@ -463,6 +576,25 @@ export default function ManageCredentialsPage() {
                             </TableCell>
                             <TableCell className="text-right">
                               <div className="flex items-center justify-end gap-2">
+                                {credential.isOnBlockchain && !credential.blockchainVerified && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleVerifyBlockchain(credential)}
+                                    disabled={verifying}
+                                    className="bg-transparent gap-2"
+                                    title="Verify on blockchain"
+                                  >
+                                    {verifying ? (
+                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                      <div className="flex items-center gap-1.5">
+                                        <VaultIcon verified={false} size={20} />
+                                        <span className="text-xs">Verify</span>
+                                      </div>
+                                    )}
+                                  </Button>
+                                )}
                                 <Button
                                   variant="outline"
                                   size="sm"
@@ -697,6 +829,32 @@ export default function ManageCredentialsPage() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Error Modal */}
+      <Dialog open={showErrorModal} onOpenChange={setShowErrorModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-red-600">Error</DialogTitle>
+            <DialogDescription>{modalMessage}</DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end">
+            <Button onClick={() => setShowErrorModal(false)}>Close</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Success Modal */}
+      <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-green-600">Success</DialogTitle>
+            <DialogDescription>{modalMessage}</DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end">
+            <Button onClick={() => setShowSuccessModal(false)}>Close</Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

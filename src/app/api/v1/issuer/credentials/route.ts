@@ -5,6 +5,8 @@ import { Credential, Template, User } from "@/models"
 import connectDB from "@/lib/db/mongodb"
 import mongoose from "mongoose"
 import { generateCertificate, generateBadge } from "@/lib/certificate"
+import { vaultProtocol, VaultProtocolService } from "@/lib/services/vault-protocol.service"
+import { checkVaultHealth, getHealthErrorMessage } from "@/lib/services/vault-health.service"
 
 // GET - List credentials for issuer's organization
 async function getHandler(
@@ -62,8 +64,7 @@ async function getHandler(
         .sort({ issuedAt: -1 })
         .skip(pagination.skip)
         .limit(pagination.limit)
-        .lean()
-        .hint({ organizationId: 1, issuedAt: -1 }), // Use compound index hint to optimize query
+        .lean(),
       Credential.countDocuments(query),
     ])
 
@@ -75,6 +76,10 @@ async function getHandler(
       type: "certificate" | "badge" | "both"
       status: "active" | "expired" | "revoked"
       isOnBlockchain: boolean
+      blockchainVerified?: boolean
+      blockchainVerifiedAt?: Date
+      vaultFid?: string
+      vaultCid?: string
       issuedAt: Date
       expiresAt?: Date
       revokedAt?: Date
@@ -93,6 +98,10 @@ async function getHandler(
         type: cred.type,
         status: cred.status,
         isOnBlockchain: cred.isOnBlockchain || false,
+        blockchainVerified: cred.blockchainVerified || false,
+        blockchainVerifiedAt: cred.blockchainVerifiedAt,
+        vaultFid: cred.vaultFid,
+        vaultCid: cred.vaultCid,
         issuedAt: cred.issuedAt,
         expiresAt: cred.expiresAt,
         revokedAt: cred.revokedAt,
@@ -141,6 +150,22 @@ async function postHandler(
       return NextResponse.json({ error: "Template ID and data are required" }, { status: 400 })
     }
 
+    // Check VAULT Protocol health if blockchain is requested
+    if (useBlockchain) {
+      const healthStatus = await checkVaultHealth()
+      if (!healthStatus.isHealthy) {
+        const errorMessage = getHealthErrorMessage(healthStatus)
+        return NextResponse.json(
+          { 
+            error: "VAULT Protocol services are not available",
+            details: errorMessage,
+            vaultHealthStatus: healthStatus
+          },
+          { status: 503 } // Service Unavailable
+        )
+      }
+    }
+
     // Find template
     const template = await Template.findOne({
       _id: templateId,
@@ -172,6 +197,11 @@ async function postHandler(
     // Generate certificate/badge images if template has them
     let certificateUrl: string | undefined = undefined
     let badgeUrl: string | undefined = undefined
+    let vaultFid: string | undefined = undefined
+    let vaultCid: string | undefined = undefined
+    let vaultUrl: string | undefined = undefined
+    let vaultGatewayUrl: string | undefined = undefined
+    let blockchainTxId: string | undefined = undefined
 
     try {
       // Generate certificate if template type is "certificate" or "both"
@@ -187,6 +217,33 @@ async function postHandler(
             placeholders: displayedPlaceholders,
             data,
           })
+
+          // If blockchain is enabled, upload certificate to VAULT Protocol
+          if (useBlockchain && certificateUrl) {
+            try {
+              const buffer = VaultProtocolService.base64ToBuffer(certificateUrl)
+              const extension = VaultProtocolService.getFileExtension(certificateUrl)
+              const fileName = `certificate_${recipientEmail}_${Date.now()}${extension}`
+
+              const vaultResponse = await vaultProtocol.issueCertificate(buffer, fileName, recipientEmail)
+              
+              console.log("VAULT Protocol Response (Certificate):", JSON.stringify(vaultResponse, null, 2))
+              
+              if (vaultResponse.success) {
+                vaultFid = vaultResponse.data.fid
+                vaultCid = vaultResponse.data.cid
+                vaultUrl = vaultResponse.data.vaultUrl
+                vaultGatewayUrl = vaultResponse.data.gatewayUrl
+                blockchainTxId = vaultResponse.data.transactionHash
+                
+                console.log("Assigned VAULT values (Certificate):", { vaultFid, vaultCid, vaultUrl, blockchainTxId })
+                // Note: vaultIssuer is retrieved later via getCertificate or verifyCertificate
+              }
+            } catch (vaultError) {
+              console.error("VAULT Protocol error:", vaultError)
+              // Continue without VAULT Protocol if it fails
+            }
+          }
         }
       }
 
@@ -203,6 +260,33 @@ async function postHandler(
             placeholders: displayedPlaceholders,
             data,
           })
+
+          // If blockchain is enabled and certificate wasn't uploaded, upload badge to VAULT Protocol
+          if (useBlockchain && badgeUrl && !vaultFid) {
+            try {
+              const buffer = VaultProtocolService.base64ToBuffer(badgeUrl)
+              const extension = VaultProtocolService.getFileExtension(badgeUrl)
+              const fileName = `badge_${recipientEmail}_${Date.now()}${extension}`
+
+              const vaultResponse = await vaultProtocol.issueCertificate(buffer, fileName, recipientEmail)
+              
+              console.log("VAULT Protocol Response (Badge):", JSON.stringify(vaultResponse, null, 2))
+              
+              if (vaultResponse.success) {
+                vaultFid = vaultResponse.data.fid
+                vaultCid = vaultResponse.data.cid
+                vaultUrl = vaultResponse.data.vaultUrl
+                vaultGatewayUrl = vaultResponse.data.gatewayUrl
+                blockchainTxId = vaultResponse.data.transactionHash
+                
+                console.log("Assigned VAULT values (Badge):", { vaultFid, vaultCid, vaultUrl, blockchainTxId })
+                // Note: vaultIssuer is retrieved later via getCertificate or verifyCertificate
+              }
+            } catch (vaultError) {
+              console.error("VAULT Protocol error:", vaultError)
+              // Continue without VAULT Protocol if it fails
+            }
+          }
         }
       }
     } catch (error) {
@@ -210,6 +294,16 @@ async function postHandler(
       // Continue with credential creation even if image generation fails
       // The credential will still be created but without certificateUrl/badgeUrl
     }
+
+    // Log values before creating credential
+    console.log("Creating credential with VAULT values:", {
+      vaultFid,
+      vaultCid,
+      vaultUrl,
+      vaultGatewayUrl,
+      blockchainTxId,
+      isOnBlockchain: useBlockchain || false,
+    })
 
     // Create credential
     const credential = await Credential.create({
@@ -222,8 +316,25 @@ async function postHandler(
       certificateUrl,
       badgeUrl,
       isOnBlockchain: useBlockchain || false,
+      blockchainTxId,
+      vaultFid,
+      vaultCid,
+      vaultUrl,
+      vaultGatewayUrl,
+      // vaultIssuer will be set later when certificate is verified
+      blockchainNetwork: useBlockchain ? "VAULT Protocol / Quorum" : undefined,
       status: "active",
       issuedAt: new Date(),
+    })
+
+    // Log what was actually saved to MongoDB
+    console.log("Credential saved to MongoDB:", {
+      id: credential._id.toString(),
+      vaultFid: credential.vaultFid,
+      vaultCid: credential.vaultCid,
+      vaultUrl: credential.vaultUrl,
+      blockchainTxId: credential.blockchainTxId,
+      isOnBlockchain: credential.isOnBlockchain,
     })
 
     return NextResponse.json(
@@ -235,6 +346,12 @@ async function postHandler(
           issuedAt: credential.issuedAt,
           certificateUrl: credential.certificateUrl,
           badgeUrl: credential.badgeUrl,
+          isOnBlockchain: credential.isOnBlockchain,
+          vaultFid: credential.vaultFid,
+          vaultCid: credential.vaultCid,
+          vaultUrl: credential.vaultUrl,
+          vaultGatewayUrl: credential.vaultGatewayUrl,
+          blockchainTxId: credential.blockchainTxId,
         },
       },
       { status: 201 }

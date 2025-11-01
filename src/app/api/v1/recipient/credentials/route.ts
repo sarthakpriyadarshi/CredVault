@@ -73,8 +73,7 @@ async function handler(
         .sort({ issuedAt: -1 })
         .skip(pagination.skip)
         .limit(pagination.limit)
-        .lean()
-        .hint(userId ? { recipientId: 1, issuedAt: -1 } : { recipientEmail: 1, issuedAt: -1 }), // Use appropriate compound index
+        .lean(),
       Credential.countDocuments(query),
     ])
 

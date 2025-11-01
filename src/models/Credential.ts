@@ -15,9 +15,16 @@ export interface ICredential extends Document {
   certificateUrl?: string // Base64 encoded certificate image (data URL)
   badgeUrl?: string // Base64 encoded badge image (data URL)
   isOnBlockchain: boolean
-  blockchainHash?: string
-  blockchainTxId?: string
+  blockchainTxId?: string // Transaction hash from VAULT Protocol
   blockchainNetwork?: string
+  blockchainVerified?: boolean // Whether blockchain record has been verified
+  blockchainVerifiedAt?: Date // When blockchain verification was performed
+  // VAULT Protocol fields (based on actual API response)
+  vaultFid?: string // VAULT Protocol File ID (cert_xxx)
+  vaultCid?: string // VAULT Protocol Content ID (IPFS hash - QmXxx)
+  vaultUrl?: string // VAULT Protocol URL (vault://fid/cid)
+  vaultGatewayUrl?: string // IPFS Gateway URL
+  vaultIssuer?: string // Blockchain issuer address
   issuedAt: Date
   expiresAt?: Date
   status: "active" | "expired" | "revoked"
@@ -72,15 +79,40 @@ const CredentialSchema = new Schema<ICredential>(
       type: Boolean,
       default: false,
     },
-    blockchainHash: {
-      type: String,
-      default: null,
-    },
     blockchainTxId: {
       type: String,
       default: null,
     },
     blockchainNetwork: {
+      type: String,
+      default: null,
+    },
+    blockchainVerified: {
+      type: Boolean,
+      default: false,
+    },
+    blockchainVerifiedAt: {
+      type: Date,
+      default: null,
+    },
+    // VAULT Protocol fields
+    vaultFid: {
+      type: String,
+      default: null,
+    },
+    vaultCid: {
+      type: String,
+      default: null,
+    },
+    vaultUrl: {
+      type: String,
+      default: null,
+    },
+    vaultGatewayUrl: {
+      type: String,
+      default: null,
+    },
+    vaultIssuer: {
       type: String,
       default: null,
     },
@@ -121,8 +153,11 @@ CredentialSchema.index({ organizationId: 1 })
 CredentialSchema.index({ templateId: 1 })
 CredentialSchema.index({ status: 1 })
 CredentialSchema.index({ isOnBlockchain: 1 })
+CredentialSchema.index({ blockchainVerified: 1 })
 CredentialSchema.index({ expiresAt: 1 })
-CredentialSchema.index({ blockchainHash: 1 })
+CredentialSchema.index({ blockchainTxId: 1 })
+CredentialSchema.index({ vaultFid: 1 }) // VAULT Protocol index
+CredentialSchema.index({ vaultCid: 1 }) // VAULT Protocol index
 // Compound indexes for optimized queries
 CredentialSchema.index({ organizationId: 1, issuedAt: -1 }) // For issuer credentials query
 CredentialSchema.index({ recipientId: 1, issuedAt: -1 }) // For recipient credentials query by ID
@@ -143,10 +178,13 @@ CredentialSchema.methods.checkExpiration = function () {
   return false
 }
 
-// Safely check for existing model or create new one
-const Credential: Model<ICredential> =
-  (mongoose.models && (mongoose.models.Credential as Model<ICredential>)) ||
-  mongoose.model<ICredential>("Credential", CredentialSchema)
+// Force delete any cached model to ensure schema updates are picked up
+if (mongoose.models && mongoose.models.Credential) {
+  delete mongoose.models.Credential
+}
+
+// Create the model with updated schema
+const Credential: Model<ICredential> = mongoose.model<ICredential>("Credential", CredentialSchema)
 
 export default Credential
 

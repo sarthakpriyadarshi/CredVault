@@ -68,6 +68,11 @@ export default function CreateTemplatePage() {
   const [selectedFontSize, setSelectedFontSize] = useState<number>(16)
   const [selectedFontColor, setSelectedFontColor] = useState<string>("#FFFFFF")
 
+  // Modal states for error and success messages
+  const [showErrorModal, setShowErrorModal] = useState(false)
+  const [showSuccessModal, setShowSuccessModal] = useState(false)
+  const [modalMessage, setModalMessage] = useState("")
+
   // Use shared Google Fonts list
   const googleFonts = GOOGLE_FONTS
 
@@ -374,7 +379,8 @@ export default function CreateTemplatePage() {
 
       if (!res.ok) {
         const error = await res.json()
-        alert(error.error || "Failed to upload image")
+        setModalMessage(error.error || "Failed to upload image")
+        setShowErrorModal(true)
         return
       }
 
@@ -390,7 +396,8 @@ export default function CreateTemplatePage() {
       // Image will be loaded by the useEffect that watches certificateImage
     } catch (error) {
       console.error("Error uploading image:", error)
-      alert("An error occurred while uploading the image")
+      setModalMessage("An error occurred while uploading the image")
+      setShowErrorModal(true)
     }
   }
 
@@ -487,19 +494,22 @@ export default function CreateTemplatePage() {
   // Save template
   const handleSaveTemplate = async () => {
     if (!templateName.trim()) {
-      alert("Please enter a template name")
+      setModalMessage("Please enter a template name")
+      setShowErrorModal(true)
       return
     }
 
     // Check if email field exists
     const hasEmailField = fields.some((f) => f.type === "email")
     if (!hasEmailField) {
-      alert("Please add at least one email field. Email is required for credential issuance.")
+      setModalMessage("Please add at least one email field. Email is required for credential issuance.")
+      setShowErrorModal(true)
       return
     }
 
     if (!certificateImage || !imageRef.current) {
-      alert("Please upload a certificate image first")
+      setModalMessage("Please upload a certificate image first")
+      setShowErrorModal(true)
       return
     }
 
@@ -508,7 +518,8 @@ export default function CreateTemplatePage() {
     try {
       const canvas = canvasRef.current
       if (!canvas) {
-        alert("Canvas not available")
+        setModalMessage("Canvas not available")
+        setShowErrorModal(true)
         setSaving(false)
         return
       }
@@ -629,15 +640,21 @@ export default function CreateTemplatePage() {
 
       if (!res.ok) {
         const error = await res.json()
-        alert(error.error || "Failed to save template")
+        setModalMessage(error.error || "Failed to save template")
+        setShowErrorModal(true)
         return
       }
 
-      alert("Template saved successfully!")
-      router.push("/dashboard/issuer/templates")
+      setModalMessage("Template saved successfully!")
+      setShowSuccessModal(true)
+      // Redirect after showing success modal
+      setTimeout(() => {
+        router.push("/dashboard/issuer/templates")
+      }, 1500)
     } catch (error) {
       console.error("Error saving template:", error)
-      alert("An error occurred while saving the template")
+      setModalMessage("An error occurred while saving the template")
+      setShowErrorModal(true)
     } finally {
       setSaving(false)
     }
@@ -798,7 +815,8 @@ export default function CreateTemplatePage() {
                           // Check if email field already exists
                           const hasEmailField = fields.some((f) => f.type === "email")
                           if (hasEmailField) {
-                            alert("Email field already exists. Only one email field is allowed.")
+                            setModalMessage("Email field already exists. Only one email field is allowed.")
+                            setShowErrorModal(true)
                             return
                           }
                           // Add email field without coordinates (not displayed on certificate)
@@ -921,7 +939,8 @@ export default function CreateTemplatePage() {
                               <PrimaryButton
                                 onClick={() => {
                                   if (!newFieldName.trim() || !pendingField) {
-                                    alert("Please enter a field name")
+                                    setModalMessage("Please enter a field name")
+                                    setShowErrorModal(true)
                                     return
                                   }
 
@@ -1234,6 +1253,32 @@ export default function CreateTemplatePage() {
           </main>
         </div>
       </div>
+
+      {/* Error Modal */}
+      <Dialog open={showErrorModal} onOpenChange={setShowErrorModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-red-600">Error</DialogTitle>
+            <DialogDescription>{modalMessage}</DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end">
+            <Button onClick={() => setShowErrorModal(false)}>Close</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Success Modal */}
+      <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-green-600">Success</DialogTitle>
+            <DialogDescription>{modalMessage}</DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end">
+            <Button onClick={() => setShowSuccessModal(false)}>Close</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -13,6 +13,13 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { Upload, Trash2, Save, Loader2 } from "lucide-react"
 import { PrimaryButton } from "@/components/ui/primary-button"
 import { GOOGLE_FONTS } from "@/lib/fonts"
@@ -60,6 +67,11 @@ export default function EditTemplatePage() {
   const [movingFieldId, setMovingFieldId] = useState<string | null>(null)
   const [fieldDragOffset, setFieldDragOffset] = useState({ x: 0, y: 0 })
 
+  // Modal states for error and success messages
+  const [showErrorModal, setShowErrorModal] = useState(false)
+  const [showSuccessModal, setShowSuccessModal] = useState(false)
+  const [modalMessage, setModalMessage] = useState("")
+
   // Canvas dimensions
   const CANVAS_WIDTH = 800
   const CANVAS_HEIGHT = 600
@@ -89,8 +101,11 @@ export default function EditTemplatePage() {
           router.push("/auth/issuer/login")
           return
         }
-        alert("Failed to load template")
-        router.push("/dashboard/issuer/templates")
+        setModalMessage("Failed to load template")
+        setShowErrorModal(true)
+        setTimeout(() => {
+          router.push("/dashboard/issuer/templates")
+        }, 1500)
         return
       }
 
@@ -238,8 +253,11 @@ export default function EditTemplatePage() {
       setLoading(false)
     } catch (error) {
       console.error("Error loading template:", error)
-      alert("Failed to load template")
-      router.push("/dashboard/issuer/templates")
+      setModalMessage("Failed to load template")
+      setShowErrorModal(true)
+      setTimeout(() => {
+        router.push("/dashboard/issuer/templates")
+      }, 1500)
     }
   }
 
@@ -489,18 +507,21 @@ export default function EditTemplatePage() {
 
   const handleUpdateTemplate = async () => {
     if (!templateName.trim()) {
-      alert("Please enter a template name")
+      setModalMessage("Please enter a template name")
+      setShowErrorModal(true)
       return
     }
 
     const hasEmailField = fields.some((f) => f.type === "email")
     if (!hasEmailField) {
-      alert("Please add at least one email field. Email is required for credential issuance.")
+      setModalMessage("Please add at least one email field. Email is required for credential issuance.")
+      setShowErrorModal(true)
       return
     }
 
     if (!certificateImage || !imageRef.current) {
-      alert("Please upload a certificate image first")
+      setModalMessage("Please upload a certificate image first")
+      setShowErrorModal(true)
       return
     }
 
@@ -509,7 +530,8 @@ export default function EditTemplatePage() {
     try {
       const canvas = canvasRef.current
       if (!canvas) {
-        alert("Canvas not available")
+        setModalMessage("Canvas not available")
+        setShowErrorModal(true)
         setSaving(false)
         return
       }
@@ -620,15 +642,21 @@ export default function EditTemplatePage() {
 
       if (!res.ok) {
         const error = await res.json()
-        alert(error.error || "Failed to update template")
+        setModalMessage(error.error || "Failed to update template")
+        setShowErrorModal(true)
         return
       }
 
-      alert("Template updated successfully!")
-      router.push("/dashboard/issuer/templates")
+      setModalMessage("Template updated successfully!")
+      setShowSuccessModal(true)
+      // Redirect after showing success modal
+      setTimeout(() => {
+        router.push("/dashboard/issuer/templates")
+      }, 1500)
     } catch (error) {
       console.error("Error updating template:", error)
-      alert("An error occurred while updating the template")
+      setModalMessage("An error occurred while updating the template")
+      setShowErrorModal(true)
     } finally {
       setSaving(false)
     }
@@ -1068,6 +1096,32 @@ export default function EditTemplatePage() {
           crossOrigin="anonymous"
         />
       )}
+
+      {/* Error Modal */}
+      <Dialog open={showErrorModal} onOpenChange={setShowErrorModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-red-600">Error</DialogTitle>
+            <DialogDescription>{modalMessage}</DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end">
+            <Button onClick={() => setShowErrorModal(false)}>Close</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Success Modal */}
+      <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-green-600">Success</DialogTitle>
+            <DialogDescription>{modalMessage}</DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end">
+            <Button onClick={() => setShowSuccessModal(false)}>Close</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

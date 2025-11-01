@@ -55,6 +55,11 @@ export default function IssuerSettingsPage() {
     confirmPassword: "",
   })
 
+  // Modal states for error and success messages
+  const [showErrorModal, setShowErrorModal] = useState(false)
+  const [showSuccessModal, setShowSuccessModal] = useState(false)
+  const [modalMessage, setModalMessage] = useState("")
+
   useEffect(() => {
     if (status === "unauthenticated") {
       router.push("/auth/issuer/login")
@@ -383,7 +388,8 @@ export default function IssuerSettingsPage() {
 
                                         if (!res.ok) {
                                           const error = await res.json()
-                                          alert(error.error || "Failed to upload logo")
+                                          setModalMessage(error.error || "Failed to upload logo")
+                                          setShowErrorModal(true)
                                           return
                                         }
 
@@ -401,7 +407,8 @@ export default function IssuerSettingsPage() {
 
                                         if (!updateRes.ok) {
                                           const error = await updateRes.json()
-                                          alert(error.error || "Failed to update logo")
+                                          setModalMessage(error.error || "Failed to update logo")
+                                          setShowErrorModal(true)
                                           return
                                         }
 
@@ -410,7 +417,8 @@ export default function IssuerSettingsPage() {
                                         setTimeout(() => setSuccess(null), 3000)
                                       } catch (error) {
                                         console.error("Error uploading logo:", error)
-                                        alert("Failed to upload logo")
+                                        setModalMessage("Failed to upload logo")
+                                        setShowErrorModal(true)
                                       }
                                     }}
                                   />
@@ -737,6 +745,32 @@ export default function IssuerSettingsPage() {
           </main>
         </div>
       </div>
+
+      {/* Error Modal */}
+      <Dialog open={showErrorModal} onOpenChange={setShowErrorModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-red-600">Error</DialogTitle>
+            <DialogDescription>{modalMessage}</DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end">
+            <Button onClick={() => setShowErrorModal(false)}>Close</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Success Modal */}
+      <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-green-600">Success</DialogTitle>
+            <DialogDescription>{modalMessage}</DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end">
+            <Button onClick={() => setShowSuccessModal(false)}>Close</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

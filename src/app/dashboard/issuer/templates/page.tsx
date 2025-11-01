@@ -41,6 +41,13 @@ export default function TemplatesPage() {
   const [loading, setLoading] = useState(true)
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null)
   const [showViewDialog, setShowViewDialog] = useState(false)
+  
+  // Modal states for error and success messages
+  const [showErrorModal, setShowErrorModal] = useState(false)
+  const [showSuccessModal, setShowSuccessModal] = useState(false)
+  const [modalMessage, setModalMessage] = useState("")
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [templateToDelete, setTemplateToDelete] = useState<string | null>(null)
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -111,34 +118,48 @@ export default function TemplatesPage() {
 
       if (res.ok) {
         await loadTemplates()
+        setModalMessage("Template archived successfully")
+        setShowSuccessModal(true)
       } else {
-        alert("Failed to archive template")
+        setModalMessage("Failed to archive template")
+        setShowErrorModal(true)
       }
     } catch (error) {
       console.error("Error archiving template:", error)
-      alert("An error occurred")
+      setModalMessage("An error occurred")
+      setShowErrorModal(true)
     }
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this template? This action cannot be undone.")) {
-      return
-    }
+    setTemplateToDelete(id)
+    setShowDeleteConfirm(true)
+  }
+
+  const confirmDelete = async () => {
+    if (!templateToDelete) return
 
     try {
-      const res = await fetch(`/api/v1/issuer/templates/${id}`, {
+      const res = await fetch(`/api/v1/issuer/templates/${templateToDelete}`, {
         method: "DELETE",
         credentials: "include",
       })
 
       if (res.ok) {
         await loadTemplates()
+        setModalMessage("Template deleted successfully")
+        setShowSuccessModal(true)
       } else {
-        alert("Failed to delete template")
+        setModalMessage("Failed to delete template")
+        setShowErrorModal(true)
       }
     } catch (error) {
       console.error("Error deleting template:", error)
-      alert("An error occurred")
+      setModalMessage("An error occurred")
+      setShowErrorModal(true)
+    } finally {
+      setTemplateToDelete(null)
+      setShowDeleteConfirm(false)
     }
   }
 
@@ -150,7 +171,8 @@ export default function TemplatesPage() {
       })
 
       if (!res.ok) {
-        alert("Failed to fetch template details")
+        setModalMessage("Failed to fetch template details")
+        setShowErrorModal(true)
         return
       }
 
@@ -182,7 +204,8 @@ export default function TemplatesPage() {
       document.body.removeChild(element)
     } catch (error) {
       console.error("Error downloading CSV template:", error)
-      alert("Failed to download CSV template")
+      setModalMessage("Failed to download CSV template")
+      setShowErrorModal(true)
     }
   }
 
@@ -194,7 +217,8 @@ export default function TemplatesPage() {
       })
 
       if (!res.ok) {
-        alert("Failed to fetch template details")
+        setModalMessage("Failed to fetch template details")
+        setShowErrorModal(true)
         return
       }
 
@@ -210,7 +234,8 @@ export default function TemplatesPage() {
       setShowViewDialog(true)
     } catch (error) {
       console.error("Error loading template:", error)
-      alert("Failed to load template")
+      setModalMessage("Failed to load template")
+      setShowErrorModal(true)
     }
   }
 
@@ -420,6 +445,55 @@ export default function TemplatesPage() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Error Modal */}
+      <Dialog open={showErrorModal} onOpenChange={setShowErrorModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-red-600">Error</DialogTitle>
+            <DialogDescription>{modalMessage}</DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end">
+            <Button onClick={() => setShowErrorModal(false)}>Close</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Success Modal */}
+      <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-green-600">Success</DialogTitle>
+            <DialogDescription>{modalMessage}</DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end">
+            <Button onClick={() => setShowSuccessModal(false)}>Close</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Modal */}
+      <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Delete</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this template? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-2 justify-end">
+            <Button variant="outline" onClick={() => {
+              setShowDeleteConfirm(false)
+              setTemplateToDelete(null)
+            }}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={confirmDelete}>
+              Delete
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

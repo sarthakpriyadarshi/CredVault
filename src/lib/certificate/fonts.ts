@@ -19,21 +19,34 @@ const fontBufferCache = new Map<string, Buffer>()
 
 /**
  * Font file cache directory (fallback for persistent storage)
- * On Vercel, this won't persist, but we'll try to use it if available
+ * On Vercel/serverless, this won't persist and won't be writable
+ * Only used for local development
  */
-const FONT_CACHE_DIR = join(process.cwd(), "public", "fonts", "cache")
+const isServerless = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME
+const FONT_CACHE_DIR = isServerless ? "/tmp/fonts" : join(process.cwd(), "public", "fonts", "cache")
 
 /**
  * Ensure font cache directory exists (only if filesystem is writable)
  */
 function ensureFontCacheDir() {
+  // Skip on serverless - use in-memory cache only
+  if (isServerless) {
+    try {
+      if (!existsSync(FONT_CACHE_DIR)) {
+        mkdirSync(FONT_CACHE_DIR, { recursive: true })
+      }
+    } catch {
+      // /tmp might not allow directory creation, that's okay
+    }
+    return
+  }
+  
   try {
     if (!existsSync(FONT_CACHE_DIR)) {
       mkdirSync(FONT_CACHE_DIR, { recursive: true })
     }
   } catch {
-    // On Vercel or read-only filesystem, this will fail - that's okay
-    // We'll use in-memory caching instead
+    // Filesystem not writable, use in-memory cache only
     console.warn("Font cache directory not writable, using in-memory cache only")
   }
 }
@@ -152,13 +165,17 @@ async function downloadFontFile(fontFamily: string, weight: number = 400): Promi
     // Cache in memory (works in serverless)
     fontBufferCache.set(cacheKey, fontBuffer)
     
-    // Try to save to filesystem cache if available (for local development)
-    try {
-      ensureFontCacheDir()
-      const cachePath = join(FONT_CACHE_DIR, `${cacheKey}.ttf`)
-      writeFileSync(cachePath, fontBuffer)
-    } catch {
-      // Filesystem not writable (e.g., on Vercel), that's okay - we have in-memory cache
+    // Save to filesystem cache only in local development (not on serverless)
+    if (!isServerless) {
+      try {
+        ensureFontCacheDir()
+        const cachePath = join(FONT_CACHE_DIR, `${cacheKey}.ttf`)
+        writeFileSync(cachePath, fontBuffer)
+        console.log(`Cached font to filesystem: ${cachePath}`)
+      } catch (error) {
+        // Filesystem not writable, that's okay - we have in-memory cache
+        console.warn(`Could not write font to filesystem cache: ${error instanceof Error ? error.message : String(error)}`)
+      }
     }
 
     return fontBuffer
@@ -212,29 +229,22 @@ export async function loadFont(fontFamily: string, weight: number = 400): Promis
       return false
     }
 
-    // Register font using a temporary file path or in-memory buffer
-    // node-canvas registerFont requires a file path, so we need to write to temp
-    // For Vercel, we can use /tmp which is writable in serverless functions
-    const tempDir = process.env.TMPDIR || process.env.TMP || "/tmp"
-    const tempPath = join(tempDir, `${cacheKey}.ttf`)
+    // Register font using temp file path
+    // For serverless environments (Vercel), use /tmp which is writable
+    // For local development, use TMPDIR or system temp directory
+    const isServerless = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME
+    const tempDir = isServerless ? "/tmp" : (process.env.TMPDIR || process.env.TMP || "/tmp")
+    const tempPath = join(tempDir, `font-${cacheKey}-${Date.now()}.ttf`)
     
     try {
       writeFileSync(tempPath, fontBuffer)
       registerFont(tempPath, { family: fontFamily })
       registeredFonts.add(registerKey)
+      console.log(`Successfully registered font ${fontFamily} from ${tempPath}`)
       return true
-    } catch {
-      // If temp directory not writable, try current directory fallback
-      try {
-        const fallbackPath = join(process.cwd(), `${cacheKey}.ttf`)
-        writeFileSync(fallbackPath, fontBuffer)
-        registerFont(fallbackPath, { family: fontFamily })
-        registeredFonts.add(registerKey)
-        return true
-      } catch {
-        console.error(`Could not register font ${fontFamily}`)
-        return false
-      }
+    } catch (error) {
+      console.error(`Failed to register font ${fontFamily}:`, error instanceof Error ? error.message : String(error))
+      return false
     }
   } catch (error) {
     console.error(`Error loading font ${fontFamily}:`, error)

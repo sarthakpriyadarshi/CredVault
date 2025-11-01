@@ -330,7 +330,13 @@ export default function RecipientSettingsPage() {
                               <div className="flex items-center gap-4">
                                 {profile.image ? (
                                   <img
-                                    src={profile.image}
+                                    src={
+                                      profile.image.startsWith('http://') || profile.image.startsWith('https://') 
+                                        ? profile.image 
+                                        : profile.image.startsWith('data:') 
+                                        ? profile.image 
+                                        : `data:image/png;base64,${profile.image}`
+                                    }
                                     alt="Avatar"
                                     className="w-20 h-20 rounded-full object-cover border-2 border-primary/50"
                                   />

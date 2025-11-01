@@ -4,7 +4,7 @@
  * - Authenticated access: Also verifies credential belongs to user
  */
 
-import { NextRequest } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import { withDB, withAuth, handleApiError } from "@/lib/api/middleware"
 import { methodNotAllowed, successResponse, errorResponse, notFound, forbidden } from "@/lib/api/responses"
 import { Credential, Template, Organization } from "@/models"
@@ -70,20 +70,26 @@ async function verifyCredential(
     }
 
     if (cred.isOnBlockchain) {
-      // Blockchain verification (dummy implementation)
-      // TODO: Replace with actual blockchain verification API call
-      const blockchainVerified = cred.blockchainHash && cred.blockchainTxId
+      // Blockchain verification with VAULT Protocol fields
+      const blockchainVerified = cred.vaultFid && cred.vaultCid && cred.blockchainVerified
 
       verificationResult = {
         verified: blockchainVerified ? true : false,
         method: "blockchain",
         message: blockchainVerified
           ? "Credential verified on blockchain"
+          : cred.vaultFid
+          ? "Credential registered on blockchain but not yet verified"
           : "Credential registered on blockchain but verification pending",
         details: {
-          hash: cred.blockchainHash || null,
+          vaultFid: cred.vaultFid || null,
+          vaultCid: cred.vaultCid || null,
+          vaultUrl: cred.vaultUrl || null,
           transactionId: cred.blockchainTxId || null,
-          network: cred.blockchainNetwork || null,
+          network: cred.blockchainNetwork || "VAULT Protocol / Quorum",
+          blockchainVerified: cred.blockchainVerified || false,
+          blockchainVerifiedAt: cred.blockchainVerifiedAt || null,
+          vaultIssuer: cred.vaultIssuer || null,
         },
       }
     } else {
@@ -160,3 +166,107 @@ async function handler(
 }
 
 export const GET = handler
+
+// POST - Trigger blockchain verification (public endpoint)
+async function postHandler(
+  req: NextRequest,
+  context: { params?: Promise<Record<string, string>> | Record<string, string> }
+) {
+  return withDB(async (req, ctx) => {
+    try {
+      const params = await Promise.resolve(context?.params || {})
+      const credentialId = params.id
+
+      if (!credentialId) {
+        return NextResponse.json({ error: "Credential ID is required" }, { status: 400 })
+      }
+
+      // Verify it's a valid MongoDB ObjectId
+      const mongoose = await import("mongoose")
+      if (!mongoose.Types.ObjectId.isValid(credentialId)) {
+        return NextResponse.json({ error: "Invalid credential ID" }, { status: 400 })
+      }
+
+      // Find credential
+      const credential = await Credential.findById(credentialId)
+        .populate("organizationId", "name")
+        .populate("templateId", "name")
+
+      if (!credential) {
+        return NextResponse.json({ error: "Credential not found" }, { status: 404 })
+      }
+
+      // Check if credential is on blockchain
+      if (!credential.isOnBlockchain || !credential.vaultFid) {
+        return NextResponse.json(
+          { error: "Credential is not registered on blockchain" },
+          { status: 400 }
+        )
+      }
+
+      // Check if already verified
+      if (credential.blockchainVerified) {
+        return NextResponse.json({
+          message: "Credential is already verified",
+          verified: true,
+          blockchainVerified: true,
+          blockchainVerifiedAt: credential.blockchainVerifiedAt,
+          vaultFid: credential.vaultFid,
+          vaultCid: credential.vaultCid,
+        })
+      }
+
+      // Check VAULT Protocol health
+      const { checkVaultHealth, getHealthErrorMessage } = await import("@/lib/services/vault-health.service")
+      const healthStatus = await checkVaultHealth()
+      if (!healthStatus.isHealthy) {
+        const errorMessage = getHealthErrorMessage(healthStatus)
+        return NextResponse.json(
+          {
+            error: "VAULT Protocol services are not available",
+            details: errorMessage,
+            vaultHealthStatus: healthStatus,
+          },
+          { status: 503 }
+        )
+      }
+
+      // Verify on blockchain using VAULT Protocol
+      const { vaultProtocol } = await import("@/lib/services/vault-protocol.service")
+      const verifyResult = await vaultProtocol.verifyCertificate(credential.vaultFid, credential.recipientEmail)
+
+      if (!verifyResult.success) {
+        return NextResponse.json(
+          { error: verifyResult.error || "Failed to verify on blockchain" },
+          { status: 500 }
+        )
+      }
+
+      // Update credential with verification info
+      credential.blockchainVerified = true
+      credential.blockchainVerifiedAt = new Date()
+      
+      // Store issuer address from blockchain certificate
+      if (verifyResult.data?.certificate?.issuer) {
+        credential.vaultIssuer = verifyResult.data.certificate.issuer
+      }
+      
+      await credential.save()
+
+      return NextResponse.json({
+        message: "Credential verified on blockchain successfully",
+        verified: true,
+        blockchainVerified: true,
+        blockchainVerifiedAt: credential.blockchainVerifiedAt,
+        vaultFid: credential.vaultFid,
+        vaultCid: credential.vaultCid,
+        vaultIssuer: credential.vaultIssuer,
+        data: verifyResult.data,
+      })
+    } catch (error) {
+      return handleApiError(error)
+    }
+  })(req, context)
+}
+
+export const POST = postHandler
