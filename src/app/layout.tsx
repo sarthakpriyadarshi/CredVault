@@ -20,12 +20,21 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_US",
     siteName: "CredVault",
+    images: [
+      {
+        url: "/meta-image.png",
+        width: 1200,
+        height: 630,
+        alt: "CredVault - Credential & Badge Issuance Platform",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "CredVault - Credential & Badge Issuance Platform",
     description: "Issue credentials and badges seamlessly. Trusted by organizations worldwide.",
     creator: "@credvault",
+    images: ["/meta-image.png"],
   },
   icons: {
     icon: [

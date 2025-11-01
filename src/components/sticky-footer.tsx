@@ -154,6 +154,64 @@ export function StickyFooter() {
                 >
                   <a href="/auth/signup" style={{ color: "inherit", textDecoration: "none" }}>Sign Up</a>
                 </li>
+                <li
+                  className="hover:underline cursor-pointer transition-colors"
+                  style={{ color: "#121113" }}
+                  onMouseEnter={(e) => {
+                    const target = e.target as HTMLElement
+                    target.style.color = "rgba(18, 17, 19, 0.8)"
+                  }}
+                  onMouseLeave={(e) => {
+                    const target = e.target as HTMLElement
+                    target.style.color = "#121113"
+                  }}
+                >
+                  <a href="/auth/issuer/login" style={{ color: "inherit", textDecoration: "none" }}>Organization</a>
+                </li>
+              </ul>
+              <ul className="space-y-2">
+                <li
+                  className="hover:underline cursor-pointer transition-colors"
+                  style={{ color: "#121113" }}
+                  onMouseEnter={(e) => {
+                    const target = e.target as HTMLElement
+                    target.style.color = "rgba(18, 17, 19, 0.8)"
+                  }}
+                  onMouseLeave={(e) => {
+                    const target = e.target as HTMLElement
+                    target.style.color = "#121113"
+                  }}
+                >
+                  <a href="/auth/admin/login" style={{ color: "inherit", textDecoration: "none" }}>Admin</a>
+                </li>
+                <li
+                  className="hover:underline cursor-pointer transition-colors"
+                  style={{ color: "#121113" }}
+                  onMouseEnter={(e) => {
+                    const target = e.target as HTMLElement
+                    target.style.color = "rgba(18, 17, 19, 0.8)"
+                  }}
+                  onMouseLeave={(e) => {
+                    const target = e.target as HTMLElement
+                    target.style.color = "#121113"
+                  }}
+                >
+                  <a href="https://docs.credvault.com" target="_blank" rel="noopener noreferrer" style={{ color: "inherit", textDecoration: "none" }}>Documentation</a>
+                </li>
+                <li
+                  className="hover:underline cursor-pointer transition-colors"
+                  style={{ color: "#121113" }}
+                  onMouseEnter={(e) => {
+                    const target = e.target as HTMLElement
+                    target.style.color = "rgba(18, 17, 19, 0.8)"
+                  }}
+                  onMouseLeave={(e) => {
+                    const target = e.target as HTMLElement
+                    target.style.color = "#121113"
+                  }}
+                >
+                  <a href="https://support.credvault.com" target="_blank" rel="noopener noreferrer" style={{ color: "inherit", textDecoration: "none" }}>Support</a>
+                </li>
               </ul>
             </motion.div>
             <motion.h2

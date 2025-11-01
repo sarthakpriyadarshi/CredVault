@@ -4,6 +4,12 @@ export const metadata: Metadata = {
   title: "Organization Signup - CredVault",
   description: "Register your organization on CredVault to start issuing digital credentials and badges. Create custom templates and issue certificates in bulk.",
   keywords: ["issuer signup", "organization signup", "register issuer", "credential issuer signup", "badge issuer registration"],
+  openGraph: {
+    images: ["/meta-image.png"],
+  },
+  twitter: {
+    images: ["/meta-image.png"],
+  },
 }
 
 export default function IssuerSignupLayout({

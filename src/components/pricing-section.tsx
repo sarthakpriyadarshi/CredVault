@@ -6,53 +6,59 @@ import { useState } from "react"
 
 const pricingPlans = [
   {
-    name: "Recipient",
+    name: "Free",
     price: "Free",
-    description: "For individuals receiving credentials",
+    description: "For individuals and organizations without blockchain",
     features: [
       "Unlimited credential storage",
       "Credential verification",
-      "Blockchain verification support",
-      "Expiration tracking",
-      "Verification page access",
-    ],
-    popular: false,
-    cta: "Get Started",
-  },
-  {
-    name: "Issuer",
-    monthlyPrice: 49,
-    annualPrice: 39,
-    description: "For organizations issuing credentials",
-    features: [
       "Unlimited templates",
       "Bulk credential issuance (CSV)",
       "Certificate & badge templates",
-      "Template categories",
-      "Blockchain & non-blockchain options",
       "Email delivery",
       "Analytics dashboard",
+      "No blockchain integration",
+    ],
+    popular: false,
+    cta: "Get Started",
+    link: "/signup",
+  },
+  {
+    name: "Self-Hosted",
+    price: "Free",
+    description: "Self-host your blockchain infrastructure",
+    features: [
+      "Everything in Free plan",
+      "Blockchain verification support",
+      "Self-hosted blockchain node",
+      "Full control over infrastructure",
+      "No monthly fees",
+      "You manage gas costs",
+      "Requires technical expertise",
+      "IPFS integration",
+    ],
+    popular: false,
+    cta: "Learn More",
+    link: "/auth/issuer/signup",
+  },
+  {
+    name: "Cloud",
+    monthlyPrice: 20,
+    annualPrice: 18,
+    description: "Cloud-based with managed blockchain",
+    features: [
+      "Everything in Free plan",
+      "Managed blockchain infrastructure",
+      "Automatic IPFS integration",
+      "Blockchain verification support",
+      "No infrastructure management",
+      "Priority support",
+      "Automatic scaling",
+      "Gas costs charged separately",
     ],
     popular: true,
     cta: "Start Free Trial",
-  },
-  {
-    name: "Enterprise",
-    monthlyPrice: 199,
-    annualPrice: 159,
-    description: "For large organizations with advanced needs",
-    features: [
-      "Everything in Issuer",
-      "Custom branding",
-      "API access",
-      "White-label solution",
-      "Priority support",
-      "Custom integrations",
-      "Advanced analytics",
-      "Dedicated account manager",
-    ],
-    popular: false,
-    cta: "Contact Sales",
+    link: "/auth/issuer/signup",
   },
 ]
 
@@ -169,17 +175,18 @@ export function PricingSection() {
                 ))}
               </ul>
 
-              <motion.button
+              <motion.a
+                href={plan.link || "/signup"}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                className={`w-full py-3 px-6 rounded-lg font-medium transition-all duration-200 ${
+                className={`w-full py-3 px-6 rounded-lg font-medium transition-all duration-200 text-center block ${
                   plan.popular
                     ? "bg-gradient-to-r from-primary to-primary/80 text-white shadow-lg shadow-primary/25 hover:shadow-primary/40"
                     : "bg-white/10 text-white border border-white/20 hover:bg-white/20"
                 }`}
               >
                 {plan.cta}
-              </motion.button>
+              </motion.a>
             </motion.div>
           ))}
         </div>
@@ -192,7 +199,7 @@ export function PricingSection() {
           transition={{ duration: 0.6, delay: 0.4 }}
           className="text-center mt-16"
         >
-          <p className="text-white/60 mb-4">Need a custom solution for your organization? We're here to help.</p>
+          <p className="text-white/60 mb-4">Need a custom solution for your organization? We&apos;re here to help.</p>
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}

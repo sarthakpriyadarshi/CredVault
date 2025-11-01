@@ -289,11 +289,17 @@ export default function RecipientSignupPage() {
             </PrimaryButton>
           </form>
 
-          <div className="mt-6 text-center">
+          <div className="mt-6 text-center space-y-2">
             <p className="text-zinc-400">
               Already have an account?{" "}
               <Link href="/auth/login" className="text-primary hover:text-primary/80 font-medium">
                 Sign in
+              </Link>
+            </p>
+            <p className="text-xs text-zinc-500">
+              Are you an admin?{" "}
+              <Link href="/auth/admin/login" className="text-primary/80 hover:text-primary transition-colors underline-offset-4 hover:underline">
+                Admin Login
               </Link>
             </p>
           </div>

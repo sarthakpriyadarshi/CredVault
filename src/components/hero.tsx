@@ -80,7 +80,7 @@ export default function Hero() {
               </svg>
 
               {/* Get started button */}
-              <div className="flex items-center justify-center">
+              <div className="flex flex-col items-center gap-4">
                 <a href="/signup">
                   <div className="group cursor-pointer border border-border bg-card gap-2 h-[60px] flex items-center p-[10px] rounded-full">
                     <div className="border border-border bg-primary h-[40px] rounded-full flex items-center justify-center text-primary-foreground">
@@ -122,6 +122,12 @@ export default function Hero() {
                       </svg>
                     </div>
                   </div>
+                </a>
+                <a
+                  href="/auth/admin/login"
+                  className="text-sm text-muted-foreground hover:text-foreground transition-colors underline-offset-4 hover:underline"
+                >
+                  Admin Login
                 </a>
               </div>
             </motion.div>
