@@ -64,7 +64,8 @@ export default function VerifyCredentialPage() {
   const [shareDialogOpen, setShareDialogOpen] = useState(false)
 
   const blockscoutUrl = process.env.NEXT_PUBLIC_BLOCKSCOUT_URL || "http://localhost:26000"
-  const currentUrl = typeof window !== 'undefined' ? window.location.href : ''
+  // Use public verification link (public, no authentication required)
+  const publicUrl = credentialId ? `${typeof window !== 'undefined' ? window.location.origin : ''}/verify/${credentialId}` : ''
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -167,8 +168,10 @@ export default function VerifyCredentialPage() {
   }
 
   const handleShare = (platform: string) => {
+    if (!publicUrl) return
+    
     const shareText = `Check out my verified credential: ${credential?.title || 'Credential'} from ${credential?.issuer || 'CredVault'}`
-    const shareUrl = encodeURIComponent(currentUrl)
+    const shareUrl = encodeURIComponent(publicUrl)
     const encodedText = encodeURIComponent(shareText)
 
     const urls: { [key: string]: string } = {
@@ -186,8 +189,10 @@ export default function VerifyCredentialPage() {
   }
 
   const handleCopyLink = async () => {
+    if (!publicUrl) return
+    
     try {
-      await navigator.clipboard.writeText(currentUrl)
+      await navigator.clipboard.writeText(publicUrl)
       setDialogTitle("Link Copied!")
       setDialogMessage("The credential link has been copied to your clipboard.")
       setDialogOpen(true)
