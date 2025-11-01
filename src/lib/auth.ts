@@ -332,6 +332,7 @@ export const authOptions: NextAuthConfig = {
     error: "/auth/error",
   },
   debug: process.env.NODE_ENV === "development",
+  trustHost: true, // Allow dynamic host detection for subdomains
   session: {
     strategy: "jwt",
     maxAge: 7 * 24 * 60 * 60, // 7 days
