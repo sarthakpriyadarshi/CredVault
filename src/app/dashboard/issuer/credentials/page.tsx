@@ -25,7 +25,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Search, Eye, Ban, Download, FileText, CheckCircle2, Clock } from "lucide-react"
+import { Search, Eye, Ban, Download, FileText, CheckCircle2, Clock, Loader2 } from "lucide-react"
 import { PrimaryButton } from "@/components/ui/primary-button"
 
 interface Credential {
@@ -50,12 +50,16 @@ export default function ManageCredentialsPage() {
   const router = useRouter()
   const [credentials, setCredentials] = useState<Credential[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
   const [filter, setFilter] = useState<"all" | "active" | "revoked" | "expired">("all")
   const [selectedCredential, setSelectedCredential] = useState<Credential | null>(null)
   const [showRevokeDialog, setShowRevokeDialog] = useState(false)
   const [showViewDialog, setShowViewDialog] = useState(false)
   const [revoking, setRevoking] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [hasMore, setHasMore] = useState(false)
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -72,6 +76,7 @@ export default function ManageCredentialsPage() {
 
   const loadCredentials = async () => {
     setLoading(true)
+    setCurrentPage(1)
     try {
       const params = new URLSearchParams()
       if (filter !== "all") {
@@ -80,6 +85,8 @@ export default function ManageCredentialsPage() {
       if (searchTerm) {
         params.append("search", searchTerm)
       }
+      params.append("page", "1")
+      params.append("limit", "10")
 
       const res = await fetch(`/api/v1/issuer/credentials?${params.toString()}`, {
         credentials: "include",
@@ -93,7 +100,9 @@ export default function ManageCredentialsPage() {
         console.error("Failed to fetch credentials:", res.statusText)
       } else {
         const data = await res.json()
-        const credentialsList = data.data || data || []
+        const credentialsList = data.data || data.credentials || []
+        const pagination = data.pagination
+        
         setCredentials(
           credentialsList.map((cred: {
             id?: string
@@ -128,11 +137,92 @@ export default function ManageCredentialsPage() {
             credentialData: cred.credentialData || {},
           }))
         )
+        
+        if (pagination) {
+          setTotalPages(pagination.totalPages || 1)
+          setHasMore(pagination.hasNext || false)
+        }
       }
     } catch (error) {
       console.error("Error loading credentials:", error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const loadMoreCredentials = async () => {
+    if (loadingMore || !hasMore) return
+    
+    setLoadingMore(true)
+    try {
+      const nextPage = currentPage + 1
+      const params = new URLSearchParams()
+      if (filter !== "all") {
+        params.append("filter", filter)
+      }
+      if (searchTerm) {
+        params.append("search", searchTerm)
+      }
+      params.append("page", nextPage.toString())
+      params.append("limit", "10")
+
+      const res = await fetch(`/api/v1/issuer/credentials?${params.toString()}`, {
+        credentials: "include",
+      })
+
+      if (!res.ok) {
+        console.error("Failed to fetch more credentials:", res.statusText)
+        return
+      }
+
+      const data = await res.json()
+      const credentialsList = data.data || data.credentials || []
+      const pagination = data.pagination
+      
+      const newCredentials = credentialsList.map((cred: {
+        id?: string
+        _id?: { toString: () => string }
+        templateName?: string
+        templateCategory?: string
+        recipientEmail?: string
+        recipientName?: string
+        type?: string
+        status?: string
+        isOnBlockchain?: boolean
+        issuedAt?: string
+        expiresAt?: string
+        revokedAt?: string
+        certificateUrl?: string
+        badgeUrl?: string
+        credentialData?: Record<string, unknown>
+      }) => ({
+        id: cred.id || cred._id?.toString() || "",
+        templateName: cred.templateName || "Unknown Template",
+        templateCategory: cred.templateCategory || "general",
+        recipientEmail: cred.recipientEmail || "",
+        recipientName: cred.recipientName || "Unknown",
+        type: cred.type || "certificate",
+        status: cred.status || "active",
+        isOnBlockchain: cred.isOnBlockchain || false,
+        issuedAt: cred.issuedAt ? new Date(cred.issuedAt).toISOString() : new Date().toISOString(),
+        expiresAt: cred.expiresAt,
+        revokedAt: cred.revokedAt,
+        certificateUrl: cred.certificateUrl,
+        badgeUrl: cred.badgeUrl,
+        credentialData: cred.credentialData || {},
+      }))
+      
+      setCredentials(prev => [...prev, ...newCredentials])
+      setCurrentPage(nextPage)
+      
+      if (pagination) {
+        setTotalPages(pagination.totalPages || 1)
+        setHasMore(pagination.hasNext || false)
+      }
+    } catch (error) {
+      console.error("Error loading more credentials:", error)
+    } finally {
+      setLoadingMore(false)
     }
   }
 
@@ -423,6 +513,32 @@ export default function ManageCredentialsPage() {
                     </TableBody>
                   </Table>
                 </div>
+                
+                {/* Load More Button */}
+                {hasMore && !loading && (
+                  <div className="mt-6 flex justify-center">
+                    <Button
+                      onClick={loadMoreCredentials}
+                      disabled={loadingMore}
+                      variant="outline"
+                      className="gap-2"
+                    >
+                      {loadingMore ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Loading...
+                        </>
+                      ) : (
+                        <>
+                          Load More
+                          <span className="text-xs text-muted-foreground">
+                            (Page {currentPage} of {totalPages})
+                          </span>
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                )}
               </Card>
             </div>
           </main>
@@ -486,110 +602,99 @@ export default function ManageCredentialsPage() {
           setSelectedCredential(null)
         }
       }}>
-        <DialogContent className="bg-card border-border/50 max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Credential Details</DialogTitle>
-            <DialogDescription>
-              Complete information about this credential
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent className="bg-card border-border/50 max-w-[98vw] w-[98vw] max-h-[95vh] h-[95vh] p-0">
           {selectedCredential && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <p className="text-sm font-semibold text-muted-foreground">Template</p>
-                  <p className="text-foreground">{selectedCredential.templateName}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-sm font-semibold text-muted-foreground">Type</p>
-                  <Badge variant="outline">{selectedCredential.type}</Badge>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-sm font-semibold text-muted-foreground">Recipient Name</p>
-                  <p className="text-foreground">{selectedCredential.recipientName}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-sm font-semibold text-muted-foreground">Email</p>
-                  <p className="text-foreground">{selectedCredential.recipientEmail}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-sm font-semibold text-muted-foreground">Status</p>
-                  {getStatusBadge(selectedCredential.status)}
-                </div>
-                <div className="space-y-1">
-                  <p className="text-sm font-semibold text-muted-foreground">Blockchain</p>
-                  {selectedCredential.isOnBlockchain ? (
-                    <Badge className="bg-blue-500/20 text-blue-400">Yes</Badge>
+            <div className="flex flex-col h-full">
+              {/* Header */}
+              <div className="p-6 border-b border-border/50 shrink-0">
+                <DialogTitle className="text-2xl">{selectedCredential.templateName}</DialogTitle>
+                <DialogDescription className="mt-1">
+                  Credential for {selectedCredential.recipientName} ({selectedCredential.recipientEmail})
+                </DialogDescription>
+              </div>
+
+              {/* Content - Full Width Certificate Preview */}
+              <div className="flex-1 overflow-hidden p-6 flex flex-col">
+                <div className="flex-1 bg-background/30 rounded-lg border border-border/30 overflow-auto flex items-center justify-center mb-6">
+                  {selectedCredential.certificateUrl ? (
+                    selectedCredential.certificateUrl.endsWith('.pdf') ? (
+                      <iframe
+                        src={selectedCredential.certificateUrl}
+                        className="w-full h-full"
+                        title="Certificate Preview"
+                      />
+                    ) : (
+                      <img
+                        src={selectedCredential.certificateUrl}
+                        alt={selectedCredential.templateName}
+                        className="w-full h-auto max-w-full"
+                      />
+                    )
+                  ) : selectedCredential.badgeUrl ? (
+                    <img
+                      src={selectedCredential.badgeUrl}
+                      alt={selectedCredential.templateName}
+                      className="w-full h-auto max-w-full"
+                    />
                   ) : (
-                    <Badge variant="outline">No</Badge>
+                    <div className="text-center space-y-2">
+                      <FileText className="h-16 w-16 mx-auto text-muted-foreground/50" />
+                      <p className="text-muted-foreground">No preview available</p>
+                    </div>
                   )}
                 </div>
-                <div className="space-y-1">
-                  <p className="text-sm font-semibold text-muted-foreground">Issued At</p>
-                  <p className="text-foreground">
-                    {new Date(selectedCredential.issuedAt).toLocaleString()}
-                  </p>
-                </div>
-                {selectedCredential.expiresAt && (
-                  <div className="space-y-1">
-                    <p className="text-sm font-semibold text-muted-foreground">Expires At</p>
-                    <p className="text-foreground">
-                      {new Date(selectedCredential.expiresAt).toLocaleString()}
-                    </p>
-                  </div>
-                )}
-                {selectedCredential.revokedAt && (
-                  <div className="space-y-1">
-                    <p className="text-sm font-semibold text-muted-foreground">Revoked At</p>
-                    <p className="text-foreground">
-                      {new Date(selectedCredential.revokedAt).toLocaleString()}
-                    </p>
-                  </div>
-                )}
-              </div>
 
-              <div className="space-y-2 pt-4 border-t border-border/50">
-                <p className="text-sm font-semibold text-muted-foreground">Credential Data</p>
-                <div className="bg-background/50 p-4 rounded-lg">
-                  <pre className="text-xs text-muted-foreground overflow-x-auto">
-                    {JSON.stringify(selectedCredential.credentialData, null, 2)}
-                  </pre>
+                {/* Action Buttons */}
+                <div className="flex justify-center gap-3 shrink-0">
+                  {(selectedCredential.certificateUrl || selectedCredential.badgeUrl) && (
+                    <>
+                      {selectedCredential.certificateUrl && (
+                        <PrimaryButton
+                          className="gap-2"
+                          onClick={() => {
+                            const filename = `${selectedCredential.templateName.replace(
+                              /\s+/g,
+                              "_"
+                            )}_certificate.png`
+                            handleDownload(selectedCredential.certificateUrl!, filename)
+                          }}
+                        >
+                          <Download className="h-4 w-4" />
+                          Download Certificate
+                        </PrimaryButton>
+                      )}
+                      {selectedCredential.badgeUrl && (
+                        <PrimaryButton
+                          className="gap-2"
+                          onClick={() => {
+                            const filename = `${selectedCredential.templateName.replace(
+                              /\s+/g,
+                              "_"
+                            )}_badge.png`
+                            handleDownload(selectedCredential.badgeUrl!, filename)
+                          }}
+                        >
+                          <Download className="h-4 w-4" />
+                          Download Badge
+                        </PrimaryButton>
+                      )}
+                    </>
+                  )}
+                  {selectedCredential.status !== "revoked" && (
+                    <Button
+                      variant="destructive"
+                      className="gap-2"
+                      onClick={() => {
+                        setShowViewDialog(false)
+                        setShowRevokeDialog(true)
+                      }}
+                    >
+                      <Ban className="h-4 w-4" />
+                      Revoke Credential
+                    </Button>
+                  )}
                 </div>
               </div>
-
-              {(selectedCredential.certificateUrl || selectedCredential.badgeUrl) && (
-                <div className="space-y-2 pt-4 border-t border-border/50">
-                  <p className="text-sm font-semibold text-muted-foreground">Downloads</p>
-                  <div className="flex gap-2">
-                    {selectedCredential.certificateUrl && (
-                      <Button
-                        variant="outline"
-                        onClick={() => {
-                          const filename = `${selectedCredential.templateName.replace(/\s+/g, "_")}_certificate.png`
-                          handleDownload(selectedCredential.certificateUrl!, filename)
-                        }}
-                        className="gap-2"
-                      >
-                        <Download className="h-4 w-4" />
-                        Certificate
-                      </Button>
-                    )}
-                    {selectedCredential.badgeUrl && (
-                      <Button
-                        variant="outline"
-                        onClick={() => {
-                          const filename = `${selectedCredential.templateName.replace(/\s+/g, "_")}_badge.png`
-                          handleDownload(selectedCredential.badgeUrl!, filename)
-                        }}
-                        className="gap-2"
-                      >
-                        <Download className="h-4 w-4" />
-                        Badge
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              )}
             </div>
           )}
         </DialogContent>

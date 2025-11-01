@@ -4,7 +4,7 @@ import { parseBody, isValidEmail, getPagination, createPaginatedResponse } from 
 import { Credential, Template, User } from "@/models"
 import connectDB from "@/lib/db/mongodb"
 import mongoose from "mongoose"
-import { generateCertificate, generateBadge } from "@/lib/certificate-generator"
+import { generateCertificate, generateBadge } from "@/lib/certificate"
 
 // GET - List credentials for issuer's organization
 async function getHandler(
@@ -52,16 +52,18 @@ async function getHandler(
       ]
     }
 
-    const pagination = getPagination(req, 20)
+    const pagination = getPagination(req, 10) // Limit to 10 per page for better performance
 
     // Get credentials with populated template
+    // Use indexed sorting to avoid disk usage - ensure issuedAt field is indexed
     const [credentials, total] = await Promise.all([
       Credential.find(query)
         .populate("templateId", "name category")
         .sort({ issuedAt: -1 })
         .skip(pagination.skip)
         .limit(pagination.limit)
-        .lean(),
+        .lean()
+        .hint({ organizationId: 1, issuedAt: -1 }), // Use compound index hint to optimize query
       Credential.countDocuments(query),
     ])
 

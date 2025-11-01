@@ -11,6 +11,13 @@ import { Input } from "@/components/ui/input"
 import { FileText, Edit, Trash2, Plus, Eye, Archive, Download } from "lucide-react"
 import Link from "next/link"
 import { PrimaryButton } from "@/components/ui/primary-button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 
 interface Template {
   id: string
@@ -20,6 +27,9 @@ interface Template {
   createdAt: string
   archived?: boolean
   fields?: Array<{ name: string; type: string }>
+  certificateImageUrl?: string
+  badgeImageUrl?: string
+  placeholders?: Array<{ fieldName: string; type: string; x?: number; y?: number }>
 }
 
 export default function TemplatesPage() {
@@ -29,6 +39,8 @@ export default function TemplatesPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [filterArchived, setFilterArchived] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null)
+  const [showViewDialog, setShowViewDialog] = useState(false)
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -61,7 +73,7 @@ export default function TemplatesPage() {
         const data = await res.json()
         const templatesList = data.data || data || []
         setTemplates(
-          templatesList.map((t: any) => ({
+          templatesList.map((t: Template & { _id?: any; isArchived?: boolean }) => ({
             id: t.id || t._id?.toString() || "",
             name: t.name || "Unnamed Template",
             category: t.category || "General",
@@ -71,6 +83,9 @@ export default function TemplatesPage() {
               : new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
             archived: t.archived || t.isArchived || false,
             fields: t.fields || [],
+            certificateImageUrl: t.certificateImageUrl,
+            badgeImageUrl: t.badgeImageUrl,
+            placeholders: t.placeholders,
           }))
         )
       }
@@ -146,7 +161,7 @@ export default function TemplatesPage() {
       const fields = templateDetails.placeholders || templateDetails.fields || template.fields || []
       
       // Create CSV header row
-      const headers = fields.map((f: any) => f.fieldName || f.name || "Field")
+      const headers = fields.map((f: { fieldName?: string; name?: string }) => f.fieldName || f.name || "Field")
       
       // Create CSV content with sample data
       const csvRows = [
@@ -168,6 +183,34 @@ export default function TemplatesPage() {
     } catch (error) {
       console.error("Error downloading CSV template:", error)
       alert("Failed to download CSV template")
+    }
+  }
+
+  const handleViewTemplate = async (template: Template) => {
+    try {
+      // Fetch full template details
+      const res = await fetch(`/api/v1/issuer/templates/${template.id}`, {
+        credentials: "include",
+      })
+
+      if (!res.ok) {
+        alert("Failed to fetch template details")
+        return
+      }
+
+      const templateData = await res.json()
+      const templateDetails = templateData.template || templateData
+
+      setSelectedTemplate({
+        ...template,
+        certificateImageUrl: templateDetails.certificateImageUrl,
+        badgeImageUrl: templateDetails.badgeImageUrl,
+        placeholders: templateDetails.placeholders,
+      })
+      setShowViewDialog(true)
+    } catch (error) {
+      console.error("Error loading template:", error)
+      alert("Failed to load template")
     }
   }
 
@@ -285,7 +328,12 @@ export default function TemplatesPage() {
                       </div>
 
                       <div className="flex gap-2">
-                        <Button variant="outline" size="sm" className="flex-1 gap-1 bg-transparent">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="flex-1 gap-1 bg-transparent"
+                          onClick={() => handleViewTemplate(template)}
+                        >
                           <Eye className="h-4 w-4" />
                           View
                         </Button>
@@ -298,7 +346,12 @@ export default function TemplatesPage() {
                         >
                           <Download className="h-4 w-4" />
                         </Button>
-                        <Button variant="outline" size="sm" className="bg-transparent">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="bg-transparent"
+                          onClick={() => router.push(`/dashboard/issuer/templates/edit/${template.id}`)}
+                        >
                           <Edit className="h-4 w-4" />
                         </Button>
                         <Button
@@ -326,6 +379,49 @@ export default function TemplatesPage() {
           </main>
         </div>
       </div>
+
+      {/* View Template Dialog */}
+      <Dialog open={showViewDialog} onOpenChange={setShowViewDialog}>
+        <DialogContent className="max-w-[98vw] max-h-[95vh] p-0 gap-0 bg-background/95 backdrop-blur">
+          {selectedTemplate && (
+            <div className="flex flex-col">
+              {/* Header */}
+              <DialogHeader className="px-6 py-4 border-b border-border/50 shrink-0">
+                <DialogTitle className="text-xl">
+                  {selectedTemplate.name}
+                </DialogTitle>
+                <DialogDescription>
+                  Category: {selectedTemplate.category || "General"}
+                </DialogDescription>
+              </DialogHeader>
+
+              {/* Preview */}
+              <div className="flex-1 overflow-hidden p-6 flex flex-col">
+                <div className="flex-1 bg-background/30 rounded-lg border border-border/30 overflow-auto flex items-center justify-center">
+                  {selectedTemplate.certificateImageUrl ? (
+                    <img
+                      src={selectedTemplate.certificateImageUrl}
+                      alt={selectedTemplate.name}
+                      className="w-full h-auto max-w-full"
+                    />
+                  ) : selectedTemplate.badgeImageUrl ? (
+                    <img
+                      src={selectedTemplate.badgeImageUrl}
+                      alt={selectedTemplate.name}
+                      className="w-full h-auto max-w-full"
+                    />
+                  ) : (
+                    <div className="text-center space-y-2">
+                      <FileText className="h-16 w-16 mx-auto text-muted-foreground/50" />
+                      <p className="text-muted-foreground">No preview available</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

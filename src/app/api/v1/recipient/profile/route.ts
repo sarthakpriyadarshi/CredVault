@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextRequest } from "next/server"
 import { withAuth, handleApiError } from "@/lib/api/middleware"
 import { parseBody } from "@/lib/api/utils"
+import { methodNotAllowed, successResponse, errorResponse, notFound } from "@/lib/api/responses"
 import { User } from "@/models"
 import connectDB from "@/lib/db/mongodb"
 
@@ -17,7 +18,7 @@ async function handler(
 
     const userId = user?.id as string | undefined
     if (!userId) {
-      return NextResponse.json({ error: "User not authenticated" }, { status: 401 })
+      return errorResponse("User not authenticated", 401)
     }
 
     if (req.method === "GET") {
@@ -26,10 +27,10 @@ async function handler(
         .lean()
 
       if (!dbUser) {
-        return NextResponse.json({ error: "User not found" }, { status: 404 })
+        return notFound("User not found")
       }
 
-      return NextResponse.json({
+      return successResponse({
         profile: {
           id: dbUser._id.toString(),
           name: dbUser.name,
@@ -59,7 +60,7 @@ async function handler(
 
       const dbUser = await User.findById(userId)
       if (!dbUser) {
-        return NextResponse.json({ error: "User not found" }, { status: 404 })
+        return notFound("User not found")
       }
 
       // Update fields if provided
@@ -90,7 +91,7 @@ async function handler(
 
       await dbUser.save()
 
-      return NextResponse.json({
+      return successResponse({
         message: "Profile updated successfully",
         profile: {
           id: dbUser._id.toString(),
@@ -107,7 +108,7 @@ async function handler(
       })
     }
 
-    return NextResponse.json({ error: "Method not allowed" }, { status: 405 })
+    return methodNotAllowed()
   } catch (error: unknown) {
     return handleApiError(error)
   }

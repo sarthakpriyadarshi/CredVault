@@ -123,6 +123,10 @@ CredentialSchema.index({ status: 1 })
 CredentialSchema.index({ isOnBlockchain: 1 })
 CredentialSchema.index({ expiresAt: 1 })
 CredentialSchema.index({ blockchainHash: 1 })
+// Compound indexes for optimized queries
+CredentialSchema.index({ organizationId: 1, issuedAt: -1 }) // For issuer credentials query
+CredentialSchema.index({ recipientId: 1, issuedAt: -1 }) // For recipient credentials query by ID
+CredentialSchema.index({ recipientEmail: 1, issuedAt: -1 }) // For recipient credentials query by email
 
 // Virtual for checking if credential is expired
 CredentialSchema.virtual("isExpired").get(function (this: ICredential) {

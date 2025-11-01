@@ -6,7 +6,7 @@
  * or: tsx scripts/download-google-fonts.ts
  */
 
-import { GOOGLE_FONTS, normalizeFontName } from "../src/lib/google-fonts"
+import { GOOGLE_FONTS, normalizeFontName } from "../src/lib/fonts"
 import { join } from "path"
 import { existsSync, mkdirSync, writeFileSync } from "fs"
 

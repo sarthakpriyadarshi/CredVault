@@ -207,7 +207,7 @@ export default function IssuerSettingsPage() {
     setSuccess(null)
 
     try {
-      const res = await fetch("/api/v1/issuer/change-password", {
+      const res = await fetch("/api/v1/auth/change-password", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -373,8 +373,9 @@ export default function IssuerSettingsPage() {
                                       try {
                                         const formData = new FormData()
                                         formData.append("file", file)
+                                        formData.append("type", "logo")
 
-                                        const res = await fetch("/api/v1/upload/logo", {
+                                        const res = await fetch("/api/v1/upload", {
                                           method: "POST",
                                           credentials: "include",
                                           body: formData,

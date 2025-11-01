@@ -1,3 +1,8 @@
+/**
+ * Client-side script loader utility
+ * Dynamically loads scripts in the browser
+ */
+
 export function loadScript(src: string): Promise<void> {
   return new Promise((resolve, reject) => {
     const script = document.createElement("script")
@@ -7,3 +12,4 @@ export function loadScript(src: string): Promise<void> {
     document.head.appendChild(script)
   })
 }
+

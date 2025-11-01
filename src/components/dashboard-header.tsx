@@ -62,7 +62,7 @@ export function DashboardHeader({ userRole, userName }: DashboardHeaderProps) {
     if (userRole !== "issuer" && session?.user?.id && !session?.user?.image) {
       let cancelled = false
       
-      fetch("/api/v1/user/image", {
+      fetch("/api/v1/user/profile", {
         credentials: "include",
       })
         .then((res) => {

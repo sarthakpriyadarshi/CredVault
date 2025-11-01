@@ -4,7 +4,7 @@ import { isValidEmail } from "@/lib/api/utils"
 import { Credential, Template, User } from "@/models"
 import connectDB from "@/lib/db/mongodb"
 import mongoose from "mongoose"
-import { generateCertificate, generateBadge } from "@/lib/certificate-generator"
+import { generateCertificate, generateBadge } from "@/lib/certificate"
 
 async function handler(
   req: NextRequest,

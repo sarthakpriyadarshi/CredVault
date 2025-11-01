@@ -7,8 +7,7 @@ import { DashboardHeader } from "@/components/dashboard-header"
 import { DashboardSidebar } from "@/components/dashboard-sidebar"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { Download, Eye, Share2, Shield } from "lucide-react"
-import Link from "next/link"
+import { Download, Eye, Share2, Shield, Loader2 } from "lucide-react"
 
 interface Credential {
   id: string
@@ -16,6 +15,9 @@ interface Credential {
   issuer: string
   date: string
   verified: boolean
+  certificateUrl?: string
+  badgeUrl?: string
+  type?: "certificate" | "badge" | "both"
 }
 
 interface Stats {
@@ -29,7 +31,42 @@ export default function AllCredentialsPage() {
   const router = useRouter()
   const [credentials, setCredentials] = useState<Credential[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [stats, setStats] = useState<Stats | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [hasMore, setHasMore] = useState(false)
+
+  const handleDownload = (credential: Credential) => {
+    // Prioritize certificate, fallback to badge
+    const url = credential.certificateUrl || credential.badgeUrl
+    if (!url) {
+      alert("No certificate or badge available for download")
+      return
+    }
+
+    // Check if it's a base64 data URL
+    if (url.startsWith("data:")) {
+      // Create a temporary link element and trigger download
+      const link = document.createElement("a")
+      link.href = url
+      const filename = credential.certificateUrl
+        ? `${credential.title.replace(/\s+/g, "_")}_certificate.png`
+        : `${credential.title.replace(/\s+/g, "_")}_badge.png`
+      link.download = filename
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    } else {
+      // For regular URLs, open in new tab
+      window.open(url, "_blank")
+    }
+  }
+
+  const handleVerify = (credentialId: string) => {
+    // Navigate to verify page
+    router.push(`/dashboard/recipient/credentials/${credentialId}/verify`)
+  }
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -44,6 +81,7 @@ export default function AllCredentialsPage() {
 
   const loadData = async () => {
     setLoading(true)
+    setCurrentPage(1)
     try {
       const fetchOptions: RequestInit = {
         credentials: "include",
@@ -62,8 +100,8 @@ export default function AllCredentialsPage() {
         setStats(statsData)
       }
 
-      // Load all credentials
-      const credentialsRes = await fetch("/api/v1/recipient/credentials?filter=all&limit=100", fetchOptions)
+      // Load credentials with pagination
+      const credentialsRes = await fetch("/api/v1/recipient/credentials?filter=all&page=1&limit=10", fetchOptions)
       if (!credentialsRes.ok) {
         if (credentialsRes.status === 401) {
           router.push("/auth/login")
@@ -73,11 +111,55 @@ export default function AllCredentialsPage() {
       } else {
         const credentialsData = await credentialsRes.json()
         setCredentials(credentialsData.data || credentialsData || [])
+        
+        const pagination = credentialsData.pagination
+        if (pagination) {
+          setTotalPages(pagination.totalPages || 1)
+          setHasMore(pagination.hasNext || false)
+        }
       }
     } catch (error) {
       console.error("Error loading data:", error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const loadMoreCredentials = async () => {
+    if (loadingMore || !hasMore) return
+    
+    setLoadingMore(true)
+    try {
+      const nextPage = currentPage + 1
+      const fetchOptions: RequestInit = {
+        credentials: "include",
+      }
+
+      const credentialsRes = await fetch(
+        `/api/v1/recipient/credentials?filter=all&page=${nextPage}&limit=10`,
+        fetchOptions
+      )
+      
+      if (!credentialsRes.ok) {
+        console.error("Failed to fetch more credentials:", credentialsRes.statusText)
+        return
+      }
+
+      const credentialsData = await credentialsRes.json()
+      const newCredentials = credentialsData.data || credentialsData || []
+      
+      setCredentials(prev => [...prev, ...newCredentials])
+      setCurrentPage(nextPage)
+      
+      const pagination = credentialsData.pagination
+      if (pagination) {
+        setTotalPages(pagination.totalPages || 1)
+        setHasMore(pagination.hasNext || false)
+      }
+    } catch (error) {
+      console.error("Error loading more credentials:", error)
+    } finally {
+      setLoadingMore(false)
     }
   }
 
@@ -182,12 +264,15 @@ export default function AllCredentialsPage() {
                         <p className="text-xs text-muted-foreground/70">{credential.date}</p>
                       </div>
                       <div className="flex gap-2 flex-wrap md:flex-nowrap">
-                        <Link href={`/verify/${credential.id}`}>
-                          <Button variant="outline" size="sm" className="gap-2 bg-transparent">
-                            <Eye className="h-4 w-4" />
-                            <span className="hidden md:inline">Verify</span>
-                          </Button>
-                        </Link>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-2 bg-transparent"
+                          onClick={() => handleVerify(credential.id)}
+                        >
+                          <Eye className="h-4 w-4" />
+                          <span className="hidden md:inline">Verify</span>
+                        </Button>
                         <Button
                           variant="outline"
                           size="sm"
@@ -197,16 +282,55 @@ export default function AllCredentialsPage() {
                           <Share2 className="h-4 w-4" />
                           <span className="hidden md:inline">Share</span>
                         </Button>
-                        <Button
-                          size="sm"
-                          className="bg-gradient-to-b from-primary to-primary/80 text-primary-foreground shadow-[0px_2px_0px_0px_rgba(255,255,255,0.3)_inset] gap-2"
-                        >
-                          <Download className="h-4 w-4" />
-                          <span className="hidden md:inline">Download</span>
-                        </Button>
+                        {(credential.certificateUrl || credential.badgeUrl) ? (
+                          <Button
+                            size="sm"
+                            className="bg-gradient-to-b from-primary to-primary/80 text-primary-foreground shadow-[0px_2px_0px_0px_rgba(255,255,255,0.3)_inset] gap-2"
+                            onClick={() => handleDownload(credential)}
+                          >
+                            <Download className="h-4 w-4" />
+                            <span className="hidden md:inline">Download</span>
+                          </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            className="bg-gradient-to-b from-primary to-primary/80 text-primary-foreground shadow-[0px_2px_0px_0px_rgba(255,255,255,0.3)_inset] gap-2"
+                            disabled
+                            title="No certificate or badge available"
+                          >
+                            <Download className="h-4 w-4" />
+                            <span className="hidden md:inline">Download</span>
+                          </Button>
+                        )}
                       </div>
                     </div>
                   ))}
+                </div>
+              )}
+              
+              {/* Load More Button */}
+              {hasMore && !loading && (
+                <div className="mt-6 flex justify-center">
+                  <Button
+                    onClick={loadMoreCredentials}
+                    disabled={loadingMore}
+                    variant="outline"
+                    className="gap-2"
+                  >
+                    {loadingMore ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Loading...
+                      </>
+                    ) : (
+                      <>
+                        Load More
+                        <span className="text-xs text-muted-foreground">
+                          (Page {currentPage} of {totalPages})
+                        </span>
+                      </>
+                    )}
+                  </Button>
                 </div>
               )}
             </Card>

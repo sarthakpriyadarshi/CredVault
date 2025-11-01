@@ -6,12 +6,15 @@
 
 import { NextRequest } from "next/server"
 import { withAuth, handleApiError } from "@/lib/api/middleware"
-import { methodNotAllowed } from "@/lib/api/responses"
+import { methodNotAllowed, successResponse, errorResponse, validationErrorResponse } from "@/lib/api/responses"
 import { parseBody } from "@/lib/api/utils"
-import { successResponse, errorResponse, validationErrorResponse } from "@/lib/api/responses"
 import { changePasswordService } from "@/lib/services/auth.service"
 import { validateRequired, validatePassword } from "@/lib/api/validation"
-import type { ChangePasswordRequest } from "@/types/api"
+
+interface ChangePasswordRequest {
+  currentPassword: string
+  newPassword: string
+}
 
 async function handler(
   req: NextRequest,

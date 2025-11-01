@@ -93,8 +93,9 @@ export default function IssuerSignupPage() {
       try {
         const uploadFormData = new FormData()
         uploadFormData.append("file", proofFile)
+        uploadFormData.append("type", "organization-proof")
 
-        const uploadResponse = await fetch("/api/v1/upload/organization-proof", {
+        const uploadResponse = await fetch("/api/v1/upload", {
           method: "POST",
           body: uploadFormData,
         })

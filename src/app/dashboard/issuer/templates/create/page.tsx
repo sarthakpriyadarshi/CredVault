@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/dialog"
 import { Upload, Trash2, Download, Save, Eye } from "lucide-react"
 import { PrimaryButton } from "@/components/ui/primary-button"
-import { GOOGLE_FONTS } from "@/lib/google-fonts"
+import { GOOGLE_FONTS } from "@/lib/fonts"
 
 interface TemplateField {
   id: string
@@ -364,10 +364,9 @@ export default function CreateTemplatePage() {
       // Create form data for upload
       const formData = new FormData()
       formData.append("file", file)
-      formData.append("type", type)
-
-      // Upload to server
-      const res = await fetch("/api/v1/upload/template-image", {
+      formData.append("type", "template-image")
+      formData.append("imageType", type)
+      const res = await fetch("/api/v1/upload", {
         method: "POST",
         credentials: "include",
         body: formData,

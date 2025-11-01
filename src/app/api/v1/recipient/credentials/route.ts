@@ -29,13 +29,24 @@ async function handler(
     const filter = searchParams.get("filter") // "all", "blockchain", "expiring"
 
     // Build query to find credentials for this recipient
-    const query: any = {}
-    if (userId) {
-      query.recipientId = userId
-    } else if (userEmail) {
-      query.recipientEmail = userEmail.toLowerCase()
+    // Credentials can be matched by either recipientId OR recipientEmail
+    // This handles cases where recipient was registered before/after credential issuance
+    const query: any = {
+      $or: [] as any[],
+      status: { $ne: "revoked" }, // Exclude revoked credentials
     }
-    query.status = { $ne: "revoked" } // Exclude revoked credentials
+    
+    if (userId) {
+      query.$or.push({ recipientId: userId })
+    }
+    if (userEmail) {
+      query.$or.push({ recipientEmail: userEmail.toLowerCase() })
+    }
+    
+    // If no OR conditions, this shouldn't happen but handle gracefully
+    if (query.$or.length === 0) {
+      return NextResponse.json({ error: "User ID or email not found" }, { status: 400 })
+    }
 
     // Apply filters
     if (filter === "blockchain") {
@@ -51,9 +62,10 @@ async function handler(
     }
     // "all" or no filter = show all
 
-    const pagination = getPagination(req, 20)
+    const pagination = getPagination(req, 10) // Limit to 10 per page for better performance
 
     // Get credentials with populated template and organization
+    // Use indexed sorting to avoid disk usage - the compound indexes are already set up in the model
     const [credentials, total] = await Promise.all([
       Credential.find(query)
         .populate("templateId", "name")
@@ -61,7 +73,8 @@ async function handler(
         .sort({ issuedAt: -1 })
         .skip(pagination.skip)
         .limit(pagination.limit)
-        .lean(),
+        .lean()
+        .hint(userId ? { recipientId: 1, issuedAt: -1 } : { recipientEmail: 1, issuedAt: -1 }), // Use appropriate compound index
       Credential.countDocuments(query),
     ])
 
@@ -80,11 +93,11 @@ async function handler(
         })}`,
         issuedAt: cred.issuedAt,
         verified: cred.isOnBlockchain || false,
-        type: cred.type,
+        type: cred.type || "certificate",
         status: cred.status,
         expiresAt: cred.expiresAt ? cred.expiresAt.toISOString() : undefined,
-        certificateUrl: cred.certificateUrl,
-        badgeUrl: cred.badgeUrl,
+        certificateUrl: cred.certificateUrl || null,
+        badgeUrl: cred.badgeUrl || null,
       }
     })
 

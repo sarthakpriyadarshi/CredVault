@@ -4,9 +4,7 @@
  */
 
 import { User } from "@/models"
-import type { IUser } from "@/models"
 import { validatePassword } from "@/lib/api/validation"
-import { updateUserPasswordService } from "./user.service"
 
 export interface ChangePasswordData {
   userId: string
@@ -42,7 +40,8 @@ export async function changePasswordService(data: ChangePasswordData): Promise<{
   }
 
   // Update password (User model's setter will hash it automatically)
-  await updateUserPasswordService(data.userId, data.newPassword)
+  dbUser.password = data.newPassword
+  await dbUser.save()
 
   return { success: true }
 }

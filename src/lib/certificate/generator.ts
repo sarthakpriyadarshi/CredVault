@@ -1,7 +1,12 @@
+/**
+ * Certificate and badge generator
+ * Uses sharp and canvas to generate certificates from templates
+ */
+
 import sharp from "sharp"
 import { createCanvas, loadImage } from "canvas"
 import { IPlaceholder } from "@/models/Template"
-import { loadFont } from "./font-loader"
+import { loadFont } from "./fonts"
 
 interface GenerateCertificateOptions {
   templateImageBase64: string // Base64 data URL of the template certificate image (e.g., data:image/png;base64,...)

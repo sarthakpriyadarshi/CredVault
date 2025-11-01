@@ -169,7 +169,7 @@ export default function RecipientSettingsPage() {
     setSuccess(null)
 
     try {
-      const res = await fetch("/api/v1/recipient/change-password", {
+      const res = await fetch("/api/v1/auth/change-password", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -355,7 +355,8 @@ export default function RecipientSettingsPage() {
                                         const formData = new FormData()
                                         formData.append("file", file)
 
-                                        const res = await fetch("/api/v1/upload/avatar", {
+                                        formData.append("type", "avatar")
+                                        const res = await fetch("/api/v1/upload", {
                                           method: "POST",
                                           credentials: "include",
                                           body: formData,

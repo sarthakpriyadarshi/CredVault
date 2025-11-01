@@ -3,6 +3,7 @@ import { withIssuer, handleApiError } from "@/lib/api/middleware"
 import { Template } from "@/models"
 import connectDB from "@/lib/db/mongodb"
 import mongoose from "mongoose"
+import { parseBody } from "@/lib/api/utils"
 
 async function handler(
   req: NextRequest,
@@ -48,10 +49,156 @@ async function handler(
           type: templateData.type,
           placeholders: templateData.placeholders || [],
           certificateImage: templateData.certificateImage,
+          certificateImageUrl: templateData.certificateImage,
           badgeImage: templateData.badgeImage,
+          badgeImageUrl: templateData.badgeImage,
           isActive: templateData.isActive,
           createdAt: templateData.createdAt,
           createdBy: templateData.createdBy,
+        },
+      })
+    } catch (error: unknown) {
+      return handleApiError(error)
+    }
+  }
+
+  if (req.method === "PUT") {
+    try {
+      await connectDB()
+
+      const params = context?.params instanceof Promise ? await context.params : context?.params
+      const templateId = params?.id
+      const organizationIdStr = user?.organizationId as string | undefined
+
+      if (!templateId) {
+        return NextResponse.json({ error: "Template ID is required" }, { status: 400 })
+      }
+
+      if (!organizationIdStr) {
+        return NextResponse.json({ error: "Organization ID not found" }, { status: 400 })
+      }
+
+      const organizationId = new mongoose.Types.ObjectId(organizationIdStr)
+
+      const body = await parseBody<{
+        name: string
+        category?: string
+        type: "certificate" | "badge" | "both"
+        fields: Array<{
+          name: string
+          type: "text" | "email" | "number" | "date" | "id"
+          coordinates?: { x: number; y: number; width: number; height: number }
+          fontFamily?: string
+          fontSize?: number
+          fontColor?: string
+        }>
+        certificateImage?: string
+        badgeImage?: string
+      }>(req)
+
+      const { name, category, type, fields, certificateImage, badgeImage } = body
+
+      if (!name || !type || !fields || fields.length === 0) {
+        return NextResponse.json({ error: "Name, type, and fields are required" }, { status: 400 })
+      }
+
+      // Check if email field exists
+      const hasEmailField = fields.some((f) => f && f.type === "email")
+      if (!hasEmailField) {
+        return NextResponse.json({ error: "At least one email field is required" }, { status: 400 })
+      }
+
+      // Convert fields to placeholders format
+      const placeholders: Array<{
+        fieldName: string
+        type: string
+        fontSize: number
+        fontFamily: string
+        color: string
+        align: "left" | "center" | "right"
+        x?: number
+        y?: number
+      }> = []
+
+      for (const field of fields) {
+        if (field.type !== "email") {
+          if (!field.coordinates || field.coordinates.x === undefined || field.coordinates.y === undefined) {
+            return NextResponse.json(
+              { error: `Field "${field.name}" (${field.type}) must have coordinates` },
+              { status: 400 }
+            )
+          }
+        }
+
+        if (field.type === "email") {
+          if (field.coordinates && field.coordinates.x !== undefined && field.coordinates.y !== undefined) {
+            placeholders.push({
+              fieldName: field.name,
+              type: field.type,
+              fontSize: field.fontSize || 16,
+              fontFamily: field.fontFamily || "Arial",
+              color: field.fontColor || "#000000",
+              align: "center" as const,
+              x: field.coordinates.x,
+              y: field.coordinates.y,
+            })
+          } else {
+            placeholders.push({
+              fieldName: field.name,
+              type: field.type,
+              fontSize: field.fontSize || 16,
+              fontFamily: field.fontFamily || "Arial",
+              color: field.fontColor || "#000000",
+              align: "center" as const,
+            })
+          }
+        } else {
+          placeholders.push({
+            fieldName: field.name,
+            type: field.type,
+            fontSize: field.fontSize || 16,
+            fontFamily: field.fontFamily || "Arial",
+            color: field.fontColor || "#000000",
+            align: "center" as const,
+            x: field.coordinates!.x,
+            y: field.coordinates!.y,
+          })
+        }
+      }
+
+      const updateData: Record<string, unknown> = {
+        name,
+        category: category || "general",
+        type,
+        placeholders,
+        updatedAt: new Date(),
+      }
+
+      if (certificateImage) {
+        updateData.certificateImage = certificateImage
+      }
+      if (badgeImage) {
+        updateData.badgeImage = badgeImage
+      }
+
+      const template = await Template.findOneAndUpdate(
+        {
+          _id: templateId,
+          organizationId,
+        },
+        { $set: updateData },
+        { new: true }
+      )
+
+      if (!template) {
+        return NextResponse.json({ error: "Template not found" }, { status: 404 })
+      }
+
+      return NextResponse.json({
+        message: "Template updated successfully",
+        template: {
+          id: template._id.toString(),
+          name: template.name,
         },
       })
     } catch (error: unknown) {
@@ -110,4 +257,5 @@ export async function GET(
   }
 }
 
+export const PUT = withIssuer(handler)
 export const DELETE = withIssuer(handler)

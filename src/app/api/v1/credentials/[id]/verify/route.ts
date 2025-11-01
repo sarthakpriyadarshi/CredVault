@@ -1,22 +1,22 @@
-import { NextRequest, NextResponse } from "next/server"
-import { withDB, handleApiError } from "@/lib/api/middleware"
+/**
+ * Unified credential verification endpoint
+ * - Public access: Verifies credential without authentication
+ * - Authenticated access: Also verifies credential belongs to user
+ */
+
+import { NextRequest } from "next/server"
+import { withDB, withAuth, handleApiError } from "@/lib/api/middleware"
+import { methodNotAllowed, successResponse, errorResponse, notFound, forbidden } from "@/lib/api/responses"
 import { Credential, Template, Organization } from "@/models"
 import connectDB from "@/lib/db/mongodb"
-import mongoose from "mongoose"
 
-/**
- * Public API to verify a credential
- * - If on blockchain: verify through blockchain (using dummy data for now)
- * - If not on blockchain: verify through database lookup
- * - No authentication required - publicly accessible
- */
-async function handler(
+async function verifyCredential(
   req: NextRequest,
   context: { params?: Promise<Record<string, string>> | Record<string, string> },
-  _user?: Record<string, unknown>
+  user?: Record<string, unknown>
 ) {
   if (req.method !== "GET") {
-    return NextResponse.json({ error: "Method not allowed" }, { status: 405 })
+    return methodNotAllowed()
   }
 
   try {
@@ -26,7 +26,7 @@ async function handler(
     const credentialId = params?.id
 
     if (!credentialId) {
-      return NextResponse.json({ error: "Credential ID is required" }, { status: 400 })
+      return errorResponse("Credential ID is required", 400)
     }
 
     // Find credential
@@ -36,11 +36,30 @@ async function handler(
       .lean()
 
     if (!credential) {
-      return NextResponse.json({ error: "Credential not found" }, { status: 404 })
+      return notFound("Credential not found")
     }
 
     const cred = credential as any
     const organization = cred.organizationId as any
+
+    // If authenticated, verify ownership (for recipient access)
+    if (user) {
+      const userId = user.id as string | undefined
+      const userEmail = user.email as string | undefined
+
+      // Only check ownership if user is recipient (not issuer/admin viewing their own issued credentials)
+      // For now, we'll check if user is recipient
+      const userRole = user.role as string | undefined
+      if (userRole === "recipient") {
+        const belongsToUser =
+          (userId && cred.recipientId && cred.recipientId.toString() === userId) ||
+          (userEmail && cred.recipientEmail?.toLowerCase() === userEmail.toLowerCase())
+
+        if (!belongsToUser) {
+          return forbidden("Credential does not belong to you")
+        }
+      }
+    }
 
     // Verify credential based on blockchain status
     let verificationResult: {
@@ -95,7 +114,7 @@ async function handler(
     }
 
     // Return credential details with verification result
-    return NextResponse.json({
+    return successResponse({
       credential: {
         id: cred._id.toString(),
         title: (cred.templateId as any)?.name || "Unknown Credential",
@@ -115,5 +134,29 @@ async function handler(
   }
 }
 
-export const GET = withDB(handler)
+// Support both authenticated and unauthenticated access
+// Check if Authorization header or cookies are present to determine auth
+async function handler(
+  req: NextRequest,
+  context: { params?: Promise<Record<string, string>> | Record<string, string> }
+) {
+  // Check if user is authenticated by looking for session
+  // This is a simplified approach - in production you might want to check cookies/headers
+  // For now, we'll use withDB for all requests and check auth inside
+  return withDB(async (req, ctx) => {
+    // Try to get session, but don't fail if not present
+    let user: Record<string, unknown> | undefined
+    try {
+      const { getServerSessionForApi } = await import("@/lib/auth-server")
+      const session = await getServerSessionForApi()
+      if (session?.user) {
+        user = session.user as Record<string, unknown>
+      }
+    } catch {
+      // No session, proceed as public
+    }
+    return verifyCredential(req, ctx, user)
+  })(req, context)
+}
 
+export const GET = handler

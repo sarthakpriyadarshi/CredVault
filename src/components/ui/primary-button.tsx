@@ -1,19 +1,24 @@
 import * as React from "react"
+import { Slot } from "@radix-ui/react-slot"
 import { cn } from "@/lib/utils"
 
 interface PrimaryButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   children: React.ReactNode
   variant?: "default" | "gradient" | "outline"
+  asChild?: boolean
 }
 
 export function PrimaryButton({ 
   children, 
   className, 
   variant = "gradient",
+  asChild = false,
   ...props 
 }: PrimaryButtonProps) {
+  const Comp = asChild ? Slot : "button"
+  
   return (
-    <button
+    <Comp
       className={cn(
         "relative z-30 rounded-md font-bold cursor-pointer hover:-translate-y-0.5 transition duration-200 inline-flex items-center justify-center gap-2 text-center px-4 text-sm",
         variant === "gradient" && "py-2 bg-gradient-to-b from-primary to-primary/80 text-primary-foreground shadow-[0px_2px_0px_0px_rgba(255,255,255,0.3)_inset]",
@@ -24,7 +29,7 @@ export function PrimaryButton({
       {...props}
     >
       {children}
-    </button>
+    </Comp>
   )
 }
 

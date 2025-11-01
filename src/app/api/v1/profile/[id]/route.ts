@@ -1,5 +1,6 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextRequest } from "next/server"
 import { withDB, handleApiError } from "@/lib/api/middleware"
+import { methodNotAllowed, successResponse, errorResponse, notFound, forbidden } from "@/lib/api/responses"
 import { User, Credential } from "@/models"
 import connectDB from "@/lib/db/mongodb"
 import mongoose from "mongoose"
@@ -15,7 +16,7 @@ async function handler(
   _user?: Record<string, unknown>
 ) {
   if (req.method !== "GET") {
-    return NextResponse.json({ error: "Method not allowed" }, { status: 405 })
+    return methodNotAllowed()
   }
 
   try {
@@ -25,7 +26,7 @@ async function handler(
     const idOrEmail = params?.id
 
     if (!idOrEmail) {
-      return NextResponse.json({ error: "User ID or email is required" }, { status: 400 })
+      return errorResponse("User ID or email is required", 400)
     }
 
     let user
@@ -57,12 +58,12 @@ async function handler(
     }
 
     if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 })
+      return notFound("User not found")
     }
 
     // Check if profile is public
     if (user.profilePublic === false) {
-      return NextResponse.json({ error: "Profile is private" }, { status: 403 })
+      return forbidden("Profile is private")
     }
 
     // Get user's active credentials
@@ -90,7 +91,7 @@ async function handler(
       isOnBlockchain: cred.isOnBlockchain || false,
     }))
 
-    return NextResponse.json({
+    return successResponse({
       profile: {
         id: user._id.toString(),
         name: user.name,

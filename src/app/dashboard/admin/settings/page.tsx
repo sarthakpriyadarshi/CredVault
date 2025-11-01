@@ -446,7 +446,7 @@ export default function AdminSettingsPage() {
     setSuccess(null)
 
     try {
-      const res = await fetch("/api/v1/admin/change-password", {
+      const res = await fetch("/api/v1/auth/change-password", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
