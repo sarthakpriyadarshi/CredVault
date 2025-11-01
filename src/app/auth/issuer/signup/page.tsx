@@ -189,20 +189,20 @@ export default function IssuerSignupPage() {
       <div className="fixed top-20 right-20 w-72 h-72 bg-primary/10 rounded-full blur-3xl z-0" />
       <div className="fixed bottom-20 left-20 w-96 h-96 bg-primary/5 rounded-full blur-3xl z-0" />
 
-      <div className="container mx-auto px-4 w-full flex items-start justify-center py-8 relative z-10">
+      <div className="container mx-auto px-4 w-full flex items-start justify-center py-8 md:py-8 pt-24 relative z-10">
         <div className="flex gap-8 w-full max-w-xl items-start">
-          {/* Auth Sidebar - 20% width, fixed */}
+          {/* Auth Sidebar */}
           <AuthSidebar
             recipientLink="/auth/signup"
             organizationLink="/auth/issuer/signup"
             adminLink="/auth/admin/login"
           />
           
-          {/* Spacer for fixed sidebar */}
-          <div className="w-16 shrink-0" aria-hidden="true" />
+          {/* Spacer for fixed sidebar on desktop only */}
+          <div className="hidden md:block w-16 shrink-0" aria-hidden="true" />
 
-          {/* Signup Form - remaining width */}
-          <div className="flex-1">
+          {/* Signup Form - full width on mobile, remaining width on desktop */}
+          <div className="flex-1 w-full">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -210,7 +210,7 @@ export default function IssuerSignupPage() {
               className="relative z-10 w-full"
             >
         {/* Header */}
-        <div className="text-center mb-8">
+        <div className="text-center mb-8 mt-8 md:mt-0">
           <Link href="/" className="inline-block mb-6">
             <div className="flex items-center justify-center space-x-2">
               <img src="/logo.svg" alt="Logo" className="rounded-full size-8 w-8 h-8 object-contain" />

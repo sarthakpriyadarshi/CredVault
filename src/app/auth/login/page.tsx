@@ -6,6 +6,7 @@ import { signIn } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import Link from "next/link"
+import Image from "next/image"
 import { PrimaryButton } from "@/components/ui/primary-button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -101,26 +102,26 @@ export default function RecipientLoginPage() {
   return (
     <div className="min-h-screen bg-black flex items-center justify-center relative overflow-x-hidden">
       {/* Background gradient - fixed to viewport */}
-      <div className="fixed inset-0 bg-gradient-to-br from-zinc-900 via-black to-zinc-900 z-0" />
+      <div className="fixed inset-0 bg-linear-to-br from-zinc-900 via-black to-zinc-900 z-0" />
 
       {/* Decorative elements - fixed to viewport */}
       <div className="fixed top-20 left-20 w-72 h-72 bg-primary/10 rounded-full blur-3xl z-0" />
       <div className="fixed bottom-20 right-20 w-96 h-96 bg-primary/5 rounded-full blur-3xl z-0" />
 
-      <div className="container mx-auto px-4 w-full flex items-start justify-center py-8 relative z-10">
+      <div className="container mx-auto px-4 w-full flex items-start justify-center py-8 md:py-8 pt-24 relative z-10">
         <div className="flex gap-8 w-full max-w-xl items-start">
-          {/* Auth Sidebar - 20% width, fixed */}
+          {/* Auth Sidebar */}
           <AuthSidebar
             recipientLink="/auth/login"
             organizationLink="/auth/issuer/login"
             adminLink="/auth/admin/login"
           />
           
-          {/* Spacer for fixed sidebar */}
-          <div className="w-16 shrink-0" aria-hidden="true" />
+          {/* Spacer for fixed sidebar on desktop only */}
+          <div className="hidden md:block w-16 shrink-0" aria-hidden="true" />
 
-          {/* Login Form - remaining width */}
-          <div className="flex-1">
+          {/* Login Form - full width on mobile, remaining width on desktop */}
+          <div className="flex-1 w-full">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -128,10 +129,10 @@ export default function RecipientLoginPage() {
               className="relative z-10 w-full"
             >
         {/* Header */}
-        <div className="text-center mb-8">
+        <div className="text-center mb-8 mt-8 md:mt-0">
           <Link href="/" className="inline-block mb-6">
             <div className="flex items-center justify-center space-x-2">
-              <img src="/logo.svg" alt="Logo" className="rounded-full size-8 w-8 h-8 object-contain" />
+              <Image src="/logo.svg" alt="Logo" width={32} height={32} className="rounded-full object-contain" />
             </div>
           </Link>
           <h1 className="text-3xl font-bold text-white mb-2">Welcome back</h1>

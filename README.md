@@ -1,6 +1,8 @@
 ![CredVault](./public/github-ogimage.png)
 
 <div align="center">
+   
+# CredVault - Credential and Badge Issuance Platform
 
 ### Enterprise-Grade Credential & Badge Issuance Platform
 
@@ -400,38 +402,6 @@ mongo --eval "rs.initiate()"
 
 ---
 
-## Contributing
-
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
-
-### **Quick Contribution Steps**
-1. **Fork** the repository
-2. **Create** a feature branch (`git checkout -b feature/amazing-feature`)
-3. **Commit** your changes (`git commit -m 'feat: add amazing feature'`)
-4. **Push** to branch (`git push origin feature/amazing-feature`)
-5. **Open** a Pull Request
-
-### **Development Setup for Contributors**
-```bash
-# Fork and clone your fork
-git clone https://github.com/YOUR_USERNAME/credvault.git
-cd credvault
-
-# Add upstream remote
-git remote add upstream https://github.com/sarthakpriyadarshi/credvault.git
-
-# Install dependencies
-npm install
-
-# Create feature branch
-git checkout -b feature/your-feature-name
-
-# Start development
-npm run dev
-```
-
----
-
 ## License
 
 This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
@@ -503,14 +473,6 @@ npm run type-check
 - **[Radix UI](https://www.radix-ui.com/)** - Accessible component system
 
 ---
-
-<div align="center">
-
-**Made with by [Sarthak Priyadarshi](https://github.com/sarthakpriyadarshi)**
-
-[Star this repo](https://github.com/sarthakpriyadarshi/credvault) • [Report Bug](https://github.com/sarthakpriyadarshi/credvault/issues) • [Request Feature](https://github.com/sarthakpriyadarshi/credvault/issues/new)
-
-</div>
 ```
 
 > **Note**: For blockchain features, you need to set up VAULT Protocol. See [VAULT Protocol Integration Guide](./docs/VAULT_PROTOCOL_INTEGRATION.md)
@@ -661,14 +623,16 @@ For detailed setup instructions, see [VAULT Protocol Integration Guide](./docs/V
 | `blockchainTxId` | Transaction hash |
 | `vaultIssuer` | Blockchain issuer address |
 
+---
 
-## Contributing
+> **Note**: For blockchain features, you need to set up VAULT Protocol. See [VAULT Protocol Integration Guide](./docs/VAULT_PROTOCOL_INTEGRATION.md)
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Submit a pull request
+---
 
-## License
+<div align="center">
 
-MIT
+**Made with ❤️ by [Sarthak Priyadarshi](https://github.com/sarthakpriyadarshi)**
+
+[Star this repo](https://github.com/sarthakpriyadarshi/credvault) • [Report Bug](https://github.com/sarthakpriyadarshi/credvault/issues) • [Request Feature](https://github.com/sarthakpriyadarshi/credvault/issues/new)
+
+</div>
