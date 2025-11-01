@@ -19,6 +19,7 @@ export function DashboardHeader({ userRole, userName }: DashboardHeaderProps) {
   const router = useRouter()
   const [organizationLogo, setOrganizationLogo] = useState<string | null>(null)
   const [organizationName, setOrganizationName] = useState<string | null>(null)
+  const [userAvatar, setUserAvatar] = useState<string | null>(null)
   
   
   const roleLabel = {
@@ -55,6 +56,38 @@ export function DashboardHeader({ userRole, userName }: DashboardHeaderProps) {
     }
   }, [userRole, session?.user?.organizationId])
 
+  // Fetch user avatar if not in session (for base64 images)
+  useEffect(() => {
+    // Only fetch if image is missing from session and user is not issuer
+    if (userRole !== "issuer" && session?.user?.id && !session?.user?.image) {
+      let cancelled = false
+      
+      fetch("/api/v1/user/image", {
+        credentials: "include",
+      })
+        .then((res) => {
+          if (res.ok) {
+            return res.json()
+          }
+          return null
+        })
+        .then((data) => {
+          if (!cancelled && data?.image) {
+            setUserAvatar(data.image)
+          }
+        })
+        .catch((error) => {
+          if (!cancelled) {
+            console.error("Error fetching user image:", error)
+          }
+        })
+      
+      return () => {
+        cancelled = true
+      }
+    }
+  }, [userRole, session?.user?.id, session?.user?.image])
+
   const handleSignOut = () => {
     const callbackUrl = {
       admin: "/auth/admin/login",
@@ -80,7 +113,7 @@ export function DashboardHeader({ userRole, userName }: DashboardHeaderProps) {
   // For issuers, show organization logo; for others, show user avatar
   const displayImage = userRole === "issuer" 
     ? (organizationLogo || null)
-    : (session?.user?.image || null)
+    : (session?.user?.image || userAvatar || null)
   const userEmail = session?.user?.email || ""
 
   return (

@@ -43,6 +43,9 @@ export default function IssuerDashboard() {
       // Only check role and verification after authentication is confirmed
       if (session?.user?.role !== "issuer") {
         router.push("/auth/issuer/login")
+      } else if (session?.user?.role === "issuer" && !session.user?.organizationId) {
+        // Redirect to completion page if organization not created (OAuth signup)
+        router.push("/auth/issuer/complete")
       } else if (session?.user?.role === "issuer" && !session.user?.isVerified) {
         // Redirect to pending page if not verified
         router.push("/auth/issuer/login?pending=true")

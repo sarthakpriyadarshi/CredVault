@@ -4,6 +4,8 @@ import GoogleProvider from "next-auth/providers/google"
 import GitHubProvider from "next-auth/providers/github"
 import connectDB from "@/lib/db/mongodb"
 import { User } from "@/models"
+import { setOAuthError } from "@/lib/oauth-errors"
+import { headers } from "next/headers"
 
 export interface User {
   id: string
@@ -93,41 +95,115 @@ export const authOptions: NextAuthConfig = {
         try {
           await connectDB()
 
+          // Extract requested role from cookie set by client before OAuth
+          let requestedRole: "recipient" | "issuer" | undefined = undefined
+          
+          try {
+            const headersList = await headers()
+            const cookieHeader = headersList.get("cookie") || ""
+            const cookies = cookieHeader.split(";").map(c => c.trim())
+            for (const cookie of cookies) {
+              if (cookie.startsWith("oauth_role=")) {
+                const roleValue = cookie.split("=")[1]
+                if (roleValue === "issuer" || roleValue === "recipient") {
+                  requestedRole = roleValue as "recipient" | "issuer"
+                }
+                break
+              }
+            }
+          } catch (err) {
+            // If we can't read cookies, that's okay - we'll proceed without role validation
+            console.warn("Could not read oauth_role cookie:", err)
+          }
+
           // Check if user exists
           const existingUser = await User.findOne({ email: user.email?.toLowerCase() })
 
           if (!existingUser) {
-            // Create new user with OAuth (default to recipient)
+            // Determine role for new user
+            let newUserRole: "recipient" | "issuer" = "recipient"
+            let isVerified = true
+            const emailVerified = true
+
+            if (requestedRole === "issuer") {
+              newUserRole = "issuer"
+              // Issuers need admin verification, so set to unverified
+              // Also, OAuth issuers need to complete organization registration
+              isVerified = false
+            }
+
+            // Create new user with OAuth
+            // Note: For issuers, organizationId will be null initially - they need to complete registration
             const newUser = await User.create({
               name: user.name || profile?.name || "User",
               email: user.email?.toLowerCase(),
-              role: "recipient", // Default role for OAuth users
-              isVerified: true,
-              emailVerified: true,
+              role: newUserRole,
+              isVerified,
+              emailVerified,
               image: user.image || profile?.picture || profile?.avatar_url,
+              organizationId: null, // OAuth issuers must complete registration to create organization
             })
 
-            user.id = newUser._id.toString()
-            user.role = newUser.role
+            // Type assertion for custom user properties
+            const customUser = user as User
+            customUser.id = newUser._id.toString()
+            customUser.role = newUser.role
+            customUser.organizationId = newUser.organizationId?.toString()
+            customUser.isVerified = newUser.isVerified
           } else {
+            // Validate role match for existing user
+            if (requestedRole && existingUser.role !== requestedRole) {
+              const errorMessage = `This account is registered as ${existingUser.role}, not ${requestedRole}. Please use the ${existingUser.role} login page.`
+              console.error(`OAuth sign-in failed: ${errorMessage}`)
+              // Store error message for error page to retrieve
+              setOAuthError(existingUser.email, errorMessage)
+              return false
+            }
+
+            // Check if issuer is verified
+            if (existingUser.role === "issuer" && !existingUser.isVerified) {
+              const errorMessage = "VERIFICATION_PENDING: Your organization is pending verification. Please wait for admin approval."
+              console.error(`OAuth sign-in failed: ${errorMessage}`)
+              // Store error message for error page to retrieve
+              setOAuthError(existingUser.email, errorMessage)
+              return false
+            }
+
             // Update user info if needed
             if (user.image && !existingUser.image) {
               existingUser.image = user.image
               await existingUser.save()
             }
-            user.id = existingUser._id.toString()
-            user.role = existingUser.role
+            
+            // Type assertion for custom user properties
+            const customUser = user as User
+            customUser.id = existingUser._id.toString()
+            customUser.role = existingUser.role
+            customUser.organizationId = existingUser.organizationId?.toString()
+            customUser.isVerified = existingUser.isVerified
           }
 
           return true
         } catch (error) {
           console.error("OAuth sign-in error:", error)
+          
+          // If error contains REDIRECT, it's a custom redirect
+          if (error && typeof error === "object" && "message" in error) {
+            const errorMsg = String(error.message)
+            if (errorMsg.startsWith("REDIRECT:")) {
+              // This will be handled by NextAuth's error handling
+              // We still return false, but the redirect URL is logged
+              return false
+            }
+          }
+          
           return false
         }
       }
       return true
     },
     async jwt({ token, user, trigger }) {
+      // First, handle initial user data from OAuth sign-in
       if (user) {
         // Set user info when user first signs in
         token.id = (user as User).id
@@ -136,9 +212,66 @@ export const authOptions: NextAuthConfig = {
         token.isVerified = (user as User).isVerified
         token.email = (user as User).email
         token.name = (user as User).name
+        
+        // Store OAuth image URL if present (OAuth providers give URLs, not base64)
+        if ("image" in user && user.image !== undefined) {
+          const imageValue = user.image as string
+          if (imageValue && (imageValue.startsWith("http://") || imageValue.startsWith("https://"))) {
+            // OAuth provider URL - safe to store
+            token.image = imageValue
+          } else if (imageValue && !imageValue.startsWith("data:") && imageValue.length < 500) {
+            // Small non-base64 value
+            token.image = imageValue
+          } else {
+            // Base64 or invalid - don't store
+            token.image = undefined
+          }
+        }
       }
       
-      // On session update, refresh user data from database
+      // Always refresh user data from database if we have a token ID
+      // This ensures organizationId is up-to-date after organization creation
+      // NOTE: Do NOT store large base64 images in token - only store metadata
+      if (token.id) {
+        try {
+          await connectDB()
+          const dbUser = await User.findById(token.id)
+          if (dbUser) {
+            token.role = dbUser.role
+            token.organizationId = dbUser.organizationId?.toString()
+            token.isVerified = dbUser.isVerified
+            // Only store image URL if it's a URL (not base64), otherwise omit to keep token small
+            // Base64 images can be several MB and will exceed cookie size limits
+            // OAuth providers (Google, GitHub) provide URLs starting with http/https
+            if (dbUser.image) {
+              if (dbUser.image.startsWith("http://") || dbUser.image.startsWith("https://")) {
+                // OAuth provider URL - safe to store (overrides any previous value)
+                token.image = dbUser.image
+              } else if (!dbUser.image.startsWith("data:") && dbUser.image.length < 500) {
+                // Small non-base64 value - might be a short reference
+                token.image = dbUser.image
+              } else {
+                // Base64 data URL - don't store in token (keep existing token.image if it's a URL)
+                const existingImage = token.image as string | undefined
+                if (!existingImage || (!existingImage.startsWith("http://") && !existingImage.startsWith("https://"))) {
+                  token.image = undefined
+                }
+                // Otherwise keep the existing URL from OAuth
+              }
+            } else {
+              // No image in DB - keep existing token.image if it exists, otherwise undefined
+              const existingImage = token.image as string | undefined
+              if (!existingImage || (!existingImage.startsWith("http://") && !existingImage.startsWith("https://"))) {
+                token.image = undefined
+              }
+            }
+          }
+        } catch (error) {
+          console.error("Error refreshing user data:", error)
+        }
+      }
+      
+      // Also handle explicit update trigger
       if (trigger === "update" && token.id) {
         try {
           await connectDB()
@@ -147,16 +280,22 @@ export const authOptions: NextAuthConfig = {
             token.role = dbUser.role
             token.organizationId = dbUser.organizationId?.toString()
             token.isVerified = dbUser.isVerified
-            token.image = dbUser.image || null
+            // Only store image URL if it's a URL (not base64)
+            if (dbUser.image) {
+              if (dbUser.image.startsWith("http://") || dbUser.image.startsWith("https://")) {
+                token.image = dbUser.image
+              } else if (!dbUser.image.startsWith("data:") && dbUser.image.length < 500) {
+                token.image = dbUser.image
+              } else {
+                token.image = undefined
+              }
+            } else {
+              token.image = undefined
+            }
           }
         } catch (error) {
           console.error("Error refreshing user data:", error)
         }
-      }
-      
-      // If user object has image, store it in token
-      if (user && (user as any).image !== undefined) {
-        token.image = (user as any).image
       }
       
       return token
@@ -168,7 +307,22 @@ export const authOptions: NextAuthConfig = {
         session.user.role = token.role as string
         session.user.organizationId = token.organizationId as string
         session.user.isVerified = token.isVerified as boolean
-        session.user.image = (token.image as string) || null
+        // Only set image if it exists and is a URL (not base64)
+        // Base64 images should be fetched separately via API to avoid cookie size issues
+        if (token.image && typeof token.image === "string") {
+          if (token.image.startsWith("http://") || token.image.startsWith("https://")) {
+            // OAuth URL - safe to include
+            session.user.image = token.image
+          } else if (token.image.length < 500 && !token.image.startsWith("data:")) {
+            // Small non-base64 value
+            session.user.image = token.image
+          } else {
+            // Base64 or too large - don't include
+            session.user.image = null
+          }
+        } else {
+          session.user.image = null
+        }
       }
       return session
     },

@@ -93,7 +93,9 @@ export default function RecipientLoginPage() {
   }
 
   const handleOAuth = (provider: "google" | "github") => {
-    signIn(provider, { callbackUrl: "/dashboard/recipient", role: "recipient" })
+    // Store role in cookie before OAuth
+    document.cookie = `oauth_role=recipient; path=/; max-age=900; SameSite=Lax`
+    signIn(provider, { callbackUrl: "/dashboard/recipient?role=recipient" })
   }
 
   return (

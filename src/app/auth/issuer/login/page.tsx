@@ -106,7 +106,9 @@ function IssuerLoginForm() {
   }
 
   const handleOAuth = (provider: "google" | "github") => {
-    signIn(provider, { callbackUrl: "/dashboard/issuer", role: "issuer" })
+    // Store role in cookie before OAuth (for backward compatibility)
+    document.cookie = `oauth_role=issuer; path=/; max-age=900; SameSite=Lax`
+    signIn(provider, { callbackUrl: "/dashboard/issuer?role=issuer" })
   }
 
   return (
