@@ -9,7 +9,7 @@ import Link from "next/link"
 import { PrimaryButton } from "@/components/ui/primary-button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Building2, User, UserCog } from "lucide-react"
+import { AuthSidebar } from "@/components/auth-sidebar"
 export default function RecipientSignupPage() {
   const [formData, setFormData] = useState({
     name: "",
@@ -127,36 +127,19 @@ export default function RecipientSignupPage() {
       <div className="fixed top-20 right-20 w-72 h-72 bg-primary/10 rounded-full blur-3xl z-0" />
       <div className="fixed bottom-20 left-20 w-96 h-96 bg-primary/5 rounded-full blur-3xl z-0" />
 
-      <div className="container mx-auto px-4 w-full flex items-center justify-center py-8 relative z-10">
-        <div className="flex gap-6 w-full max-w-4xl">
-          {/* Vertical Tabs */}
-          <div className="shrink-0 w-64">
-            <div className="bg-zinc-900/50 border border-zinc-800 rounded-lg p-2 sticky top-24">
-              <Link
-                href="/auth/signup"
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors bg-primary/20 border border-primary/50 text-white"
-              >
-                <User className="w-5 h-5" />
-                <span className="font-medium">Recipient</span>
-              </Link>
-              <Link
-                href="/auth/issuer/signup"
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-lg mt-2 transition-colors text-zinc-400 hover:text-white hover:bg-zinc-800/50"
-              >
-                <Building2 className="w-5 h-5" />
-                <span className="font-medium">Organization</span>
-              </Link>
-              <Link
-                href="/auth/admin/login"
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-lg mt-2 transition-colors text-zinc-400 hover:text-white hover:bg-zinc-800/50"
-              >
-                <UserCog className="w-5 h-5" />
-                <span className="font-medium">Admin</span>
-              </Link>
-            </div>
-          </div>
+      <div className="container mx-auto px-4 w-full flex items-start justify-center py-8 relative z-10">
+        <div className="flex gap-8 w-full max-w-xl items-start">
+          {/* Auth Sidebar - 20% width, fixed */}
+          <AuthSidebar
+            recipientLink="/auth/signup"
+            organizationLink="/auth/issuer/signup"
+            adminLink="/auth/admin/login"
+          />
+          
+          {/* Spacer for fixed sidebar */}
+          <div className="w-16 shrink-0" aria-hidden="true" />
 
-          {/* Signup Form */}
+          {/* Signup Form - remaining width */}
           <div className="flex-1">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
