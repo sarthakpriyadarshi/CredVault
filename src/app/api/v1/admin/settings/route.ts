@@ -6,8 +6,8 @@ import connectDB from "@/lib/db/mongodb"
 
 // GET settings
 async function getHandler(
-  _req: NextRequest,
-  _context: { params?: Promise<Record<string, string>> | Record<string, string> },
+  req: NextRequest,
+  _context?: { params?: Promise<Record<string, string>> | Record<string, string> },
   _user?: Record<string, unknown>
 ) {
   try {
@@ -47,9 +47,9 @@ async function getHandler(
 }
 
 // PUT/PATCH settings
-async function updateHandler(
+async function postHandler(
   req: NextRequest,
-  _context: { params?: Promise<Record<string, string>> | Record<string, string> },
+  _context?: { params?: Promise<Record<string, string>> | Record<string, string> },
   _user?: Record<string, unknown>
 ) {
   try {
@@ -115,6 +115,6 @@ async function updateHandler(
 }
 
 export const GET = withAdmin(getHandler)
-export const PUT = withAdmin(updateHandler)
-export const PATCH = withAdmin(updateHandler)
+export const PUT = withAdmin(postHandler)
+export const PATCH = withAdmin(postHandler)
 

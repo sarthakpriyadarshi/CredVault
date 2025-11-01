@@ -6,7 +6,7 @@ import mongoose from "mongoose"
 
 async function handler(
   req: NextRequest,
-  context: { params?: Promise<Record<string, string>> | Record<string, string> },
+  context?: { params?: Promise<Record<string, string>> | Record<string, string> },
   user?: Record<string, unknown>
 ) {
   if (req.method !== "PUT") {
@@ -16,7 +16,7 @@ async function handler(
   try {
     await connectDB()
 
-    const params = context.params instanceof Promise ? await context.params : context.params
+    const params = context?.params instanceof Promise ? await context.params : context?.params
     const credentialId = params?.id
     const organizationIdStr = user?.organizationId as string | undefined
     const userId = user?.id as string | undefined

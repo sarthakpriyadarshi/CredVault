@@ -25,9 +25,9 @@ async function handler(
       const dbUser = await User.findById(userId).select("settings").lean()
 
       return NextResponse.json({
-        emailNotifications: dbUser?.settings?.emailNotifications ?? true,
-        webhookEnabled: dbUser?.settings?.webhookEnabled ?? false,
-        apiAccessEnabled: dbUser?.settings?.apiAccessEnabled ?? false,
+        emailNotifications: (dbUser as any)?.settings?.emailNotifications ?? true,
+        webhookEnabled: (dbUser as any)?.settings?.webhookEnabled ?? false,
+        apiAccessEnabled: (dbUser as any)?.settings?.apiAccessEnabled ?? false,
       })
     }
 

@@ -13,10 +13,6 @@ const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
       if (onCheckedChange) {
         onCheckedChange(e.target.checked)
       }
-      // Also call original onChange if provided
-      if (props.onChange) {
-        props.onChange(e)
-      }
     }
 
     return (

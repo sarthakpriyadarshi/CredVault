@@ -61,7 +61,7 @@ async function handler(
     })
 
     // Update user with organization ID
-    dbUser.organizationId = organization._id
+    dbUser.organizationId = organization._id as any
     await dbUser.save()
 
     return NextResponse.json({

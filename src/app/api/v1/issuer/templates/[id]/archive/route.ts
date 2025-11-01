@@ -16,7 +16,7 @@ async function handler(
   try {
     await connectDB()
 
-    const params = context?.params instanceof Promise ? await context.params : context.params
+    const params = context?.params instanceof Promise ? await context?.params : context?.params
     const templateId = params?.id
     const organizationIdStr = user?.organizationId as string | undefined
 

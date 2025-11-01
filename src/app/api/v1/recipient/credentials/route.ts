@@ -6,7 +6,7 @@ import connectDB from "@/lib/db/mongodb"
 
 async function handler(
   req: NextRequest,
-  _context: { params?: Promise<Record<string, string>> | Record<string, string> },
+  _context?: { params?: Promise<Record<string, string>> | Record<string, string> },
   user?: Record<string, unknown>
 ) {
   if (req.method !== "GET") {

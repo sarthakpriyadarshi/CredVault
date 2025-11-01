@@ -14,7 +14,7 @@ async function handler(
     try {
       await connectDB()
 
-      const params = context?.params instanceof Promise ? await context.params : context.params
+      const params = context?.params instanceof Promise ? await context?.params : context?.params
       const templateId = params?.id
       const organizationIdStr = user?.organizationId as string | undefined
 
@@ -62,11 +62,11 @@ async function handler(
     }
   }
 
-  if (req.method === "PUT") {
+  if (req.method === "PUT" || req.method === "PATCH") {
     try {
       await connectDB()
 
-      const params = context?.params instanceof Promise ? await context.params : context?.params
+      const params = context?.params instanceof Promise ? await context?.params : context?.params
       const templateId = params?.id
       const organizationIdStr = user?.organizationId as string | undefined
 
@@ -210,7 +210,7 @@ async function handler(
     try {
       await connectDB()
 
-      const params = context?.params instanceof Promise ? await context.params : context.params
+      const params = context?.params instanceof Promise ? await context?.params : context?.params
       const templateId = params?.id
       const organizationIdStr = user?.organizationId as string | undefined
 

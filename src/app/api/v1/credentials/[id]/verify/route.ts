@@ -12,7 +12,7 @@ import connectDB from "@/lib/db/mongodb"
 
 async function verifyCredential(
   req: NextRequest,
-  context: { params?: Promise<Record<string, string>> | Record<string, string> },
+  context?: { params?: Promise<Record<string, string>> | Record<string, string> },
   user?: Record<string, unknown>
 ) {
   if (req.method !== "GET") {
@@ -22,7 +22,7 @@ async function verifyCredential(
   try {
     await connectDB()
 
-    const params = context.params instanceof Promise ? await context.params : context.params
+    const params = context?.params instanceof Promise ? await context.params : context?.params
     const credentialId = params?.id
 
     if (!credentialId) {
@@ -144,7 +144,8 @@ async function verifyCredential(
 // Check if Authorization header or cookies are present to determine auth
 async function handler(
   req: NextRequest,
-  context: { params?: Promise<Record<string, string>> | Record<string, string> }
+  context?: { params?: Promise<Record<string, string>> | Record<string, string> },
+  _user?: Record<string, unknown>
 ) {
   // Check if user is authenticated by looking for session
   // This is a simplified approach - in production you might want to check cookies/headers
@@ -161,6 +162,7 @@ async function handler(
     } catch {
       // No session, proceed as public
     }
+    // Pass the context from withDB which is guaranteed to exist
     return verifyCredential(req, ctx, user)
   })(req, context)
 }
@@ -170,7 +172,7 @@ export const GET = handler
 // POST - Trigger blockchain verification (public endpoint)
 async function postHandler(
   req: NextRequest,
-  context: { params?: Promise<Record<string, string>> | Record<string, string> }
+  context?: { params?: Promise<Record<string, string>> | Record<string, string> }
 ) {
   return withDB(async (req, ctx) => {
     try {
@@ -237,7 +239,7 @@ async function postHandler(
 
       if (!verifyResult.success) {
         return NextResponse.json(
-          { error: verifyResult.error || "Failed to verify on blockchain" },
+          { error: (verifyResult as any).error || "Failed to verify on blockchain" },
           { status: 500 }
         )
       }

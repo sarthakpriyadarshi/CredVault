@@ -129,7 +129,7 @@ export default function IssuerDashboard() {
       <div className="fixed bottom-20 right-20 w-96 h-96 bg-primary/5 rounded-full blur-3xl z-0" />
 
       <div className="relative z-10 overflow-x-hidden pt-20">
-        <DashboardHeader userRole="issuer" userName={session.user?.name || undefined} />
+        <DashboardHeader userRole="issuer" userName={session?.user?.name || undefined} />
 
         <div className="flex mt-4">
         <DashboardSidebar userRole="issuer" />

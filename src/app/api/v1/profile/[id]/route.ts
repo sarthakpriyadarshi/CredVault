@@ -12,8 +12,8 @@ import mongoose from "mongoose"
  */
 async function handler(
   req: NextRequest,
-  context: { params?: Promise<Record<string, string>> | Record<string, string> },
-  _user?: Record<string, unknown>
+  context?: { params?: Promise<Record<string, string>> | Record<string, string> },
+  user?: Record<string, unknown>
 ) {
   if (req.method !== "GET") {
     return methodNotAllowed()
@@ -22,7 +22,7 @@ async function handler(
   try {
     await connectDB()
 
-    const params = context.params instanceof Promise ? await context.params : context.params
+    const params = context?.params instanceof Promise ? await context.params : context?.params
     const idOrEmail = params?.id
 
     if (!idOrEmail) {

@@ -5,7 +5,7 @@ import connectDB from "@/lib/db/mongodb"
 
 async function handler(
   req: NextRequest,
-  _context: { params?: Record<string, string> },
+  _context?: { params?: Promise<Record<string, string>> | Record<string, string> },
   user?: Record<string, unknown>
 ) {
   if (req.method !== "GET") {
@@ -15,7 +15,7 @@ async function handler(
   try {
     await connectDB()
 
-    const dbUser = await User.findById(user.id).populate("organizationId")
+    const dbUser = await User.findById(user?.id).populate("organizationId")
 
     if (!dbUser) {
       return NextResponse.json({ error: "User not found" }, { status: 404 })
@@ -30,9 +30,9 @@ async function handler(
         organizationId: dbUser.organizationId?._id?.toString(),
         organization: dbUser.organizationId
           ? {
-              id: dbUser.organizationId._id.toString(),
-              name: dbUser.organizationId.name,
-              verificationStatus: dbUser.organizationId.verificationStatus,
+              id: (dbUser.organizationId as any)._id.toString(),
+              name: (dbUser.organizationId as any).name,
+              verificationStatus: (dbUser.organizationId as any).verificationStatus,
             }
           : null,
         isVerified: dbUser.isVerified,

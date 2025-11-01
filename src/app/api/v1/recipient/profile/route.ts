@@ -68,19 +68,19 @@ async function handler(
         dbUser.name = body.name.trim()
       }
       if (body.description !== undefined) {
-        dbUser.description = body.description && typeof body.description === "string" ? body.description.trim() || null : null
+        dbUser.description = body.description && typeof body.description === "string" ? body.description.trim() || undefined : undefined
       }
       if (body.linkedin !== undefined) {
-        dbUser.linkedin = body.linkedin && typeof body.linkedin === "string" ? body.linkedin.trim() || null : null
+        dbUser.linkedin = body.linkedin && typeof body.linkedin === "string" ? body.linkedin.trim() || undefined : undefined
       }
       if (body.github !== undefined) {
-        dbUser.github = body.github && typeof body.github === "string" ? body.github.trim() || null : null
+        dbUser.github = body.github && typeof body.github === "string" ? body.github.trim() || undefined : undefined
       }
       if (body.twitter !== undefined) {
-        dbUser.twitter = body.twitter && typeof body.twitter === "string" ? body.twitter.trim() || null : null
+        dbUser.twitter = body.twitter && typeof body.twitter === "string" ? body.twitter.trim() || undefined : undefined
       }
       if (body.website !== undefined) {
-        dbUser.website = body.website && typeof body.website === "string" ? body.website.trim() || null : null
+        dbUser.website = body.website && typeof body.website === "string" ? body.website.trim() || undefined : undefined
       }
       if (body.profilePublic !== undefined) {
         dbUser.profilePublic = body.profilePublic

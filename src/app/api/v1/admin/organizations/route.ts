@@ -6,7 +6,7 @@ import connectDB from "@/lib/db/mongodb"
 
 async function handler(
   req: NextRequest,
-  _context: { params?: Record<string, string> },
+  _context?: { params?: Promise<Record<string, string>> | Record<string, string> },
   _user?: Record<string, unknown>
 ) {
   if (req.method !== "GET") {
@@ -61,9 +61,9 @@ async function handler(
         verificationStatus: org.verificationStatus,
         verifiedBy: org.verifiedBy
           ? {
-              id: org.verifiedBy._id.toString(),
-              name: org.verifiedBy.name,
-              email: org.verifiedBy.email,
+              id: (org.verifiedBy as any)._id.toString(),
+              name: (org.verifiedBy as any).name,
+              email: (org.verifiedBy as any).email,
             }
           : null,
         verifiedAt: org.verifiedAt,

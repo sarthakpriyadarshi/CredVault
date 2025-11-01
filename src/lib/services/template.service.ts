@@ -42,10 +42,10 @@ export async function createTemplateService(data: CreateTemplateData): Promise<I
  * Get template by ID
  */
 export async function getTemplateByIdService(templateId: string): Promise<ITemplate | null> {
-  return await Template.findById(templateId)
+  return (await Template.findById(templateId)
     .populate("organizationId", "name")
     .populate("createdBy", "name email")
-    .lean()
+    .lean()) as unknown as ITemplate | null
 }
 
 /**
@@ -72,7 +72,7 @@ export async function getTemplatesByOrganizationIdService(
     templates.skip(options.skip)
   }
 
-  return await templates.lean()
+  return (await templates.lean()) as unknown as ITemplate[]
 }
 
 /**
@@ -92,18 +92,18 @@ export async function updateTemplateService(
   if (data.badgeImage !== undefined) updateData.badgeImage = data.badgeImage || null
   if (data.placeholders !== undefined) updateData.placeholders = data.placeholders
 
-  return await Template.findByIdAndUpdate(templateId, updateData, { new: true }).lean()
+  return (await Template.findByIdAndUpdate(templateId, updateData, { new: true }).lean()) as unknown as ITemplate | null
 }
 
 /**
  * Archive template (set isActive to false)
  */
 export async function archiveTemplateService(templateId: string): Promise<ITemplate | null> {
-  return await Template.findByIdAndUpdate(
+  return (await Template.findByIdAndUpdate(
     templateId,
     { isActive: false },
     { new: true }
-  ).lean()
+  ).lean()) as unknown as ITemplate | null
 }
 
 /**

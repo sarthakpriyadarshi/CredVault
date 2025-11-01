@@ -105,7 +105,7 @@ export default function IssuerAnalyticsPage() {
                     <Calendar className="h-4 w-4" />
                     Last 6 Months
                   </Button>
-                  <PrimaryButton size="sm" className="gap-2">
+                  <PrimaryButton className="gap-2">
                     <Download className="h-4 w-4" />
                     Export
                   </PrimaryButton>

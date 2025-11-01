@@ -29,8 +29,8 @@ export default function Features() {
   useEffect(() => {
     // Use primary color - oklch(0.65 0.20 15) for light, oklch(0.70 0.20 15) for dark
     // Converting to RGB: approximately rgb(220, 48, 77) for light mode
-    const lightPrimary = [0.863, 0.188, 0.302] // Primary pinkish-red for light mode
-    const darkPrimary = [0.863, 0.204, 0.306] // Primary pinkish-red for dark mode
+    const lightPrimary: [number, number, number] = [0.863, 0.188, 0.302] // Primary pinkish-red for light mode
+    const darkPrimary: [number, number, number] = [0.863, 0.204, 0.306] // Primary pinkish-red for dark mode
     const color = theme === "dark" ? darkPrimary : lightPrimary
     setBaseColor(color)
     setGlowColor(color)
