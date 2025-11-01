@@ -6,7 +6,7 @@ export interface IOrganization extends Document {
   description?: string
   website?: string
   logo?: string
-  verificationProof?: string // URL or path to verification proof image
+  verificationProof?: string // Base64 encoded verification proof image
   verificationStatus: "pending" | "approved" | "rejected"
   verifiedBy?: mongoose.Types.ObjectId // Admin user who verified
   verifiedAt?: Date

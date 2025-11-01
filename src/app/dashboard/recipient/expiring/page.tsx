@@ -91,6 +91,39 @@ export default function ExpiringCredentialsPage() {
     return diffDays
   }
 
+  const handleShare = async (credentialId: string, credentialTitle: string) => {
+    const verifyUrl = `${window.location.origin}/verify/${credentialId}`
+    const shareText = `Check out my credential: ${credentialTitle}`
+
+    try {
+      // Try Web Share API first (mobile)
+      if (navigator.share) {
+        await navigator.share({
+          title: credentialTitle,
+          text: shareText,
+          url: verifyUrl,
+        })
+        return
+      }
+
+      // Fallback to clipboard
+      await navigator.clipboard.writeText(verifyUrl)
+      alert("Verification link copied to clipboard!")
+    } catch (error) {
+      // User cancelled or error occurred
+      if (error instanceof Error && error.name !== "AbortError") {
+        // Try fallback to clipboard if Web Share failed
+        try {
+          await navigator.clipboard.writeText(verifyUrl)
+          alert("Verification link copied to clipboard!")
+        } catch (clipboardError) {
+          console.error("Failed to copy to clipboard:", clipboardError)
+          alert("Failed to share. Please copy the link manually.")
+        }
+      }
+    }
+  }
+
   if (status === "loading") {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -167,13 +200,18 @@ export default function ExpiringCredentialsPage() {
                           <p className="text-xs text-muted-foreground/70">{credential.date}</p>
                         </div>
                         <div className="flex gap-2 flex-wrap md:flex-nowrap">
-                          <Link href={`/dashboard/recipient/credentials/${credential.id}/verify`}>
+                          <Link href={`/verify/${credential.id}`}>
                             <Button variant="outline" size="sm" className="gap-2 bg-transparent">
                               <Eye className="h-4 w-4" />
                               <span className="hidden md:inline">Verify</span>
                             </Button>
                           </Link>
-                          <Button variant="outline" size="sm" className="gap-2 bg-transparent">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-2 bg-transparent"
+                            onClick={() => handleShare(credential.id, credential.title)}
+                          >
                             <Share2 className="h-4 w-4" />
                             <span className="hidden md:inline">Share</span>
                           </Button>

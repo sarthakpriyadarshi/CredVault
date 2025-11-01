@@ -15,7 +15,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-  DialogTrigger,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -597,16 +596,17 @@ export default function AdminSettingsPage() {
                                 </p>
                               </div>
                               <Dialog open={editSystemName} onOpenChange={setEditSystemName}>
-                                <DialogTrigger asChild>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => setSystemNameValue(systemSettings?.systemName || "")}
-                                  >
-                                    <Edit2 className="h-4 w-4 mr-1" />
-                                    Edit
-                                  </Button>
-                                </DialogTrigger>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    setSystemNameValue(systemSettings?.systemName || "")
+                                    setEditSystemName(true)
+                                  }}
+                                >
+                                  <Edit2 className="h-4 w-4 mr-1" />
+                                  Edit
+                                </Button>
                                 <DialogContent className="bg-card border-border/50">
                                   <DialogHeader>
                                     <DialogTitle>Edit System Name</DialogTitle>
@@ -641,16 +641,17 @@ export default function AdminSettingsPage() {
                                 </p>
                               </div>
                               <Dialog open={editTimeout} onOpenChange={setEditTimeout}>
-                                <DialogTrigger asChild>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => setTimeoutValue(systemSettings?.autoVerificationTimeoutHours || 24)}
-                                  >
-                                    <Edit2 className="h-4 w-4 mr-1" />
-                                    Edit
-                                  </Button>
-                                </DialogTrigger>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    setTimeoutValue(systemSettings?.autoVerificationTimeoutHours || 24)
+                                    setEditTimeout(true)
+                                  }}
+                                >
+                                  <Edit2 className="h-4 w-4 mr-1" />
+                                  Edit
+                                </Button>
                                 <DialogContent className="bg-card border-border/50">
                                   <DialogHeader>
                                     <DialogTitle>Edit Auto-verification Timeout</DialogTitle>
@@ -687,16 +688,17 @@ export default function AdminSettingsPage() {
                                 </p>
                               </div>
                               <Dialog open={editBackup} onOpenChange={setEditBackup}>
-                                <DialogTrigger asChild>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => setBackupValue(systemSettings?.backupSchedule || "0 2 * * *")}
-                                  >
-                                    <Edit2 className="h-4 w-4 mr-1" />
-                                    Edit
-                                  </Button>
-                                </DialogTrigger>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    setBackupValue(systemSettings?.backupSchedule || "0 2 * * *")
+                                    setEditBackup(true)
+                                  }}
+                                >
+                                  <Edit2 className="h-4 w-4 mr-1" />
+                                  Edit
+                                </Button>
                                 <DialogContent className="bg-card border-border/50">
                                   <DialogHeader>
                                     <DialogTitle>Edit Backup Schedule</DialogTitle>
@@ -746,16 +748,17 @@ export default function AdminSettingsPage() {
                                 </p>
                               </div>
                               <Dialog open={editApiKey} onOpenChange={setEditApiKey}>
-                                <DialogTrigger asChild>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => setApiKeyValue(systemSettings?.apiKeyRotationDays || 90)}
-                                  >
-                                    <Edit2 className="h-4 w-4 mr-1" />
-                                    Configure
-                                  </Button>
-                                </DialogTrigger>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    setApiKeyValue(systemSettings?.apiKeyRotationDays || 90)
+                                    setEditApiKey(true)
+                                  }}
+                                >
+                                  <Edit2 className="h-4 w-4 mr-1" />
+                                  Configure
+                                </Button>
                                 <DialogContent className="bg-card border-border/50">
                                   <DialogHeader>
                                     <DialogTitle>Configure API Key Rotation</DialogTitle>
@@ -791,20 +794,19 @@ export default function AdminSettingsPage() {
                                 </p>
                               </div>
                               <Dialog open={editIpWhitelist} onOpenChange={setEditIpWhitelist}>
-                                <DialogTrigger asChild>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() =>
-                                      setIpWhitelistValue(
-                                        systemSettings?.ipWhitelisting.join(", ") || "0.0.0.0/0"
-                                      )
-                                    }
-                                  >
-                                    <Edit2 className="h-4 w-4 mr-1" />
-                                    Manage
-                                  </Button>
-                                </DialogTrigger>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    setIpWhitelistValue(
+                                      systemSettings?.ipWhitelisting.join(", ") || "0.0.0.0/0"
+                                    )
+                                    setEditIpWhitelist(true)
+                                  }}
+                                >
+                                  <Edit2 className="h-4 w-4 mr-1" />
+                                  Manage
+                                </Button>
                                 <DialogContent className="bg-card border-border/50">
                                   <DialogHeader>
                                     <DialogTitle>Manage IP Whitelisting</DialogTitle>
@@ -837,23 +839,22 @@ export default function AdminSettingsPage() {
                                 <p className="text-sm text-muted-foreground">Update your account password</p>
                               </div>
                               <Dialog open={showChangePassword} onOpenChange={setShowChangePassword}>
-                                <DialogTrigger asChild>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => {
-                                      setPasswordForm({
-                                        currentPassword: "",
-                                        newPassword: "",
-                                        confirmPassword: "",
-                                      })
-                                      setError(null)
-                                    }}
-                                  >
-                                    <Edit2 className="h-4 w-4 mr-1" />
-                                    Change Password
-                                  </Button>
-                                </DialogTrigger>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    setPasswordForm({
+                                      currentPassword: "",
+                                      newPassword: "",
+                                      confirmPassword: "",
+                                    })
+                                    setError(null)
+                                    setShowChangePassword(true)
+                                  }}
+                                >
+                                  <Edit2 className="h-4 w-4 mr-1" />
+                                  Change Password
+                                </Button>
                                 <DialogContent className="bg-card border-border/50 max-w-md">
                                   <DialogHeader>
                                     <DialogTitle>Change Password</DialogTitle>
@@ -1002,11 +1003,9 @@ export default function AdminSettingsPage() {
                       <div className="flex justify-between items-center">
                         <h3 className="text-lg font-semibold text-foreground">Admin Users</h3>
                         <Dialog open={showCreateAdmin} onOpenChange={setShowCreateAdmin}>
-                          <DialogTrigger asChild>
-                            <PrimaryButton onClick={() => setShowCreateAdmin(true)}>
-                              Add Admin User
-                            </PrimaryButton>
-                          </DialogTrigger>
+                          <PrimaryButton onClick={() => setShowCreateAdmin(true)}>
+                            Add Admin User
+                          </PrimaryButton>
                           <DialogContent className="bg-card border-border/50 max-w-md">
                             <DialogHeader>
                               <DialogTitle>Create Admin User</DialogTitle>

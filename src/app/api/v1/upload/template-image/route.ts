@@ -1,7 +1,4 @@
 import { NextRequest, NextResponse } from "next/server"
-import { writeFile, mkdir } from "fs/promises"
-import { join } from "path"
-import { existsSync } from "fs"
 import { withIssuer } from "@/lib/api/middleware"
 
 async function handler(
@@ -48,30 +45,19 @@ async function handler(
       return NextResponse.json({ error: "File size exceeds 10MB limit" }, { status: 400 })
     }
 
-    // Create uploads directory if it doesn't exist
-    const uploadsDir = join(process.cwd(), "public", "uploads", "templates")
-    if (!existsSync(uploadsDir)) {
-      await mkdir(uploadsDir, { recursive: true })
-    }
-
-    // Generate unique filename
-    const timestamp = Date.now()
-    const randomString = Math.random().toString(36).substring(2, 15)
-    const extension = file.name.split(".").pop()?.toLowerCase() || "png"
-    const filename = `${timestamp}-${randomString}.${extension}`
-
-    // Save file
+    // Read file and convert to base64
     const bytes = await file.arrayBuffer()
     const buffer = Buffer.from(bytes)
-    const filepath = join(uploadsDir, filename)
-    await writeFile(filepath, buffer)
-
-    // Return file URL
-    const fileUrl = `/uploads/templates/${filename}`
+    const base64 = buffer.toString("base64")
+    
+    // Create data URL with MIME type
+    const dataUrl = `data:${file.type};base64,${base64}`
 
     return NextResponse.json({
-      url: fileUrl,
-      filename,
+      base64: dataUrl,
+      mimeType: file.type,
+      size: file.size,
+      type: imageType,
     })
   } catch (error) {
     console.error("Error uploading template image:", error)

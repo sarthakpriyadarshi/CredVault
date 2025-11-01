@@ -149,7 +149,7 @@ async function handler(
 
             if (displayedPlaceholders.length > 0) {
               certificateUrl = await generateCertificate({
-                templateImagePath: template.certificateImage,
+                templateImageBase64: template.certificateImage,
                 placeholders: displayedPlaceholders,
                 data: credentialData,
               })
@@ -164,7 +164,7 @@ async function handler(
 
             if (displayedPlaceholders.length > 0) {
               badgeUrl = await generateBadge({
-                templateImagePath: template.badgeImage,
+                templateImageBase64: template.badgeImage,
                 placeholders: displayedPlaceholders,
                 data: credentialData,
               })

@@ -1,41 +1,46 @@
 import sharp from "sharp"
 import { createCanvas, loadImage } from "canvas"
-import { join } from "path"
-import { existsSync, mkdirSync, writeFileSync } from "fs"
 import { IPlaceholder } from "@/models/Template"
 import { loadFont } from "./font-loader"
 
 interface GenerateCertificateOptions {
-  templateImagePath: string // Path to the template certificate image (e.g., /uploads/templates/xxx.png)
+  templateImageBase64: string // Base64 data URL of the template certificate image (e.g., data:image/png;base64,...)
   placeholders: IPlaceholder[]
   data: Record<string, string> // Field name -> value mapping
-  outputFilename?: string
 }
 
 /**
  * Generate a certificate image by overlaying text on the template image
+ * Returns a base64 data URL
  */
 export async function generateCertificate(options: GenerateCertificateOptions): Promise<string> {
-  const { templateImagePath, placeholders, data, outputFilename } = options
+  const { templateImageBase64, placeholders, data } = options
 
   try {
-    // Resolve the full path to the template image
-    const templateFullPath = join(process.cwd(), "public", templateImagePath.replace(/^\//, ""))
-
-    if (!existsSync(templateFullPath)) {
-      throw new Error(`Template image not found: ${templateFullPath}`)
+    // Validate that templateImageBase64 is a data URL
+    if (!templateImageBase64.startsWith("data:")) {
+      throw new Error("Template image must be a base64 data URL")
     }
 
-    // Load the template image
-    // First check if it's an image file or PDF
-    const fileExtension = templateFullPath.split(".").pop()?.toLowerCase()
-    
-    if (fileExtension === "pdf") {
+    // Extract MIME type and base64 data from data URL
+    const matches = templateImageBase64.match(/^data:([^;]+);base64,(.+)$/)
+    if (!matches || matches.length < 3) {
+      throw new Error("Invalid base64 data URL format")
+    }
+
+    const mimeType = matches[1]
+    const base64Data = matches[2]
+
+    // Check if it's a PDF (not yet supported)
+    if (mimeType === "application/pdf") {
       throw new Error("PDF templates are not yet supported. Please use PNG, JPG, or JPEG images.")
     }
 
-    // For images, use sharp to get dimensions and convert to PNG if needed
-    const imageMetadata = await sharp(templateFullPath).metadata()
+    // Convert base64 to buffer
+    const imageBuffer = Buffer.from(base64Data, "base64")
+
+    // Get image dimensions using sharp
+    const imageMetadata = await sharp(imageBuffer).metadata()
     const width = imageMetadata.width || 0
     const height = imageMetadata.height || 0
 
@@ -43,9 +48,12 @@ export async function generateCertificate(options: GenerateCertificateOptions): 
       throw new Error("Could not determine image dimensions")
     }
 
-    // Convert image to PNG buffer for canvas compatibility
-    const imageBuffer = await sharp(templateFullPath).png().toBuffer()
-    const image = await loadImage(imageBuffer)
+    // Convert image to PNG buffer for canvas compatibility (if needed)
+    const processedBuffer = mimeType.startsWith("image/")
+      ? await sharp(imageBuffer).png().toBuffer()
+      : imageBuffer
+    
+    const image = await loadImage(processedBuffer)
 
     // Create canvas with the same dimensions as the image
     const canvas = createCanvas(width, height)
@@ -158,23 +166,12 @@ export async function generateCertificate(options: GenerateCertificateOptions): 
     // Convert canvas to buffer
     const certificateBuffer = canvas.toBuffer("image/png")
 
-    // Save to public/uploads/credentials directory
-    const credentialsDir = join(process.cwd(), "public", "uploads", "credentials")
-    if (!existsSync(credentialsDir)) {
-      mkdirSync(credentialsDir, { recursive: true })
-    }
+    // Convert buffer to base64 data URL
+    const base64 = certificateBuffer.toString("base64")
+    const dataUrl = `data:image/png;base64,${base64}`
 
-    // Generate unique filename
-    const timestamp = Date.now()
-    const randomString = Math.random().toString(36).substring(2, 15)
-    const filename = outputFilename || `certificate-${timestamp}-${randomString}.png`
-    const outputPath = join(credentialsDir, filename)
-
-    // Write the file
-    writeFileSync(outputPath, certificateBuffer)
-
-    // Return the public URL
-    return `/uploads/credentials/${filename}`
+    // Return the base64 data URL
+    return dataUrl
   } catch (error) {
     console.error("Error generating certificate:", error)
     throw new Error(`Failed to generate certificate: ${error instanceof Error ? error.message : "Unknown error"}`)
@@ -183,6 +180,7 @@ export async function generateCertificate(options: GenerateCertificateOptions): 
 
 /**
  * Generate a badge image (similar to certificate but for badges)
+ * Returns a base64 data URL
  */
 export async function generateBadge(options: GenerateCertificateOptions): Promise<string> {
   // Badge generation is similar to certificate

@@ -5,7 +5,7 @@ import type React from "react"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { LayoutDashboard, FileText, Users, BarChart3, Settings, HelpCircle, ChevronDown } from "lucide-react"
+import { LayoutDashboard, FileText, Users, BarChart3, Settings, HelpCircle, ChevronDown, ShieldCheck, UploadCloud } from "lucide-react"
 import { useState } from "react"
 
 interface SidebarItem {
@@ -66,6 +66,11 @@ export function DashboardSidebar({ userRole, badgeCounts }: DashboardSidebarProp
       icon: <LayoutDashboard className="h-5 w-5" />,
     },
     {
+      label: "Manage Credentials",
+      href: "/dashboard/issuer/credentials",
+      icon: <ShieldCheck className="h-5 w-5" />,
+    },
+    {
       label: "Templates",
       href: "/dashboard/issuer/templates",
       icon: <FileText className="h-5 w-5" />,
@@ -83,7 +88,7 @@ export function DashboardSidebar({ userRole, badgeCounts }: DashboardSidebarProp
     {
       label: "Bulk Issuance",
       href: "/dashboard/issuer/bulk-issuance",
-      icon: <BarChart3 className="h-5 w-5" />,
+      icon: <UploadCloud className="h-5 w-5" />,
     },
     {
       label: "Analytics",

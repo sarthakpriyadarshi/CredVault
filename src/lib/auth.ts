@@ -64,6 +64,7 @@ export const authOptions: NextAuthConfig = {
             role: user.role,
             organizationId: user.organizationId?.toString(),
             isVerified: user.isVerified,
+            image: user.image || null,
           }
         } catch (error: unknown) {
           console.error("Auth error:", error)
@@ -146,10 +147,16 @@ export const authOptions: NextAuthConfig = {
             token.role = dbUser.role
             token.organizationId = dbUser.organizationId?.toString()
             token.isVerified = dbUser.isVerified
+            token.image = dbUser.image || null
           }
         } catch (error) {
           console.error("Error refreshing user data:", error)
         }
+      }
+      
+      // If user object has image, store it in token
+      if (user && (user as any).image !== undefined) {
+        token.image = (user as any).image
       }
       
       return token
@@ -161,6 +168,7 @@ export const authOptions: NextAuthConfig = {
         session.user.role = token.role as string
         session.user.organizationId = token.organizationId as string
         session.user.isVerified = token.isVerified as boolean
+        session.user.image = (token.image as string) || null
       }
       return session
     },

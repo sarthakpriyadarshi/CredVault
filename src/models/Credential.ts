@@ -12,8 +12,8 @@ export interface ICredential extends Document {
   recipientId?: mongoose.Types.ObjectId
   credentialData: ICredentialData
   type: "certificate" | "badge" | "both"
-  certificateUrl?: string
-  badgeUrl?: string
+  certificateUrl?: string // Base64 encoded certificate image (data URL)
+  badgeUrl?: string // Base64 encoded badge image (data URL)
   isOnBlockchain: boolean
   blockchainHash?: string
   blockchainTxId?: string

@@ -10,6 +10,13 @@ export interface IUser extends Document {
   isVerified: boolean
   emailVerified: boolean
   image?: string
+  // Profile fields
+  profilePublic?: boolean
+  description?: string
+  linkedin?: string
+  github?: string
+  twitter?: string
+  website?: string
   createdAt: Date
   updatedAt: Date
   // Methods
@@ -60,6 +67,35 @@ const UserSchema = new Schema<IUser>(
     image: {
       type: String,
       default: null,
+    },
+    profilePublic: {
+      type: Boolean,
+      default: true, // Profile is public by default
+    },
+    description: {
+      type: String,
+      default: null,
+      trim: true,
+    },
+    linkedin: {
+      type: String,
+      default: null,
+      trim: true,
+    },
+    github: {
+      type: String,
+      default: null,
+      trim: true,
+    },
+    twitter: {
+      type: String,
+      default: null,
+      trim: true,
+    },
+    website: {
+      type: String,
+      default: null,
+      trim: true,
     },
   },
   {

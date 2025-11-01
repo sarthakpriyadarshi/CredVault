@@ -106,7 +106,7 @@ export default function IssuerSignupPage() {
         }
 
         const uploadData = await uploadResponse.json()
-        proofUrl = uploadData.url
+        proofUrl = uploadData.base64
       } catch (uploadErr) {
         console.error("Upload error:", uploadErr)
         setError("Failed to upload proof document. Please try again.")

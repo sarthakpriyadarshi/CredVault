@@ -45,7 +45,6 @@ export default function CreateTemplatePage() {
   const [templateName, setTemplateName] = useState("")
   const [category, setCategory] = useState("general")
   const [templateType, setTemplateType] = useState<"certificate" | "badge" | "both">("certificate")
-  const [useBlockchain, setUseBlockchain] = useState(false)
   const [fields, setFields] = useState<TemplateField[]>([])
   const [selectedField, setSelectedField] = useState<string | null>(null)
   const [certificateImage, setCertificateImage] = useState<string | null>(null)
@@ -382,11 +381,11 @@ export default function CreateTemplatePage() {
 
       const data = await res.json()
 
-      // Store the URL instead of base64
+      // Store the base64 data URL
       if (type === "certificate") {
-        setCertificateImage(data.url)
+        setCertificateImage(data.base64)
       } else {
-        setBadgeImage(data.url)
+        setBadgeImage(data.base64)
       }
 
       // Image will be loaded by the useEffect that watches certificateImage
@@ -524,7 +523,6 @@ export default function CreateTemplatePage() {
         name: templateName.trim(),
         category: newCategory.trim() || category,
         type: templateType,
-        useBlockchain,
         fields: fields.map((f) => {
           // For email fields, coordinates are optional (they may not be displayed)
           if (f.type === "email" && f.x === undefined && f.y === undefined) {
@@ -742,14 +740,6 @@ export default function CreateTemplatePage() {
                           </div>
                         ))}
                       </div>
-                    </div>
-
-                    {/* Blockchain Option */}
-                    <div className="flex items-center gap-2 p-3 bg-primary/10 rounded-lg">
-                      <Checkbox checked={useBlockchain} onCheckedChange={setUseBlockchain} id="blockchain" />
-                      <Label htmlFor="blockchain" className="font-normal cursor-pointer flex-1">
-                        Use Blockchain Verification
-                      </Label>
                     </div>
                   </Card>
 

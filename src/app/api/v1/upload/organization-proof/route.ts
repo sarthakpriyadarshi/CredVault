@@ -1,7 +1,4 @@
 import { NextRequest, NextResponse } from "next/server"
-import { writeFile, mkdir } from "fs/promises"
-import { join } from "path"
-import { existsSync } from "fs"
 
 async function handler(req: NextRequest) {
   if (req.method !== "POST") {
@@ -31,31 +28,19 @@ async function handler(req: NextRequest) {
       return NextResponse.json({ error: "File size exceeds 5MB limit" }, { status: 400 })
     }
 
-    // Create uploads directory if it doesn't exist
-    const uploadsDir = join(process.cwd(), "public", "uploads", "organization-proofs")
-    if (!existsSync(uploadsDir)) {
-      await mkdir(uploadsDir, { recursive: true })
-    }
-
-    // Generate unique filename
-    const timestamp = Date.now()
-    const randomString = Math.random().toString(36).substring(2, 15)
-    const extension = file.name.split(".").pop()
-    const filename = `${timestamp}-${randomString}.${extension}`
-
-    // Save file
+    // Read file and convert to base64
     const bytes = await file.arrayBuffer()
     const buffer = Buffer.from(bytes)
-    const filepath = join(uploadsDir, filename)
-    await writeFile(filepath, buffer)
-
-    // Return file URL
-    const fileUrl = `/uploads/organization-proofs/${filename}`
+    const base64 = buffer.toString("base64")
+    
+    // Create data URL with MIME type
+    const dataUrl = `data:${file.type};base64,${base64}`
 
     return NextResponse.json({
       message: "File uploaded successfully",
-      url: fileUrl,
-      filename: filename,
+      base64: dataUrl,
+      mimeType: file.type,
+      size: file.size,
     })
   } catch (error: unknown) {
     console.error("File upload error:", error)

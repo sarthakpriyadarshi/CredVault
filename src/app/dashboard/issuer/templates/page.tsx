@@ -8,7 +8,7 @@ import { DashboardSidebar } from "@/components/dashboard-sidebar"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { FileText, Edit, Trash2, Plus, Eye, Archive } from "lucide-react"
+import { FileText, Edit, Trash2, Plus, Eye, Archive, Download } from "lucide-react"
 import Link from "next/link"
 import { PrimaryButton } from "@/components/ui/primary-button"
 
@@ -19,6 +19,7 @@ interface Template {
   credentialsIssued: number
   createdAt: string
   archived?: boolean
+  fields?: Array<{ name: string; type: string }>
 }
 
 export default function TemplatesPage() {
@@ -69,6 +70,7 @@ export default function TemplatesPage() {
               ? new Date(t.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
               : new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
             archived: t.archived || t.isArchived || false,
+            fields: t.fields || [],
           }))
         )
       }
@@ -122,6 +124,50 @@ export default function TemplatesPage() {
     } catch (error) {
       console.error("Error deleting template:", error)
       alert("An error occurred")
+    }
+  }
+
+  const downloadCSVTemplate = async (template: Template) => {
+    try {
+      // Fetch full template details to get all fields
+      const res = await fetch(`/api/v1/issuer/templates/${template.id}`, {
+        credentials: "include",
+      })
+
+      if (!res.ok) {
+        alert("Failed to fetch template details")
+        return
+      }
+
+      const templateData = await res.json()
+      const templateDetails = templateData.template || templateData
+
+      // Get all field names from placeholders
+      const fields = templateDetails.placeholders || templateDetails.fields || template.fields || []
+      
+      // Create CSV header row
+      const headers = fields.map((f: any) => f.fieldName || f.name || "Field")
+      
+      // Create CSV content with sample data
+      const csvRows = [
+        headers.join(","), // Header row
+        headers.map(() => "Sample Value").join(","), // Sample row 1
+        headers.map(() => "Sample Value").join(","), // Sample row 2
+      ]
+
+      const csv = csvRows.join("\n")
+
+      // Download CSV
+      const element = document.createElement("a")
+      element.setAttribute("href", "data:text/csv;charset=utf-8," + encodeURIComponent(csv))
+      element.setAttribute("download", `${template.name.replace(/[^a-z0-9]/gi, "_")}_template.csv`)
+      element.style.display = "none"
+      document.body.appendChild(element)
+      element.click()
+      document.body.removeChild(element)
+    } catch (error) {
+      console.error("Error downloading CSV template:", error)
+      alert("Failed to download CSV template")
     }
   }
 
@@ -242,6 +288,15 @@ export default function TemplatesPage() {
                         <Button variant="outline" size="sm" className="flex-1 gap-1 bg-transparent">
                           <Eye className="h-4 w-4" />
                           View
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => downloadCSVTemplate(template)}
+                          className="bg-transparent"
+                          title="Download CSV Template"
+                        >
+                          <Download className="h-4 w-4" />
                         </Button>
                         <Button variant="outline" size="sm" className="bg-transparent">
                           <Edit className="h-4 w-4" />

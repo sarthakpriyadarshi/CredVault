@@ -19,8 +19,8 @@ export interface ITemplate extends Document {
   organizationId: mongoose.Types.ObjectId
   createdBy: mongoose.Types.ObjectId
   type: "certificate" | "badge" | "both"
-  certificateImage?: string // URL or path to certificate image/PDF
-  badgeImage?: string // URL or path to badge image
+  certificateImage?: string // Base64 encoded certificate image/PDF
+  badgeImage?: string // Base64 encoded badge image
   placeholders: IPlaceholder[]
   isActive: boolean
   createdAt: Date

@@ -7,7 +7,17 @@ import { DashboardHeader } from "@/components/dashboard-header"
 import { DashboardSidebar } from "@/components/dashboard-sidebar"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { ChevronRight, Save, Building2, Bell, Key, FileText } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { ChevronRight, Save, Building2, Bell, Lock, FileText, Edit2, Upload } from "lucide-react"
 import { PrimaryButton } from "@/components/ui/primary-button"
 
 export default function IssuerSettingsPage() {
@@ -19,8 +29,31 @@ export default function IssuerSettingsPage() {
     webhookEnabled: true,
     apiAccessEnabled: true,
   })
-  const [organization, setOrganization] = useState<any>(null)
+  const [organization, setOrganization] = useState<{
+    id?: string
+    name?: string
+    email?: string
+    website?: string
+    verificationStatus?: string
+    description?: string
+    logo?: string
+  } | null>(null)
   const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
+
+  // Edit states
+  const [editName, setEditName] = useState(false)
+  const [editWebsite, setEditWebsite] = useState(false)
+  const [showChangePassword, setShowChangePassword] = useState(false)
+  const [nameValue, setNameValue] = useState("")
+  const [websiteValue, setWebsiteValue] = useState("")
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  })
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -60,6 +93,9 @@ export default function IssuerSettingsPage() {
   }
 
   const handleSaveSettings = async () => {
+    setSaving(true)
+    setError(null)
+    setSuccess(null)
     try {
       const res = await fetch("/api/v1/issuer/settings", {
         method: "PUT",
@@ -71,14 +107,136 @@ export default function IssuerSettingsPage() {
       })
 
       if (!res.ok) {
-        alert("Failed to save settings")
-        return
+        throw new Error("Failed to save settings")
       }
 
-      alert("Settings saved successfully!")
+      setSuccess("Settings saved successfully!")
+      setTimeout(() => setSuccess(null), 3000)
     } catch (error) {
       console.error("Error saving settings:", error)
-      alert("An error occurred")
+      setError("Failed to save settings")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleSaveName = async () => {
+    if (!nameValue.trim()) {
+      setError("Organization name cannot be empty")
+      return
+    }
+
+    setSaving(true)
+    setError(null)
+    try {
+      const res = await fetch("/api/v1/issuer/organization", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({ name: nameValue.trim() }),
+      })
+
+      if (!res.ok) {
+        throw new Error("Failed to update organization name")
+      }
+
+      setEditName(false)
+      await loadOrganization()
+      setSuccess("Organization name updated successfully")
+      setTimeout(() => setSuccess(null), 3000)
+    } catch {
+      setError("Failed to update organization name")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleSaveWebsite = async () => {
+    setSaving(true)
+    setError(null)
+    try {
+      const res = await fetch("/api/v1/issuer/organization", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({ website: websiteValue.trim() }),
+      })
+
+      if (!res.ok) {
+        throw new Error("Failed to update website")
+      }
+
+      setEditWebsite(false)
+      await loadOrganization()
+      setSuccess("Website updated successfully")
+      setTimeout(() => setSuccess(null), 3000)
+    } catch {
+      setError("Failed to update website")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleChangePassword = async () => {
+    if (!passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
+      setError("All fields are required")
+      return
+    }
+
+    if (passwordForm.newPassword.length < 8) {
+      setError("New password must be at least 8 characters")
+      return
+    }
+
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      setError("New password and confirm password do not match")
+      return
+    }
+
+    if (passwordForm.currentPassword === passwordForm.newPassword) {
+      setError("New password must be different from current password")
+      return
+    }
+
+    setSaving(true)
+    setError(null)
+    setSuccess(null)
+
+    try {
+      const res = await fetch("/api/v1/issuer/change-password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          currentPassword: passwordForm.currentPassword,
+          newPassword: passwordForm.newPassword,
+        }),
+      })
+
+      if (!res.ok) {
+        const errorData = await res.json()
+        throw new Error(errorData.error || "Failed to change password")
+      }
+
+      setSuccess("Password changed successfully")
+      setShowChangePassword(false)
+      setPasswordForm({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      })
+      setTimeout(() => setSuccess(null), 3000)
+    } catch (err) {
+      console.error("Error changing password:", err)
+      setError(err && typeof err === "object" && "message" in err ? String(err.message) : "Failed to change password")
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -117,6 +275,21 @@ export default function IssuerSettingsPage() {
                 <p className="text-muted-foreground">Manage your issuer profile and preferences</p>
               </div>
 
+              {/* Messages */}
+              {error && (
+                <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
+                  {error}
+                  <button onClick={() => setError(null)} className="ml-2 text-red-300 hover:text-red-200">
+                    ×
+                  </button>
+                </div>
+              )}
+              {success && (
+                <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg text-green-400 text-sm">
+                  {success}
+                </div>
+              )}
+
               <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
                 {/* Settings Navigation */}
                 <div className="lg:col-span-1">
@@ -134,7 +307,7 @@ export default function IssuerSettingsPage() {
                         title: "Notifications",
                         desc: "Alert settings",
                       },
-                      { id: "api", icon: <Key className="h-5 w-5" />, title: "API Keys", desc: "Manage access keys" },
+                      { id: "security", icon: <Lock className="h-5 w-5" />, title: "Security", desc: "Password & access" },
                       {
                         id: "templates",
                         icon: <FileText className="h-5 w-5" />,
@@ -172,22 +345,196 @@ export default function IssuerSettingsPage() {
                           <div className="text-muted-foreground text-sm">Loading...</div>
                         ) : (
                           <div className="space-y-4">
-                            {[
-                              { label: "Organization Name", value: organization?.name || "N/A" },
-                              { label: "Email", value: organization?.email || session?.user?.email || "N/A" },
-                              { label: "Website", value: organization?.website || "N/A" },
-                              { label: "Verification Status", value: organization?.verificationStatus || "N/A" },
-                            ].map((field, i) => (
-                              <div key={i} className="flex items-center justify-between p-4 bg-background/50 rounded-lg">
+                            {/* Logo Upload */}
+                            <div className="space-y-2">
+                              <Label>Organization Logo</Label>
+                              <div className="flex items-center gap-4">
+                                {organization?.logo ? (
+                                  <img
+                                    src={organization.logo}
+                                    alt="Logo"
+                                    className="w-20 h-20 rounded-full object-cover border-2 border-primary/50"
+                                  />
+                                ) : (
+                                  <div className="w-20 h-20 rounded-full bg-primary/20 flex items-center justify-center border-2 border-primary/50">
+                                    <Building2 className="h-10 w-10 text-primary" />
+                                  </div>
+                                )}
                                 <div>
-                                  <p className="font-medium text-foreground">{field.label}</p>
-                                  <p className="text-sm text-muted-foreground">{field.value}</p>
+                                  <input
+                                    type="file"
+                                    id="logo-upload"
+                                    accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                                    className="hidden"
+                                    onChange={async (e) => {
+                                      const file = e.target.files?.[0]
+                                      if (!file) return
+
+                                      try {
+                                        const formData = new FormData()
+                                        formData.append("file", file)
+
+                                        const res = await fetch("/api/v1/upload/logo", {
+                                          method: "POST",
+                                          credentials: "include",
+                                          body: formData,
+                                        })
+
+                                        if (!res.ok) {
+                                          const error = await res.json()
+                                          alert(error.error || "Failed to upload logo")
+                                          return
+                                        }
+
+                                        const data = await res.json()
+                                        
+                                        // Update organization logo via API
+                                        const updateRes = await fetch("/api/v1/issuer/organization", {
+                                          method: "PUT",
+                                          headers: {
+                                            "Content-Type": "application/json",
+                                          },
+                                          credentials: "include",
+                                          body: JSON.stringify({ logo: data.base64 }),
+                                        })
+
+                                        if (!updateRes.ok) {
+                                          const error = await updateRes.json()
+                                          alert(error.error || "Failed to update logo")
+                                          return
+                                        }
+
+                                        setOrganization({ ...organization, logo: data.base64 })
+                                        setSuccess("Logo updated successfully!")
+                                        setTimeout(() => setSuccess(null), 3000)
+                                      } catch (error) {
+                                        console.error("Error uploading logo:", error)
+                                        alert("Failed to upload logo")
+                                      }
+                                    }}
+                                  />
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    type="button" 
+                                    className="gap-2"
+                                    onClick={() => {
+                                      const fileInput = document.getElementById("logo-upload") as HTMLInputElement
+                                      fileInput?.click()
+                                    }}
+                                  >
+                                    <Upload className="h-4 w-4" />
+                                    Upload Logo
+                                  </Button>
                                 </div>
-                                <Button variant="outline" size="sm">
+                              </div>
+                              <p className="text-xs text-muted-foreground">Upload organization logo (max 5MB)</p>
+                            </div>
+
+                            <div className="flex items-center justify-between p-4 bg-background/50 rounded-lg">
+                              <div>
+                                <p className="font-medium text-foreground">Organization Name</p>
+                                <p className="text-sm text-muted-foreground">{organization?.name || "N/A"}</p>
+                              </div>
+                              <Dialog open={editName} onOpenChange={setEditName}>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    setNameValue(organization?.name || "")
+                                    setEditName(true)
+                                  }}
+                                >
+                                  <Edit2 className="h-4 w-4 mr-1" />
                                   Edit
                                 </Button>
+                                <DialogContent className="bg-card border-border/50">
+                                  <DialogHeader>
+                                    <DialogTitle>Edit Organization Name</DialogTitle>
+                                    <DialogDescription>Update your organization name</DialogDescription>
+                                  </DialogHeader>
+                                  <div className="space-y-4">
+                                    <div>
+                                      <Label>Organization Name</Label>
+                                      <Input
+                                        value={nameValue}
+                                        onChange={(e) => setNameValue(e.target.value)}
+                                        placeholder="Enter organization name"
+                                        className="mt-1"
+                                      />
+                                    </div>
+                                  </div>
+                                  <DialogFooter>
+                                    <Button variant="outline" onClick={() => setEditName(false)} disabled={saving}>
+                                      Cancel
+                                    </Button>
+                                    <PrimaryButton onClick={handleSaveName} disabled={saving}>
+                                      {saving ? "Saving..." : "Save"}
+                                    </PrimaryButton>
+                                  </DialogFooter>
+                                </DialogContent>
+                              </Dialog>
+                            </div>
+                            <div className="flex items-center justify-between p-4 bg-background/50 rounded-lg">
+                              <div>
+                                <p className="font-medium text-foreground">Email</p>
+                                <p className="text-sm text-muted-foreground">{session?.user?.email || "N/A"}</p>
                               </div>
-                            ))}
+                              <Button variant="outline" size="sm" disabled>
+                                <Edit2 className="h-4 w-4 mr-1" />
+                                Edit
+                              </Button>
+                            </div>
+                            <div className="flex items-center justify-between p-4 bg-background/50 rounded-lg">
+                              <div>
+                                <p className="font-medium text-foreground">Website</p>
+                                <p className="text-sm text-muted-foreground">{organization?.website || "N/A"}</p>
+                              </div>
+                              <Dialog open={editWebsite} onOpenChange={setEditWebsite}>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    setWebsiteValue(organization?.website || "")
+                                    setEditWebsite(true)
+                                  }}
+                                >
+                                  <Edit2 className="h-4 w-4 mr-1" />
+                                  Edit
+                                </Button>
+                                <DialogContent className="bg-card border-border/50">
+                                  <DialogHeader>
+                                    <DialogTitle>Edit Website</DialogTitle>
+                                    <DialogDescription>Update your organization website</DialogDescription>
+                                  </DialogHeader>
+                                  <div className="space-y-4">
+                                    <div>
+                                      <Label>Website</Label>
+                                      <Input
+                                        value={websiteValue}
+                                        onChange={(e) => setWebsiteValue(e.target.value)}
+                                        placeholder="https://example.com"
+                                        className="mt-1"
+                                      />
+                                    </div>
+                                  </div>
+                                  <DialogFooter>
+                                    <Button variant="outline" onClick={() => setEditWebsite(false)} disabled={saving}>
+                                      Cancel
+                                    </Button>
+                                    <PrimaryButton onClick={handleSaveWebsite} disabled={saving}>
+                                      {saving ? "Saving..." : "Save"}
+                                    </PrimaryButton>
+                                  </DialogFooter>
+                                </DialogContent>
+                              </Dialog>
+                            </div>
+                            <div className="flex items-center justify-between p-4 bg-background/50 rounded-lg">
+                              <div>
+                                <p className="font-medium text-foreground">Verification Status</p>
+                                <p className="text-sm text-muted-foreground">{organization?.verificationStatus || "N/A"}</p>
+                              </div>
+                            </div>
                           </div>
                         )}
                       </Card>
@@ -234,18 +581,110 @@ export default function IssuerSettingsPage() {
                     </div>
                   )}
 
-                  {activeSection === "api" && (
+                  {activeSection === "security" && (
                     <div className="space-y-4">
-                      <div className="flex justify-between items-center">
-                        <h3 className="text-lg font-semibold text-foreground">API Keys</h3>
-                        <PrimaryButton size="sm">Generate New Key</PrimaryButton>
-                      </div>
                       <Card className="p-6 border border-border/50 bg-card/50 backdrop-blur">
-                        <div className="space-y-3">
-                          <p className="text-sm text-muted-foreground">
-                            API keys allow you to programmatically issue credentials and manage templates.
-                          </p>
-                          <p className="text-sm text-muted-foreground">No API keys generated yet.</p>
+                        <h3 className="text-lg font-semibold text-foreground mb-4">Security</h3>
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between p-4 bg-background/50 rounded-lg">
+                            <div>
+                              <p className="font-medium text-foreground">Change Password</p>
+                              <p className="text-sm text-muted-foreground">Update your account password</p>
+                            </div>
+                            <Dialog open={showChangePassword} onOpenChange={setShowChangePassword}>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setPasswordForm({
+                                    currentPassword: "",
+                                    newPassword: "",
+                                    confirmPassword: "",
+                                  })
+                                  setError(null)
+                                  setShowChangePassword(true)
+                                }}
+                              >
+                                <Edit2 className="h-4 w-4 mr-1" />
+                                Change Password
+                              </Button>
+                              <DialogContent className="bg-card border-border/50 max-w-md">
+                                <DialogHeader>
+                                  <DialogTitle>Change Password</DialogTitle>
+                                  <DialogDescription>
+                                    Enter your current password and choose a new secure password
+                                  </DialogDescription>
+                                </DialogHeader>
+                                <div className="space-y-4">
+                                  <div>
+                                    <Label htmlFor="current-password">Current Password</Label>
+                                    <Input
+                                      id="current-password"
+                                      type="password"
+                                      value={passwordForm.currentPassword}
+                                      onChange={(e) =>
+                                        setPasswordForm({ ...passwordForm, currentPassword: e.target.value })
+                                      }
+                                      placeholder="Enter current password"
+                                      className="mt-1"
+                                      autoComplete="current-password"
+                                    />
+                                  </div>
+                                  <div>
+                                    <Label htmlFor="new-password">New Password</Label>
+                                    <Input
+                                      id="new-password"
+                                      type="password"
+                                      value={passwordForm.newPassword}
+                                      onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                                      placeholder="Min. 8 characters"
+                                      className="mt-1"
+                                      autoComplete="new-password"
+                                    />
+                                  </div>
+                                  <div>
+                                    <Label htmlFor="confirm-new-password">Confirm New Password</Label>
+                                    <Input
+                                      id="confirm-new-password"
+                                      type="password"
+                                      value={passwordForm.confirmPassword}
+                                      onChange={(e) =>
+                                        setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })
+                                      }
+                                      placeholder="Confirm new password"
+                                      className="mt-1"
+                                      autoComplete="new-password"
+                                    />
+                                  </div>
+                                  {error && (
+                                    <div className="p-2 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
+                                      {error}
+                                    </div>
+                                  )}
+                                </div>
+                                <DialogFooter>
+                                  <Button
+                                    variant="outline"
+                                    onClick={() => {
+                                      setShowChangePassword(false)
+                                      setPasswordForm({
+                                        currentPassword: "",
+                                        newPassword: "",
+                                        confirmPassword: "",
+                                      })
+                                      setError(null)
+                                    }}
+                                    disabled={saving}
+                                  >
+                                    Cancel
+                                  </Button>
+                                  <PrimaryButton onClick={handleChangePassword} disabled={saving}>
+                                    {saving ? "Changing..." : "Change Password"}
+                                  </PrimaryButton>
+                                </DialogFooter>
+                              </DialogContent>
+                            </Dialog>
+                          </div>
                         </div>
                       </Card>
                     </div>
@@ -261,7 +700,7 @@ export default function IssuerSettingsPage() {
                               <p className="font-medium text-foreground">Default Expiration Period</p>
                               <p className="text-sm text-muted-foreground">5 years</p>
                             </div>
-                            <Button variant="outline" size="sm">
+                            <Button variant="outline" size="sm" disabled>
                               Change
                             </Button>
                           </div>
@@ -270,7 +709,7 @@ export default function IssuerSettingsPage() {
                               <p className="font-medium text-foreground">Verification Required</p>
                               <p className="text-sm text-muted-foreground">Enabled</p>
                             </div>
-                            <Button variant="outline" size="sm">
+                            <Button variant="outline" size="sm" disabled>
                               Configure
                             </Button>
                           </div>
@@ -280,13 +719,17 @@ export default function IssuerSettingsPage() {
                   )}
 
                   {/* Save Button */}
-                  <div className="flex justify-end gap-2">
-                    <Button variant="outline">Cancel</Button>
-                    <PrimaryButton onClick={handleSaveSettings} className="gap-2">
-                      <Save className="h-4 w-4" />
-                      Save Changes
-                    </PrimaryButton>
-                  </div>
+                  {(activeSection === "notifications") && (
+                    <div className="flex justify-end gap-2">
+                      <Button variant="outline" onClick={() => loadOrganization()}>
+                        Cancel
+                      </Button>
+                      <PrimaryButton onClick={handleSaveSettings} disabled={saving} className="gap-2">
+                        <Save className="h-4 w-4" />
+                        {saving ? "Saving..." : "Save Changes"}
+                      </PrimaryButton>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -296,4 +739,3 @@ export default function IssuerSettingsPage() {
     </div>
   )
 }
-

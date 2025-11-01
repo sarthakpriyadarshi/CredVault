@@ -12,7 +12,8 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Upload, Download, CheckCircle, AlertCircle } from "lucide-react"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Upload, Download, CheckCircle, AlertCircle, FileText } from "lucide-react"
 import { PrimaryButton } from "@/components/ui/primary-button"
 
 interface IssuanceRecord {
@@ -20,18 +21,27 @@ interface IssuanceRecord {
   email: string
   status: "pending" | "success" | "error"
   message?: string
+  [key: string]: any // For additional CSV fields
+}
+
+interface CSVRow {
+  [key: string]: string
 }
 
 export default function BulkIssuancePage() {
   const { data: session, status } = useSession()
   const router = useRouter()
   const [selectedTemplate, setSelectedTemplate] = useState("")
-  const [templates, setTemplates] = useState<Array<{ id: string; name: string }>>([])
+  const [templates, setTemplates] = useState<Array<{ id: string; name: string; fields?: any[] }>>([])
+  const [templateFields, setTemplateFields] = useState<Array<{ name: string; type: string }>>([])
   const [csvFile, setCsvFile] = useState<File | null>(null)
+  const [csvPreview, setCsvPreview] = useState<CSVRow[]>([])
+  const [csvHeaders, setCsvHeaders] = useState<string[]>([])
   const [useBlockchain, setUseBlockchain] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
   const [issuanceRecords, setIssuanceRecords] = useState<IssuanceRecord[]>([])
   const [loading, setLoading] = useState(true)
+  const [showPreview, setShowPreview] = useState(false)
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -45,6 +55,14 @@ export default function BulkIssuancePage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, status, router])
+
+  useEffect(() => {
+    if (selectedTemplate) {
+      loadTemplateDetails(selectedTemplate)
+    } else {
+      setTemplateFields([])
+    }
+  }, [selectedTemplate])
 
   const loadTemplates = async () => {
     setLoading(true)
@@ -62,12 +80,11 @@ export default function BulkIssuancePage() {
       } else {
         const data = await res.json()
         const templatesList = data.data || data || []
-        setTemplates(
-          templatesList.map((t: any) => ({
-            id: t.id || t._id?.toString() || "",
-            name: t.name || "Unnamed Template",
-          }))
-        )
+        setTemplates(templatesList.map((t: any) => ({
+          id: t.id || t._id?.toString() || "",
+          name: t.name || "Unnamed Template",
+          fields: t.fields || [],
+        })))
       }
     } catch (error) {
       console.error("Error loading templates:", error)
@@ -76,16 +93,73 @@ export default function BulkIssuancePage() {
     }
   }
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const loadTemplateDetails = async (templateId: string) => {
+    try {
+      const res = await fetch(`/api/v1/issuer/templates/${templateId}`, {
+        credentials: "include",
+      })
+
+      if (res.ok) {
+        const data = await res.json()
+        const template = data.template || data
+        const fields = template.placeholders || template.fields || []
+        setTemplateFields(fields.map((f: any) => ({
+          name: f.fieldName || f.name || "",
+          type: f.type || "text",
+        })))
+      }
+    } catch (error) {
+      console.error("Error loading template details:", error)
+    }
+  }
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (file) {
-      setCsvFile(file)
+    if (!file) return
+
+    setCsvFile(file)
+    setCsvPreview([])
+    setCsvHeaders([])
+    setShowPreview(false)
+
+    try {
+      const text = await file.text()
+      const lines = text.split("\n").filter((line) => line.trim())
+      
+      if (lines.length < 2) {
+        alert("CSV must have header and at least one data row")
+        return
+      }
+
+      const headers = lines[0].split(",").map((h) => h.trim())
+      const rows: CSVRow[] = []
+
+      for (let i = 1; i < lines.length; i++) {
+        const values = lines[i].split(",").map((v) => v.trim())
+        const row: CSVRow = {}
+        headers.forEach((header, idx) => {
+          row[header] = values[idx] || ""
+        })
+        rows.push(row)
+      }
+
+      setCsvHeaders(headers)
+      setCsvPreview(rows)
+      setShowPreview(true)
+    } catch (error) {
+      console.error("Error parsing CSV:", error)
+      alert("Failed to parse CSV file")
     }
   }
 
   const handleProcessBulkIssuance = async () => {
     if (!csvFile || !selectedTemplate) {
       alert("Please select template and upload CSV file")
+      return
+    }
+
+    if (csvPreview.length === 0) {
+      alert("CSV file is empty")
       return
     }
 
@@ -120,19 +194,43 @@ export default function BulkIssuancePage() {
     }
   }
 
-  const downloadTemplate = () => {
-    const csv = `Recipient Name,Email,Additional Field 1,Additional Field 2
-John Doe,john@example.com,Value1,Value2
-Jane Smith,jane@example.com,Value1,Value2
-Bob Johnson,bob@example.com,Value1,Value2`
+  const downloadTemplate = async () => {
+    if (!selectedTemplate) {
+      alert("Please select a template first")
+      return
+    }
 
-    const element = document.createElement("a")
-    element.setAttribute("href", "data:text/csv;charset=utf-8," + encodeURIComponent(csv))
-    element.setAttribute("download", "bulk-issuance-template.csv")
-    element.style.display = "none"
-    document.body.appendChild(element)
-    element.click()
-    document.body.removeChild(element)
+    try {
+      // Get field names from selected template
+      const headers = templateFields.map((f) => f.name)
+      
+      if (headers.length === 0) {
+        alert("Template has no fields defined")
+        return
+      }
+
+      // Create CSV content with sample data
+      const csvRows = [
+        headers.join(","), // Header row
+        headers.map(() => "Sample Value").join(","), // Sample row 1
+        headers.map(() => "Sample Value").join(","), // Sample row 2
+      ]
+
+      const csv = csvRows.join("\n")
+
+      // Download CSV
+      const element = document.createElement("a")
+      element.setAttribute("href", "data:text/csv;charset=utf-8," + encodeURIComponent(csv))
+      const templateName = templates.find((t) => t.id === selectedTemplate)?.name || "template"
+      element.setAttribute("download", `${templateName.replace(/[^a-z0-9]/gi, "_")}_template.csv`)
+      element.style.display = "none"
+      document.body.appendChild(element)
+      element.click()
+      document.body.removeChild(element)
+    } catch (error) {
+      console.error("Error downloading CSV template:", error)
+      alert("Failed to download CSV template")
+    }
   }
 
   const successCount = issuanceRecords.filter((r) => r.status === "success").length
@@ -225,30 +323,72 @@ Bob Johnson,bob@example.com,Value1,Value2`
                       )}
                     </div>
 
-                    {/* Options */}
-                    <div className="space-y-3 pt-4 border-t border-border/50">
-                      <div className="flex items-center gap-3 p-4 bg-primary/10 rounded-lg">
-                        <Checkbox checked={useBlockchain} onCheckedChange={setUseBlockchain} id="blockchain" />
-                        <Label htmlFor="blockchain" className="font-normal cursor-pointer flex-1">
-                          Register all on Blockchain
-                        </Label>
-                      </div>
-                    </div>
+                    {/* CSV Preview Table */}
+                    {showPreview && csvPreview.length > 0 && (
+                      <div className="space-y-4 pt-4 border-t border-border/50">
+                        <div className="flex items-center justify-between">
+                          <h3 className="font-semibold text-foreground">CSV Preview ({csvPreview.length} rows)</h3>
+                        </div>
+                        <div className="border border-border/50 rounded-lg overflow-hidden">
+                          <div className="max-h-96 overflow-auto">
+                            <Table>
+                              <TableHeader>
+                                <TableRow className="bg-background/50">
+                                  {csvHeaders.map((header) => (
+                                    <TableHead key={header} className="font-semibold">
+                                      {header}
+                                    </TableHead>
+                                  ))}
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {csvPreview.slice(0, 10).map((row, idx) => (
+                                  <TableRow key={idx}>
+                                    {csvHeaders.map((header) => (
+                                      <TableCell key={header} className="text-sm">
+                                        {row[header] || "-"}
+                                      </TableCell>
+                                    ))}
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </div>
+                          {csvPreview.length > 10 && (
+                            <div className="p-2 text-xs text-muted-foreground text-center bg-background/30">
+                              Showing first 10 rows of {csvPreview.length} total rows
+                            </div>
+                          )}
+                        </div>
 
-                    {/* Action Buttons */}
-                    <div className="flex gap-2 justify-end pt-4 border-t border-border/50">
-                      <Button variant="outline" onClick={() => { setCsvFile(null); setSelectedTemplate("") }}>
-                        Reset
-                      </Button>
-                      <PrimaryButton
-                        onClick={handleProcessBulkIssuance}
-                        disabled={!selectedTemplate || !csvFile || isProcessing}
-                        className="gap-2"
-                      >
-                        <Upload className="h-4 w-4" />
-                        {isProcessing ? "Processing..." : "Start Issuance"}
-                      </PrimaryButton>
-                    </div>
+                        {/* Blockchain Option and Issue Button */}
+                        <div className="flex items-center justify-between pt-4 border-t border-border/50">
+                          <div className="flex items-center gap-3 p-4 bg-primary/10 rounded-lg">
+                            <Checkbox checked={useBlockchain} onCheckedChange={setUseBlockchain} id="blockchain" />
+                            <Label htmlFor="blockchain" className="font-normal cursor-pointer flex-1">
+                              Issue with Blockchain
+                            </Label>
+                          </div>
+                          <PrimaryButton
+                            onClick={handleProcessBulkIssuance}
+                            disabled={isProcessing}
+                            className="gap-2"
+                          >
+                            <Upload className="h-4 w-4" />
+                            {isProcessing ? "Processing..." : "Issue Credentials"}
+                          </PrimaryButton>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Action Buttons (if no preview shown) */}
+                    {!showPreview && (
+                      <div className="flex gap-2 justify-end pt-4 border-t border-border/50">
+                        <Button variant="outline" onClick={() => { setCsvFile(null); setSelectedTemplate(""); setShowPreview(false); setCsvPreview([]); setCsvHeaders([]) }}>
+                          Reset
+                        </Button>
+                      </div>
+                    )}
                   </Card>
 
                   {/* Results */}
@@ -311,11 +451,29 @@ Bob Johnson,bob@example.com,Value1,Value2`
                   <Card className="p-6 border border-border/50 bg-card/50 backdrop-blur">
                     <h3 className="font-semibold text-foreground mb-4">CSV Format Guide</h3>
                     <div className="text-sm text-muted-foreground space-y-3">
-                      <div className="p-3 bg-background/50 rounded-lg font-mono text-xs">
-                        <p>Recipient Name,Email</p>
-                        <p>John Doe,john@example.com</p>
-                        <p>Jane Smith,jane@example.com</p>
-                      </div>
+                      {selectedTemplate && templateFields.length > 0 ? (
+                        <>
+                          <div className="p-3 bg-background/50 rounded-lg font-mono text-xs space-y-1">
+                            <p className="text-foreground font-semibold mb-2">Required Fields:</p>
+                            {templateFields.map((field, idx) => (
+                              <p key={idx}>
+                                {field.name} {field.type === "email" && <span className="text-primary">(Required)</span>}
+                              </p>
+                            ))}
+                          </div>
+                          <div className="p-3 bg-background/50 rounded-lg font-mono text-xs">
+                            <p className="text-foreground font-semibold mb-2">Example:</p>
+                            <p>{templateFields.map((f) => f.name).join(",")}</p>
+                            <p>{templateFields.map(() => "Sample Value").join(",")}</p>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="p-3 bg-background/50 rounded-lg font-mono text-xs">
+                          <p>Recipient Name,Email</p>
+                          <p>John Doe,john@example.com</p>
+                          <p>Jane Smith,jane@example.com</p>
+                        </div>
+                      )}
                       <ul className="space-y-2">
                         <li className="flex gap-2">
                           <span className="text-primary">•</span>
@@ -333,7 +491,7 @@ Bob Johnson,bob@example.com,Value1,Value2`
                     </div>
                   </Card>
 
-                  <Button onClick={downloadTemplate} variant="outline" className="w-full gap-2 bg-transparent">
+                  <Button onClick={downloadTemplate} variant="outline" className="w-full gap-2 bg-transparent" disabled={!selectedTemplate}>
                     <Download className="h-4 w-4" />
                     Download Template
                   </Button>
@@ -355,7 +513,7 @@ Bob Johnson,bob@example.com,Value1,Value2`
                       </li>
                       <li className="flex gap-2">
                         <span className="text-primary">•</span>
-                        <span>View status updates in real-time</span>
+                        <span>Review CSV preview before issuing</span>
                       </li>
                     </ul>
                   </Card>
@@ -368,4 +526,3 @@ Bob Johnson,bob@example.com,Value1,Value2`
     </div>
   )
 }
-
