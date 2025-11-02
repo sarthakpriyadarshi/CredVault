@@ -177,8 +177,8 @@ export default function RecipientDashboard() {
   }
 
   const handleVerify = (credentialId: string) => {
-    // Hard redirect to verify page (real DOM-based navigation)
-    window.location.href = `/dashboard/recipient/credentials/${credentialId}/verify`
+    // Force a complete page reload (hard navigation)
+    window.location.assign(`/dashboard/recipient/credentials/${credentialId}/verify`)
   }
 
   // Show loading state while session is being fetched
