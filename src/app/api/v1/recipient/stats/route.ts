@@ -69,8 +69,6 @@ async function handler(
       aboutToExpire: expiringCredentials,
     }
 
-    console.log("Stats response:", response) // Debug log
-
     return NextResponse.json(response)
   } catch (error: unknown) {
     return handleApiError(error)
