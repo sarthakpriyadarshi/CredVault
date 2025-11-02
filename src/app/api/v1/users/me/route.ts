@@ -30,9 +30,9 @@ async function handler(
         organizationId: dbUser.organizationId?._id?.toString(),
         organization: dbUser.organizationId
           ? {
-              id: (dbUser.organizationId as any)._id.toString(),
-              name: (dbUser.organizationId as any).name,
-              verificationStatus: (dbUser.organizationId as any).verificationStatus,
+              id: (dbUser.organizationId as unknown as { _id: { toString: () => string }; name: string; verificationStatus: string })._id.toString(),
+              name: (dbUser.organizationId as unknown as { _id: { toString: () => string }; name: string; verificationStatus: string }).name,
+              verificationStatus: (dbUser.organizationId as unknown as { _id: { toString: () => string }; name: string; verificationStatus: string }).verificationStatus,
             }
           : null,
         isVerified: dbUser.isVerified,

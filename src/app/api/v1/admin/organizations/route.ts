@@ -4,11 +4,7 @@ import { getPagination, createPaginatedResponse, getQueryParams } from "@/lib/ap
 import { Organization, User } from "@/models"
 import connectDB from "@/lib/db/mongodb"
 
-async function handler(
-  req: NextRequest,
-  _context?: { params?: Promise<Record<string, string>> | Record<string, string> },
-  _user?: Record<string, unknown>
-) {
+async function handler(req: NextRequest) {
   if (req.method !== "GET") {
     return NextResponse.json({ error: "Method not allowed" }, { status: 405 })
   }
@@ -21,7 +17,7 @@ async function handler(
     const status = searchParams.get("status") // pending, approved, rejected, or all
 
     // Build filter
-    const filter: any = {}
+    const filter: Record<string, unknown> = {}
     if (status && status !== "all") {
       filter.verificationStatus = status
     }
@@ -61,9 +57,9 @@ async function handler(
         verificationStatus: org.verificationStatus,
         verifiedBy: org.verifiedBy
           ? {
-              id: (org.verifiedBy as any)._id.toString(),
-              name: (org.verifiedBy as any).name,
-              email: (org.verifiedBy as any).email,
+              id: (org.verifiedBy as unknown as { _id: { toString: () => string }; name: string; email: string })._id.toString(),
+              name: (org.verifiedBy as unknown as { _id: { toString: () => string }; name: string; email: string }).name,
+              email: (org.verifiedBy as unknown as { _id: { toString: () => string }; name: string; email: string }).email,
             }
           : null,
         verifiedAt: org.verifiedAt,

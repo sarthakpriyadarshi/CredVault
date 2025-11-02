@@ -105,7 +105,11 @@ export default function EditTemplatePage() {
         setModalMessage("Failed to load template")
         setShowErrorModal(true)
         setTimeout(() => {
-          router.push("/dashboard/issuer/templates")
+          setShowErrorModal(false)
+          // Allow modal to close before navigation
+          setTimeout(() => {
+            router.push("/dashboard/issuer/templates")
+          }, 100)
         }, 1500)
         return
       }
@@ -257,7 +261,11 @@ export default function EditTemplatePage() {
       setModalMessage("Failed to load template")
       setShowErrorModal(true)
       setTimeout(() => {
-        router.push("/dashboard/issuer/templates")
+        setShowErrorModal(false)
+        // Allow modal to close before navigation
+        setTimeout(() => {
+          router.push("/dashboard/issuer/templates")
+        }, 100)
       }, 1500)
     }
   }
@@ -650,9 +658,13 @@ export default function EditTemplatePage() {
 
       setModalMessage("Template updated successfully!")
       setShowSuccessModal(true)
-      // Redirect after showing success modal
+      // Close modal and redirect after short delay
       setTimeout(() => {
-        router.push("/dashboard/issuer/templates")
+        setShowSuccessModal(false)
+        // Allow modal to close before navigation
+        setTimeout(() => {
+          router.push("/dashboard/issuer/templates")
+        }, 100)
       }, 1500)
     } catch (error) {
       console.error("Error updating template:", error)

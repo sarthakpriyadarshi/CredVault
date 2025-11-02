@@ -6,8 +6,7 @@ import { LoadingScreen } from "@/components/loading-screen"
 
 export function SetupChecker({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
-  const [isChecking, setIsChecking] = useState(pathname !== "/setup")
-  const [setupNeeded, setSetupNeeded] = useState(false)
+  const [redirectMessage, setRedirectMessage] = useState<string | null>(null)
 
   useEffect(() => {
     // Don't check if already on setup page
@@ -17,29 +16,42 @@ export function SetupChecker({ children }: { children: React.ReactNode }) {
 
     const checkSetup = async () => {
       try {
-        const res = await fetch("/api/v1/admin/setup")
+        // Use direct=true for auth pages to ensure fresh data
+        const isDirect = pathname.startsWith("/setup") || pathname.startsWith("/auth")
+        const url = isDirect ? "/api/v1/admin/setup?direct=true" : "/api/v1/admin/setup"
+        
+        console.log(`[SetupChecker] Checking setup on ${pathname} (direct: ${isDirect})`)
+        const res = await fetch(url)
+        
+        if (!res.ok) {
+          console.error(`[SetupChecker] API error: ${res.status} ${res.statusText}`)
+          return
+        }
+        
         const data = await res.json()
-
-        if (data.setupNeeded) {
-          setSetupNeeded(true)
-          // Use replace instead of push to avoid adding to history
-          // Use window.location for immediate navigation to ensure page loads
+        console.log(`[SetupChecker] Setup check result:`, data)
+        console.log(`[SetupChecker] data.setupNeeded = ${data.setupNeeded}, data.hasAdmin = ${data.hasAdmin}`)
+        
+        if (data.setupNeeded === true) {
+          console.log(`[SetupChecker] Setup needed! Redirecting to /setup`)
+          setRedirectMessage("Setup required. Redirecting...")
+          // Use window.location for immediate hard redirect
           window.location.href = "/setup"
+          return
         } else {
-          setIsChecking(false)
+          console.log(`[SetupChecker] Setup complete, allowing access`)
         }
       } catch (error) {
-        console.error("Error checking setup:", error)
-        setIsChecking(false)
+        console.error("[SetupChecker] Error checking setup:", error)
       }
     }
 
     checkSetup()
   }, [pathname])
 
-  // Show loading while checking or during redirect
-  if (isChecking || (setupNeeded && pathname !== "/setup")) {
-    return <LoadingScreen />
+  // Only show loading screen when actively redirecting
+  if (redirectMessage) {
+    return <LoadingScreen message={redirectMessage} />
   }
 
   return <>{children}</>

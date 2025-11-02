@@ -1,17 +1,37 @@
 import { NextRequest, NextResponse } from "next/server"
 import connectDB from "@/lib/db/mongodb"
 import { User } from "@/models"
+import { invalidateAdminExists } from "@/lib/cache/invalidation"
+import { hasAdminUser } from "@/lib/cache/user-cache"
 
 // Check if setup is needed (no admin users exist)
-export async function GET() {
+// This endpoint is called on EVERY page load by SetupChecker component
+// Using cached hasAdminUser() to avoid repeated DB queries
+// Use ?direct=true query parameter to bypass cache (for setup page itself)
+export async function GET(req: NextRequest) {
   try {
-    await connectDB()
+    const { searchParams } = new URL(req.url)
+    const isDirect = searchParams.get("direct") === "true"
 
-    const adminCount = await User.countDocuments({ role: "admin" })
+    let adminExists: boolean
+
+    if (isDirect) {
+      // Direct DB query for setup page - always fresh data
+      if (process.env.NODE_ENV === "development") {
+        console.log("[CACHE] Direct DB query requested (bypassing cache)")
+      }
+      await connectDB()
+      const adminCount = await User.countDocuments({ role: "admin" })
+      adminExists = adminCount > 0
+    } else {
+      // Use cached function for all other requests (SetupChecker)
+      // Cache is configured with 2hr stale time in next.config.ts
+      adminExists = await hasAdminUser()
+    }
 
     return NextResponse.json({
-      setupNeeded: adminCount === 0,
-      hasAdmin: adminCount > 0,
+      setupNeeded: !adminExists,
+      hasAdmin: adminExists,
     })
   } catch (error) {
     console.error("Error checking setup status:", error)
@@ -80,6 +100,10 @@ export async function POST(req: NextRequest) {
       role: "admin",
       isVerified: true, // Auto-verify first admin
     })
+
+    // Invalidate admin existence cache since we just created the first admin
+    // Use background revalidation (false) since we're in a Route Handler, not Server Action
+    await invalidateAdminExists(false)
 
     return NextResponse.json({
       success: true,

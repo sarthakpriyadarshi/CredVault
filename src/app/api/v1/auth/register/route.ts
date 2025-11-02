@@ -3,6 +3,7 @@ import { withDB, handleApiError } from "@/lib/api/middleware"
 import { parseBody, isValidEmail } from "@/lib/api/utils"
 import { User, Organization } from "@/models"
 import connectDB from "@/lib/db/mongodb"
+import { invalidateUserRole } from "@/lib/cache/invalidation"
 
 async function handler(req: NextRequest) {
   if (req.method !== "POST") {
@@ -79,6 +80,10 @@ async function handler(req: NextRequest) {
       isVerified: role === "recipient", // Recipients auto-verified, admins should be created via separate endpoint
       emailVerified: false,
     })
+
+    // Invalidate user role cache for this new user
+    // Use background revalidation since the user doesn't exist in cache yet
+    await invalidateUserRole(user._id.toString(), false)
 
     // Note: After registration, use NextAuth signIn() for session management
     return NextResponse.json(

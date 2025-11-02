@@ -37,7 +37,8 @@ export default function SetupPage() {
 
   const checkSetupStatus = async () => {
     try {
-      const res = await fetch("/api/v1/admin/setup")
+      // Use direct=true to bypass cache and get fresh data
+      const res = await fetch("/api/v1/admin/setup?direct=true")
       const data = await res.json()
 
       if (!data.setupNeeded) {
@@ -98,9 +99,13 @@ export default function SetupPage() {
       // Success! Show modal then redirect to admin login
       setShowSuccessModal(true)
       
-      // Redirect to admin login after 2 seconds - user must sign in
+      // Close modal and redirect to admin login after 2 seconds
       setTimeout(() => {
-        router.push("/auth/admin/login")
+        setShowSuccessModal(false)
+        // Allow modal to close before navigation
+        setTimeout(() => {
+          router.push("/auth/admin/login")
+        }, 100)
       }, 2000)
     } catch (error) {
       console.error("Error creating admin:", error)

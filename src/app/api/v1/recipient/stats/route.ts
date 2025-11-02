@@ -23,8 +23,11 @@ async function handler(
     }
 
     // Build query to find credentials for this recipient
-    const query: any = {
-      $or: [] as any[],
+    const query: {
+      $or: Array<Record<string, unknown>>;
+      status: { $ne: string };
+    } = {
+      $or: [],
       status: { $ne: "revoked" }, // Exclude revoked credentials
     }
     

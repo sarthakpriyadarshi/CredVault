@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { withIssuer, handleApiError } from "@/lib/api/middleware"
+import { withIssuerUnverified, handleApiError } from "@/lib/api/middleware"
 import { parseBody } from "@/lib/api/utils"
 import { Organization, User } from "@/models"
 import connectDB from "@/lib/db/mongodb"
@@ -77,5 +77,5 @@ async function handler(
   }
 }
 
-export const POST = withIssuer(handler)
+export const POST = withIssuerUnverified(handler)
 

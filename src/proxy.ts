@@ -5,6 +5,17 @@ import { auth } from "@/app/api/auth/[...nextauth]/route"
 export default async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
+  // Skip middleware for complete registration page
+  // This page needs to update session and redirect without middleware interference
+  if (pathname === "/auth/issuer/complete") {
+    return NextResponse.next()
+  }
+
+  // NOTE: Setup check cannot run in middleware because:
+  // 1. Middleware runs on Edge Runtime (no database access)
+  // 2. unstable_cache/database queries are not available
+  // Setup check is handled by SetupChecker component (client-side) instead
+
   // Handle redirect routes - check session and redirect appropriately
   if (pathname === "/issuer" || pathname === "/login" || pathname === "/signup") {
     try {
@@ -150,9 +161,12 @@ export default async function proxy(request: NextRequest) {
           }
         } else {
           // Issuer role is correct, but check if they need to complete registration
-          if (!session.user.organizationId) {
+          // Skip organizationId check if coming from complete registration (session update in progress)
+          const isFromCompleteRegistration = request.nextUrl.searchParams.get("setup") === "complete"
+          
+          if (!session.user.organizationId && !isFromCompleteRegistration) {
             return NextResponse.redirect(new URL("/auth/issuer/complete", request.url))
-          } else if (!session.user.isVerified) {
+          } else if (!session.user.isVerified && !isFromCompleteRegistration) {
             return NextResponse.redirect(new URL("/auth/issuer/login?pending=true", request.url))
           }
         }
@@ -191,10 +205,14 @@ export default async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
+    "/",
     "/issuer",
     "/login", 
     "/signup",
     "/dashboard/:path*",
+    "/auth/:path*",
+    "/profile/:path*",
+    "/verify/:path*",
   ],
 }
 

@@ -3,6 +3,7 @@ import { withAdmin, handleApiError } from "@/lib/api/middleware"
 import { parseBody } from "@/lib/api/utils"
 import { Organization, User } from "@/models"
 import connectDB from "@/lib/db/mongodb"
+import { invalidateAllUsers } from "@/lib/cache/invalidation"
 
 async function handler(
   req: NextRequest,
@@ -46,6 +47,9 @@ async function handler(
     organization.verifiedAt = new Date()
     organization.rejectionReason = reason || "Rejected by administrator"
     await organization.save()
+
+    // Invalidate cache for all users in the organization (use false for Route Handler)
+    await invalidateAllUsers(false)
 
     // Note: We don't delete issuer users, but they remain unverified
     // They can re-apply or contact support

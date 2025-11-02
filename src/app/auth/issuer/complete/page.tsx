@@ -21,11 +21,17 @@ export default function IssuerCompleteRegistrationPage() {
   const [proofFile, setProofFile] = useState<File | null>(null)
   const [proofPreview, setProofPreview] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [isSubmitted, setIsSubmitted] = useState(false)
   const [error, setError] = useState("")
   const router = useRouter()
-  const { data: session, status } = useSession()
+  const { data: session, status, update: updateSession } = useSession()
 
   useEffect(() => {
+    // Skip redirect checks if form has been submitted (we're handling redirect manually)
+    if (isSubmitted) {
+      return
+    }
+
     // Redirect if not authenticated or not an issuer
     if (status === "unauthenticated") {
       router.push("/auth/issuer/login")
@@ -44,7 +50,7 @@ export default function IssuerCompleteRegistrationPage() {
         return
       }
     }
-  }, [session, status, router])
+  }, [session, status, router, isSubmitted])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData((prev) => ({
@@ -151,8 +157,18 @@ export default function IssuerCompleteRegistrationPage() {
         return
       }
 
-      // Success - redirect and force full page reload to refresh session
-      // The JWT callback will refresh user data from database on next page load
+      // Mark as submitted to prevent useEffect from interfering with redirect
+      setIsSubmitted(true)
+
+      // Success - use full page redirect to ensure fresh session is loaded
+      // window.location.href forces a complete reload which triggers new session fetch
+      // The ?setup=complete param tells dashboard to skip organizationId check temporarily
+      console.log("[Complete] Organization created, redirecting with full page reload...")
+      
+      // Small delay to ensure DB write completes
+      await new Promise(resolve => setTimeout(resolve, 500))
+      
+      // Full page reload ensures fresh session from server
       window.location.href = "/dashboard/issuer?setup=complete"
     } catch (err: unknown) {
       const errorMessage = err && typeof err === "object" && "message" in err

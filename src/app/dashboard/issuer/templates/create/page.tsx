@@ -647,9 +647,13 @@ export default function CreateTemplatePage() {
 
       setModalMessage("Template saved successfully!")
       setShowSuccessModal(true)
-      // Redirect after showing success modal
+      // Close modal and redirect after short delay
       setTimeout(() => {
-        router.push("/dashboard/issuer/templates")
+        setShowSuccessModal(false)
+        // Allow modal to close before navigation
+        setTimeout(() => {
+          router.push("/dashboard/issuer/templates")
+        }, 100)
       }, 1500)
     } catch (error) {
       console.error("Error saving template:", error)

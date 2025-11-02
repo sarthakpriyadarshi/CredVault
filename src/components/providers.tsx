@@ -1,6 +1,7 @@
 "use client"
 
 import { SessionProvider } from "next-auth/react"
+import { Suspense } from "react"
 import type { ReactNode } from "react"
 
 export function Providers({ children }: { children: ReactNode }) {
@@ -10,7 +11,9 @@ export function Providers({ children }: { children: ReactNode }) {
       refetchOnWindowFocus={false} // Disable refetch on window focus to reduce API calls
       refetchWhenOffline={false} // Don't refetch when offline
     >
-      {children}
+      <Suspense fallback={null}>
+        {children}
+      </Suspense>
     </SessionProvider>
   )
 }

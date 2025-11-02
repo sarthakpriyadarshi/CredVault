@@ -3,11 +3,7 @@ import { withAdmin, handleApiError } from "@/lib/api/middleware"
 import { Organization, Credential } from "@/models"
 import connectDB from "@/lib/db/mongodb"
 
-async function handler(
-  req: NextRequest,
-  _context?: { params?: Promise<Record<string, string>> | Record<string, string> },
-  _user?: Record<string, unknown>
-) {
+async function handler(req: NextRequest) {
   if (req.method !== "GET") {
     return NextResponse.json({ error: "Method not allowed" }, { status: 405 })
   }

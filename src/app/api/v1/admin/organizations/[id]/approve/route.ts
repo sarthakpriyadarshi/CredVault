@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { withAdmin, handleApiError } from "@/lib/api/middleware"
 import { Organization, User } from "@/models"
 import connectDB from "@/lib/db/mongodb"
+import { invalidateAllUsers } from "@/lib/cache"
 
 async function handler(
   req: NextRequest,
@@ -47,6 +48,9 @@ async function handler(
       { organizationId: organization._id, role: "issuer" },
       { $set: { isVerified: true } }
     )
+
+    // Invalidate cache for all affected users (use false for Route Handler)
+    await invalidateAllUsers(false)
 
     return NextResponse.json({
       message: "Organization approved successfully",

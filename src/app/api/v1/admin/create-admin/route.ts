@@ -3,6 +3,7 @@ import { withDB, handleApiError } from "@/lib/api/middleware"
 import { parseBody, isValidEmail } from "@/lib/api/utils"
 import { User } from "@/models"
 import connectDB from "@/lib/db/mongodb"
+import { invalidateAdminExists } from "@/lib/cache/invalidation"
 
 /**
  * Admin Creation Endpoint
@@ -61,6 +62,9 @@ async function handler(req: NextRequest) {
       isVerified: true, // Admins are auto-verified
       emailVerified: false,
     })
+
+    // Invalidate admin existence cache immediately
+    await invalidateAdminExists(false)
 
     return NextResponse.json(
       {

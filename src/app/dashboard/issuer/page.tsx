@@ -35,8 +35,27 @@ export default function IssuerDashboard() {
   const [stats, setStats] = useState<Stats | null>(null)
   const [templates, setTemplates] = useState<Template[]>([])
   const [loading, setLoading] = useState(true)
+  const [skipRedirectCheck, setSkipRedirectCheck] = useState(false)
+
+  // Check if this is a redirect from complete registration
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search)
+      if (urlParams.get('setup') === 'complete') {
+        setSkipRedirectCheck(true)
+      }
+    }
+  }, [])
 
   useEffect(() => {
+    // Skip all checks if coming from complete registration
+    if (skipRedirectCheck) {
+      // Just load the page, show pending verification message
+      // Don't try to load data for unverified users
+      setLoading(false)
+      return
+    }
+
     // Only redirect if we're sure the user is not authenticated (not during loading)
     if (status === "unauthenticated") {
       router.push("/auth/issuer/login")
@@ -50,12 +69,16 @@ export default function IssuerDashboard() {
       } else if (session?.user?.role === "issuer" && !session.user?.isVerified) {
         // Redirect to pending page if not verified
         router.push("/auth/issuer/login?pending=true")
-      } else {
+      } else if (session?.user?.isVerified) {
+        // Only load data if user is verified
         loadData()
+      } else {
+        // User is unverified - just show pending message
+        setLoading(false)
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session, status, router])
+  }, [session, status, router, skipRedirectCheck])
 
   const loadData = async () => {
     setLoading(true)
@@ -106,8 +129,8 @@ export default function IssuerDashboard() {
     return null
   }
 
-  // Only check role if we have a session
-  if (status === "authenticated" && (!session || session.user?.role !== "issuer" || !session.user?.isVerified)) {
+  // Only check role if we have a session (allow unverified issuers with skipRedirectCheck)
+  if (status === "authenticated" && (!session || session.user?.role !== "issuer")) {
     return null
   }
 
@@ -115,6 +138,9 @@ export default function IssuerDashboard() {
   if (!session) {
     return null
   }
+
+  // Check if user is unverified
+  const isUnverified = !session.user?.isVerified
 
   return (
     <div className="min-h-screen w-full bg-black relative">
@@ -127,6 +153,27 @@ export default function IssuerDashboard() {
 
       <div className="relative z-10 overflow-x-hidden pt-20">
         <DashboardHeader userRole="issuer" userName={session?.user?.name || undefined} />
+
+        {isUnverified && (
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
+            <Card className="p-8 border border-yellow-500/20 bg-yellow-500/5 backdrop-blur">
+              <div className="text-center">
+                <h2 className="text-2xl font-bold text-yellow-400 mb-4">
+                  Verification Pending
+                </h2>
+                <p className="text-zinc-300 mb-2">
+                  Thank you for completing your registration! Your organization is currently under review.
+                </p>
+                <p className="text-zinc-400 text-sm">
+                  You will receive an email notification once your account has been verified by an administrator.
+                  This usually takes 24-48 hours.
+                </p>
+              </div>
+            </Card>
+          </div>
+        )}
+
+        {!isUnverified && (
 
         <div className="flex mt-4">
         <DashboardSidebar userRole="issuer" />
@@ -253,6 +300,8 @@ export default function IssuerDashboard() {
           </div>
         </main>
         </div>
+
+        )}
       </div>
     </div>
   )

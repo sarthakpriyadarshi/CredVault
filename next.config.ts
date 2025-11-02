@@ -1,6 +1,31 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Enable Cache Components for improved caching with use cache directive
+  cacheComponents: true,
+  
+  // Configure cache life profiles for different use cases
+  cacheLife: {
+    // User role checks can be cached longer since they change infrequently
+    "user-role": {
+      stale: 3600, // 1 hour - serve stale content
+      revalidate: 3600, // 1 hour - revalidate in background
+      expire: 86400, // 24 hours - hard expiration
+    },
+    // Session data should be cached for shorter periods
+    "session": {
+      stale: 300, // 5 minutes
+      revalidate: 300, // 5 minutes
+      expire: 1800, // 30 minutes
+    },
+    // Admin checks can be cached longer
+    "admin-check": {
+      stale: 7200, // 2 hours
+      revalidate: 7200, // 2 hours
+      expire: 86400, // 24 hours
+    },
+  },
+  
   images: {
     remotePatterns: [
       {

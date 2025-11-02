@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSessionForApi } from "@/lib/auth-server"
 import connectDB from "@/lib/db/mongodb"
+import { getUserCacheInfo } from "@/lib/cache"
 
 type Handler = (
   req: NextRequest,
@@ -34,13 +35,13 @@ export function withDB(handler: Handler) {
 }
 
 /**
- * Authentication middleware for API routes
- * Validates session and optionally checks user roles
+ * Authentication middleware for API routes with caching
+ * Validates session and optionally checks user roles using cached data
  * 
  * In Next.js 16 App Router, middleware functions wrap route handlers
  * This follows the pattern recommended for API route protection
  */
-export function withAuth(handler: Handler, options?: { roles?: string[] }) {
+export function withAuth(handler: Handler, options?: { roles?: string[]; skipVerificationCheck?: boolean }) {
   return async (req: NextRequest, context?: { params?: Promise<Record<string, string>> | Record<string, string> }) => {
     try {
       const session = await getServerSessionForApi()
@@ -49,13 +50,46 @@ export function withAuth(handler: Handler, options?: { roles?: string[] }) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
       }
 
-      // Check role if specified
-      const userRole = session.user.role as string | undefined
-      if (options?.roles && userRole && !options.roles.includes(userRole)) {
-        return NextResponse.json(
-          { error: "Forbidden: Insufficient permissions" },
-          { status: 403 }
-        )
+      // Get user ID from session
+      const userId = session.user.id as string | undefined
+      
+      if (!userId) {
+        return NextResponse.json({ error: "Invalid session" }, { status: 401 })
+      }
+
+      // Check role if specified - use cached data
+      if (options?.roles && options.roles.length > 0) {
+        // Fetch cached user info including role and verification status
+        const userInfo = await getUserCacheInfo(userId)
+        
+        if (!userInfo) {
+          return NextResponse.json(
+            { error: "User not found" },
+            { status: 404 }
+          )
+        }
+        
+        // Check if user's role is in the allowed roles
+        if (!options.roles.includes(userInfo.role)) {
+          return NextResponse.json(
+            { error: "Forbidden: Insufficient permissions" },
+            { status: 403 }
+          )
+        }
+        
+        // For issuer role, check verification status (unless explicitly skipped)
+        // Skip verification check for endpoints like create-organization where user needs to create org first
+        if (userInfo.role === "issuer" && !userInfo.isVerified && !options.skipVerificationCheck) {
+          return NextResponse.json(
+            { error: "Forbidden: Organization pending verification" },
+            { status: 403 }
+          )
+        }
+        
+        // Enrich session.user with cached data
+        session.user.role = userInfo.role
+        session.user.isVerified = userInfo.isVerified
+        session.user.organizationId = userInfo.organizationId || undefined
       }
 
       // Await params if it's a Promise
@@ -106,6 +140,14 @@ export function withAdmin(handler: Handler) {
  */
 export function withIssuer(handler: Handler) {
   return withAuth(handler, { roles: ["issuer", "admin"] })
+}
+
+/**
+ * Issuer route protection (allows unverified issuers)
+ * Use this for endpoints that unverified issuers need access to (e.g., create organization)
+ */
+export function withIssuerUnverified(handler: Handler) {
+  return withAuth(handler, { roles: ["issuer", "admin"], skipVerificationCheck: true })
 }
 
 /**

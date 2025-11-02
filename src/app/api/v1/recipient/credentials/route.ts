@@ -31,8 +31,14 @@ async function handler(
     // Build query to find credentials for this recipient
     // Credentials can be matched by either recipientId OR recipientEmail
     // This handles cases where recipient was registered before/after credential issuance
-    const query: any = {
-      $or: [] as any[],
+    const query: {
+      $or: Array<Record<string, unknown>>;
+      status: { $ne: string };
+      onBlockchain?: boolean;
+      isOnBlockchain?: boolean;
+      expiresAt?: { $gte: Date; $lte: Date };
+    } = {
+      $or: [],
       status: { $ne: "revoked" }, // Exclude revoked credentials
     }
     
@@ -77,9 +83,22 @@ async function handler(
       Credential.countDocuments(query),
     ])
 
-    const formattedCredentials = credentials.map((cred: any) => {
-      const template = cred.templateId as any
-      const organization = cred.organizationId as any
+    interface PopulatedCredential {
+      _id: { toString: () => string };
+      templateId?: { name?: string };
+      organizationId?: { name?: string };
+      issuedAt: Date;
+      isOnBlockchain?: boolean;
+      type?: string;
+      status: string;
+      expiresAt?: Date;
+      certificateUrl?: string;
+      badgeUrl?: string;
+    }
+
+    const formattedCredentials = (credentials as PopulatedCredential[]).map((cred) => {
+      const template = cred.templateId
+      const organization = cred.organizationId
 
       return {
         id: cred._id.toString(),

@@ -21,12 +21,17 @@ export async function getServerSessionForApi() {
     const session = await auth()
     
     if (!session) {
-      console.warn("No session found - user may not be authenticated")
       return null
     }
     
     return session
   } catch (error) {
+    // Suppress prerendering warnings during build time
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    if (errorMessage.includes('During prerendering') || errorMessage.includes('headers()')) {
+      // Silent failure during prerendering - this is expected
+      return null
+    }
     console.error("Auth error:", error)
     console.warn("Failed to get server session - authentication may not be available")
     return null
