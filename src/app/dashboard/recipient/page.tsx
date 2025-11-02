@@ -65,6 +65,11 @@ export default function RecipientDashboard() {
     try {
       const fetchOptions: RequestInit = {
         credentials: "include",
+        cache: "no-store", // Bypass cache to ensure fresh data
+        headers: {
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+          "Pragma": "no-cache",
+        },
       }
 
       // Load stats
@@ -91,6 +96,7 @@ export default function RecipientDashboard() {
         console.error("Failed to fetch credentials:", credentialsRes.statusText)
       } else {
         const credentialsData = await credentialsRes.json()
+        console.log("Credentials data received:", credentialsData) // Debug log
         setCredentials(credentialsData.data || credentialsData || [])
       }
     } catch (error) {

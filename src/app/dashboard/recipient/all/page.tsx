@@ -98,6 +98,11 @@ export default function AllCredentialsPage() {
     try {
       const fetchOptions: RequestInit = {
         credentials: "include",
+        cache: "no-store", // Bypass cache to ensure fresh data
+        headers: {
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+          "Pragma": "no-cache",
+        },
       }
 
       // Load stats
@@ -146,6 +151,11 @@ export default function AllCredentialsPage() {
       const nextPage = currentPage + 1
       const fetchOptions: RequestInit = {
         credentials: "include",
+        cache: "no-store", // Bypass cache to ensure fresh data
+        headers: {
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+          "Pragma": "no-cache",
+        },
       }
 
       const credentialsRes = await fetch(

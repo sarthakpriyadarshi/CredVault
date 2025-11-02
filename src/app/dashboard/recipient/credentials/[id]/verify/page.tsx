@@ -83,6 +83,11 @@ export default function VerifyCredentialPage() {
     try {
       const res = await fetch(`/api/v1/credentials/${credentialId}/verify`, {
         credentials: "include",
+        cache: "no-store", // Bypass cache to ensure fresh session data
+        headers: {
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+          "Pragma": "no-cache",
+        },
       })
 
       if (!res.ok) {
@@ -96,11 +101,13 @@ export default function VerifyCredentialPage() {
           return
         }
         const error = await res.json()
+        console.error("Verification API error:", error)
         alert(error.error || "Failed to verify credential")
         return
       }
 
       const data = await res.json()
+      console.log("Verification data loaded:", data)
       setCredential(data.credential)
       setVerification(data.verification)
     } catch (error) {

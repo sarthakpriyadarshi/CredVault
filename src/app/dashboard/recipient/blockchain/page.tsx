@@ -94,6 +94,11 @@ export default function BlockchainCredentialsPage() {
     try {
       const fetchOptions: RequestInit = {
         credentials: "include",
+        cache: "no-store", // Bypass cache to ensure fresh data
+        headers: {
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+          "Pragma": "no-cache",
+        },
       }
 
       // Load stats
