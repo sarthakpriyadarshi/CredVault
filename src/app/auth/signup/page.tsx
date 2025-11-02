@@ -259,11 +259,11 @@ export default function RecipientSignupPage() {
                 </div>
                 <span className="text-zinc-300">
                   I agree to the{" "}
-                  <Link href="#" className="text-primary hover:text-primary/80">
+                  <Link href="/terms" className="text-primary hover:text-primary/80">
                     Terms of Service
                   </Link>{" "}
                   and{" "}
-                  <Link href="#" className="text-primary hover:text-primary/80">
+                  <Link href="/privacy" className="text-primary hover:text-primary/80">
                     Privacy Policy
                   </Link>
                 </span>
@@ -279,17 +279,11 @@ export default function RecipientSignupPage() {
             </PrimaryButton>
           </form>
 
-          <div className="mt-6 text-center space-y-2">
+          <div className="mt-6 text-center">
             <p className="text-zinc-400">
               Already have an account?{" "}
               <Link href="/auth/login" className="text-primary hover:text-primary/80 font-medium">
                 Sign in
-              </Link>
-            </p>
-            <p className="text-xs text-zinc-500">
-              Are you an admin?{" "}
-              <Link href="/auth/admin/login" className="text-primary/80 hover:text-primary transition-colors underline-offset-4 hover:underline">
-                Admin Login
               </Link>
             </p>
           </div>

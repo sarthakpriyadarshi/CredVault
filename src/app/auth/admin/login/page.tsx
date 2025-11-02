@@ -216,6 +216,20 @@ export default function AdminLoginPage() {
               Admin access only. Contact system administrator if you need access.
             </p>
           </div>
+
+          {/* Privacy & Terms Links */}
+          <div className="mt-6 pt-4 border-t border-zinc-800 text-center">
+            <p className="text-xs text-zinc-500">
+              By continuing, you agree to our{" "}
+              <Link href="/terms" className="text-zinc-400 hover:text-white transition-colors underline">
+                Terms & Conditions
+              </Link>{" "}
+              and{" "}
+              <Link href="/privacy" className="text-zinc-400 hover:text-white transition-colors underline">
+                Privacy Policy
+              </Link>
+            </p>
+          </div>
         </motion.div>
             </motion.div>
           </div>

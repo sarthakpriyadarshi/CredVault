@@ -390,11 +390,11 @@ export default function IssuerSignupPage() {
                 </div>
                 <span className="text-zinc-300">
                   I agree to the{" "}
-                  <Link href="#" className="text-primary hover:text-primary/80">
+                  <Link href="/terms" className="text-primary hover:text-primary/80">
                     Terms of Service
                   </Link>{" "}
                   and{" "}
-                  <Link href="#" className="text-primary hover:text-primary/80">
+                  <Link href="/privacy" className="text-primary hover:text-primary/80">
                     Privacy Policy
                   </Link>
                 </span>
@@ -486,6 +486,20 @@ export default function IssuerSignupPage() {
             </PrimaryButton>
           </div>
         </motion.div>
+
+        {/* Privacy & Terms Links */}
+        <div className="mt-6 pt-4 border-t border-zinc-800 text-center">
+          <p className="text-xs text-zinc-500">
+            By continuing, you agree to our{" "}
+            <Link href="/terms" className="text-zinc-400 hover:text-white transition-colors underline">
+              Terms & Conditions
+            </Link>{" "}
+            and{" "}
+            <Link href="/privacy" className="text-zinc-400 hover:text-white transition-colors underline">
+              Privacy Policy
+            </Link>
+          </p>
+        </div>
             </motion.div>
           </div>
         </div>

@@ -219,17 +219,25 @@ export default function RecipientLoginPage() {
             </PrimaryButton>
           </form>
 
-          <div className="mt-6 text-center space-y-2">
+          <div className="mt-6 text-center">
             <p className="text-zinc-400">
               Don&apos;t have an account?{" "}
               <Link href="/auth/signup" className="text-primary hover:text-primary/80 font-medium">
                 Sign up
               </Link>
             </p>
+          </div>
+
+          {/* Privacy & Terms Links */}
+          <div className="mt-6 pt-4 border-t border-zinc-800 text-center">
             <p className="text-xs text-zinc-500">
-              Are you an admin?{" "}
-              <Link href="/auth/admin/login" className="text-primary/80 hover:text-primary transition-colors underline-offset-4 hover:underline">
-                Admin Login
+              By continuing, you agree to our{" "}
+              <Link href="/terms" className="text-zinc-400 hover:text-white transition-colors underline">
+                Terms & Conditions
+              </Link>{" "}
+              and{" "}
+              <Link href="/privacy" className="text-zinc-400 hover:text-white transition-colors underline">
+                Privacy Policy
               </Link>
             </p>
           </div>
