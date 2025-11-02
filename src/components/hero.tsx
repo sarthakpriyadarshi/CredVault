@@ -123,12 +123,6 @@ export default function Hero() {
                     </div>
                   </div>
                 </a>
-                <a
-                  href="/auth/admin/login"
-                  className="text-sm text-muted-foreground hover:text-foreground transition-colors underline-offset-4 hover:underline"
-                >
-                  Admin Login
-                </a>
               </div>
             </motion.div>
           </div>
@@ -141,7 +135,7 @@ export default function Hero() {
             className="mt-auto pb-8"
           >
             <div className="text-center">
-              <p className="text-sm text-muted-foreground mb-6">Trusted by organizations worldwide</p>
+              <p className="text-sm text-muted-foreground mb-6 mt-8">Built with</p>
               <div className="flex items-center justify-center gap-8">
                 {/* Vercel Logo */}
                 <div className="opacity-60 grayscale hover:opacity-100 hover:grayscale-0 hover:drop-shadow-[0_0_8px_rgba(255,255,255,0.3)] transition-all duration-300">
@@ -165,20 +159,6 @@ export default function Hero() {
                   />
                 </div>
 
-                {/* Framer Logo */}
-                <div className="opacity-60 grayscale hover:opacity-100 hover:grayscale-0 hover:drop-shadow-[0_0_8px_rgba(255,255,255,0.3)] transition-all duration-300">
-                  <svg
-                    width="32"
-                    height="32"
-                    viewBox="0 0 24 24"
-                    className="h-8 w-8 fill-current text-foreground"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path d="M4 0h16v8h-8zM4 8h8l8 8H4zM4 16h8v8z" />
-                  </svg>
-                </div>
-
-              
                 {/* Next.js Logo */}
                 <div className="opacity-60 grayscale hover:opacity-100 hover:grayscale-0 hover:drop-shadow-[0_0_8px_rgba(255,255,255,0.3)] transition-all duration-300">
                   <svg
