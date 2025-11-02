@@ -331,7 +331,7 @@ export default function TermsAndConditionsPage() {
                 <div>
                   <h3 className="text-xl font-semibold text-white mb-3">12.1 Informal Resolution</h3>
                   <p className="text-zinc-300 leading-relaxed">
-                    Before filing a legal claim, you agree to attempt to resolve disputes informally by contacting us at support@credvault.com. We will attempt to resolve the dispute within 30 days.
+                    Before filing a legal claim, you agree to attempt to resolve disputes informally by contacting us at sarthak@sarthakpriyadarshi.com. We will attempt to resolve the dispute within 30 days.
                   </p>
                 </div>
 
@@ -367,10 +367,10 @@ export default function TermsAndConditionsPage() {
                 </p>
                 <div className="bg-zinc-800/50 border border-zinc-700 rounded-xl p-6 space-y-2">
                   <p className="text-zinc-300">
-                    <strong className="text-white">Email:</strong> legal@credvault.com
+                    <strong className="text-white">Email:</strong> sarthak@sarthakpriyadarshi.com
                   </p>
                   <p className="text-zinc-300">
-                    <strong className="text-white">Support:</strong> support@credvault.com
+                    <strong className="text-white">Support:</strong> sarthak@sarthakpriyadarshi.com
                   </p>
                   <p className="text-zinc-300">
                     <strong className="text-white">Response Time:</strong> We aim to respond within 48 hours

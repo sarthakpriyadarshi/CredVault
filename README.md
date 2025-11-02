@@ -413,7 +413,7 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 ### **Getting Help**
 - **Documentation**: [docs.credvault.app](https://docs.credvault.app)
 - **Discord**: [Join our community](https://discord.gg/credvault)
-- **Email**: support@credvault.app
+- **Email**: sarthak@sarthakpriyadarshi.com
 - **Issues**: [GitHub Issues](https://github.com/sarthakpriyadarshi/credvault/issues)
 
 ### **Common Issues**
