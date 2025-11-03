@@ -60,6 +60,13 @@ export default function OrganizationsPage() {
   const [organizations, setOrganizations] = useState<Organization[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [isAddOpen, setIsAddOpen] = useState(false)
+  const [addForm, setAddForm] = useState({
+    name: "",
+    website: "",
+    email: "",
+    password: "",
+  })
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -141,6 +148,49 @@ export default function OrganizationsPage() {
     }
   }
 
+  const handleAddOrganization = async () => {
+    if (!addForm.name.trim()) {
+      alert("Organization name is required")
+      return
+    }
+    if (!addForm.email.trim()) {
+      alert("Issuer email is required")
+      return
+    }
+    if (!addForm.password.trim()) {
+      alert("Password is required")
+      return
+    }
+
+    setSaving(true)
+    try {
+      const res = await fetch("/api/v1/admin/organizations", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify(addForm),
+      })
+
+      if (!res.ok) {
+        const error = await res.json()
+        alert(error.error || "Failed to create organization")
+        return
+      }
+
+      // Reset form and close dialog
+      setAddForm({ name: "", website: "", email: "", password: "" })
+      setIsAddOpen(false)
+      await loadData()
+    } catch (error) {
+      console.error("Error creating organization:", error)
+      alert("An error occurred while creating the organization")
+    } finally {
+      setSaving(false)
+    }
+  }
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "approved":
@@ -169,7 +219,7 @@ export default function OrganizationsPage() {
   return (
     <div className="min-h-screen w-full bg-black relative">
       {/* Background gradient - fixed to viewport */}
-      <div className="fixed inset-0 bg-gradient-to-br from-zinc-900 via-black to-zinc-900 z-0" />
+      <div className="fixed inset-0 bg-linear-to-br from-zinc-900 via-black to-zinc-900 z-0" />
 
       {/* Decorative elements - fixed to viewport */}
       <div className="fixed top-20 left-20 w-72 h-72 bg-primary/10 rounded-full blur-3xl z-0" />
@@ -195,7 +245,7 @@ export default function OrganizationsPage() {
                   <h1 className="text-3xl font-bold text-foreground">Organizations</h1>
                   <p className="text-muted-foreground">Manage and monitor all registered organizations</p>
                 </div>
-                <Dialog>
+                <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
                   <DialogTrigger asChild>
                     <PrimaryButton className="gap-2">
                       <Plus className="h-4 w-4" />
@@ -205,7 +255,7 @@ export default function OrganizationsPage() {
                   <DialogContent className="bg-card border-border/50">
                     <DialogHeader>
                       <DialogTitle>Add New Organization</DialogTitle>
-                      <DialogDescription>Register a new organization in the system</DialogDescription>
+                      <DialogDescription>Register a new organization and create an issuer account</DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4">
                       <div>
@@ -213,6 +263,8 @@ export default function OrganizationsPage() {
                         <input
                           type="text"
                           placeholder="Enter organization name"
+                          value={addForm.name}
+                          onChange={(e) => setAddForm({ ...addForm, name: e.target.value })}
                           className="w-full mt-1 px-3 py-2 rounded-lg bg-background border border-border/50 text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary"
                         />
                       </div>
@@ -221,13 +273,39 @@ export default function OrganizationsPage() {
                         <input
                           type="url"
                           placeholder="https://organization.com"
+                          value={addForm.website}
+                          onChange={(e) => setAddForm({ ...addForm, website: e.target.value })}
+                          className="w-full mt-1 px-3 py-2 rounded-lg bg-background border border-border/50 text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-foreground">Issuer Email</label>
+                        <input
+                          type="email"
+                          placeholder="issuer@organization.com"
+                          value={addForm.email}
+                          onChange={(e) => setAddForm({ ...addForm, email: e.target.value })}
+                          className="w-full mt-1 px-3 py-2 rounded-lg bg-background border border-border/50 text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-foreground">Password</label>
+                        <input
+                          type="password"
+                          placeholder="Enter password for issuer account"
+                          value={addForm.password}
+                          onChange={(e) => setAddForm({ ...addForm, password: e.target.value })}
                           className="w-full mt-1 px-3 py-2 rounded-lg bg-background border border-border/50 text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary"
                         />
                       </div>
                     </div>
                     <DialogFooter>
-                      <Button variant="outline">Cancel</Button>
-                      <PrimaryButton>Add Organization</PrimaryButton>
+                      <Button variant="outline" onClick={() => setIsAddOpen(false)} disabled={saving}>
+                        Cancel
+                      </Button>
+                      <PrimaryButton onClick={handleAddOrganization} disabled={saving}>
+                        {saving ? "Creating..." : "Create Organization"}
+                      </PrimaryButton>
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>

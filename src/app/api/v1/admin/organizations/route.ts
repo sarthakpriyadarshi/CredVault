@@ -1,14 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
 import { withAdmin, handleApiError } from "@/lib/api/middleware"
-import { getPagination, createPaginatedResponse, getQueryParams } from "@/lib/api/utils"
+import { getPagination, createPaginatedResponse, getQueryParams, parseBody } from "@/lib/api/utils"
 import { Organization, User } from "@/models"
 import connectDB from "@/lib/db/mongodb"
 
-async function handler(req: NextRequest) {
-  if (req.method !== "GET") {
-    return NextResponse.json({ error: "Method not allowed" }, { status: 405 })
-  }
-
+async function getHandler(req: NextRequest) {
   try {
     await connectDB()
 
@@ -84,5 +80,97 @@ async function handler(req: NextRequest) {
   }
 }
 
-export const GET = withAdmin(handler)
+async function postHandler(req: NextRequest) {
+  try {
+    await connectDB()
+
+    const body = await parseBody<{
+      name: string
+      website?: string
+      email: string
+      password: string
+    }>(req)
+
+    const { name, website, email, password } = body
+
+    // Validate required fields
+    if (!name || !name.trim()) {
+      return NextResponse.json({ error: "Organization name is required" }, { status: 400 })
+    }
+    if (!email || !email.trim()) {
+      return NextResponse.json({ error: "Issuer email is required" }, { status: 400 })
+    }
+    if (!password || !password.trim()) {
+      return NextResponse.json({ error: "Password is required" }, { status: 400 })
+    }
+
+    // Validate email format
+    const emailRegex = /^\S+@\S+\.\S+$/
+    if (!emailRegex.test(email)) {
+      return NextResponse.json({ error: "Invalid email format" }, { status: 400 })
+    }
+
+    // Check if organization with this name already exists
+    const existingOrg = await Organization.findOne({
+      name: { $regex: new RegExp(`^${name.trim()}$`, "i") },
+    })
+
+    if (existingOrg) {
+      return NextResponse.json(
+        { error: "An organization with this name already exists" },
+        { status: 409 }
+      )
+    }
+
+    // Check if user with this email already exists
+    const existingUser = await User.findOne({ email: email.toLowerCase().trim() })
+    if (existingUser) {
+      return NextResponse.json(
+        { error: "A user with this email already exists" },
+        { status: 409 }
+      )
+    }
+
+    // Create organization with approved status
+    const organization = await Organization.create({
+      name: name.trim(),
+      website: website?.trim() || undefined,
+      verificationStatus: "approved",
+      verifiedAt: new Date(),
+    })
+
+    // Create issuer user with the organization ID
+    const user = await User.create({
+      name: name.trim(), // Use organization name as user name
+      email: email.toLowerCase().trim(),
+      password, // Will be hashed by pre-save hook
+      role: "issuer",
+      organizationId: organization._id,
+      isVerified: true, // Auto-approve issuer
+      emailVerified: true,
+    })
+
+    return NextResponse.json({
+      message: "Organization and issuer account created successfully",
+      organization: {
+        id: organization._id.toString(),
+        name: organization.name,
+        website: organization.website,
+        verificationStatus: organization.verificationStatus,
+      },
+      user: {
+        id: user._id.toString(),
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
+    })
+  } catch (error: unknown) {
+    return handleApiError(error)
+  }
+}
+
+export const GET = withAdmin(getHandler)
+export const POST = withAdmin(postHandler)
+
 
