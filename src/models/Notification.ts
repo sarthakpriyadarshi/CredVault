@@ -6,6 +6,7 @@ export type NotificationType =
   | "organization_rejected"     // Issuer: Organization rejected
   | "credential_issued"         // Recipient: Credential issued
   | "credential_verified"        // Issuer: Credential verified
+  | "password_reset"            // User: Password reset confirmation
 
 export interface INotification extends Document {
   _id: string
@@ -35,6 +36,7 @@ const NotificationSchema = new Schema<INotification>(
         "organization_rejected",
         "credential_issued",
         "credential_verified",
+        "password_reset",
       ],
       required: true,
     },

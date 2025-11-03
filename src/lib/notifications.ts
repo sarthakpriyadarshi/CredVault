@@ -10,7 +10,7 @@ import {
  */
 export async function createNotification(params: {
   userId: string | any
-  type: "organization_signup" | "organization_approved" | "organization_rejected" | "credential_issued" | "credential_verified"
+  type: "organization_signup" | "organization_approved" | "organization_rejected" | "credential_issued" | "credential_verified" | "password_reset"
   title: string
   message: string
   link?: string

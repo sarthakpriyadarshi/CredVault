@@ -92,7 +92,15 @@ export const authOptions: NextAuthConfig = {
             image: user.image || null,
           }
         } catch (error: unknown) {
-          console.error("Auth error:", error)
+          // Don't log EMAIL_NOT_VERIFIED errors as they're expected behavior
+          const errorMessage = error && typeof error === "object" && "message" in error 
+            ? String(error.message) 
+            : String(error)
+          
+          if (!errorMessage.includes("EMAIL_NOT_VERIFIED")) {
+            console.error("Auth error:", error)
+          }
+          
           // Re-throw custom error messages
           if (error && typeof error === "object" && "message" in error && typeof error.message === "string") {
             throw error

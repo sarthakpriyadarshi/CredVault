@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useSearchParams } from "next/navigation"
 import { Building2, User, UserCog } from "lucide-react"
 import { motion } from "framer-motion"
 
@@ -13,8 +13,20 @@ interface AuthSidebarProps {
 
 export function AuthSidebar({ recipientLink, organizationLink, adminLink }: AuthSidebarProps) {
   const pathname = usePathname()
+  const searchParams = useSearchParams()
 
-  const isActive = (path: string) => pathname === path
+  const isActive = (path: string) => {
+    // Check if pathname matches exactly
+    if (pathname === path) return true
+    // For forgot-password page, check if it was accessed from this login page
+    if (pathname === "/forgot-password") {
+      const fromParam = searchParams.get("from")
+      if (fromParam === "recipient" && path === recipientLink) return true
+      if (fromParam === "issuer" && path === organizationLink) return true
+      if (fromParam === "admin" && path === adminLink) return true
+    }
+    return false
+  }
 
   const activeIndex = isActive(recipientLink) ? 0 : isActive(organizationLink) ? 1 : 2
 

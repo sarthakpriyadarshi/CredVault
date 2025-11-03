@@ -1,6 +1,6 @@
 "use client"
 
-import { LogOut, Bell, Building2, Check, X } from "lucide-react"
+import { LogOut, Bell, Building2, Check } from "lucide-react"
 import { signOut, useSession } from "next-auth/react"
 import Link from "next/link"
 import Image from "next/image"
@@ -172,8 +172,12 @@ export function DashboardHeader({ userRole, userName }: DashboardHeaderProps) {
       handleMarkAsRead(notification._id)
     }
     if (notification.link) {
-      router.push(notification.link)
+      // Close popover first to ensure it unmounts before navigation
       setIsNotificationOpen(false)
+      // Use setTimeout to ensure popover unmounts before navigation
+      setTimeout(() => {
+        router.push(notification.link!)
+      }, 150)
     }
   }
 
@@ -223,6 +227,7 @@ export function DashboardHeader({ userRole, userName }: DashboardHeaderProps) {
       </div>
 
       <div className="flex items-center gap-2 md:gap-4">
+        {/* Popover state is controlled by isNotificationOpen - when set to false, it unmounts */}
         <Popover open={isNotificationOpen} onOpenChange={setIsNotificationOpen}>
           <PopoverTrigger asChild>
             <button className="relative p-2 rounded-full hover:bg-muted transition-colors">
@@ -315,7 +320,8 @@ export function DashboardHeader({ userRole, userName }: DashboardHeaderProps) {
                   onClick={(e) => {
                     e.preventDefault()
                     setIsNotificationOpen(false)
-                    // Use setTimeout to ensure popover closes before navigation
+                    // Use setTimeout to ensure popover unmounts before navigation
+                    // This applies to all roles: admin, issuer, and recipient
                     setTimeout(() => {
                       router.push(
                         userRole === "admin"
@@ -324,7 +330,7 @@ export function DashboardHeader({ userRole, userName }: DashboardHeaderProps) {
                           ? "/dashboard/issuer/notifications"
                           : "/dashboard/recipient/notifications"
                       )
-                    }, 100)
+                    }, 150)
                   }}
                   className="text-xs text-primary hover:text-primary/80 transition-colors"
                 >
