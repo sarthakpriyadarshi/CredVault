@@ -4,17 +4,20 @@
  * Matches the exact website design
  */
 
+// Get base URL from environment variable (fallback for development)
+const BASE_URL = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:4300';
+
 // Logo image URL (hosted on domain)
-const LOGO_URL = 'https://credvault.app/assets/email/logo.png';
+const LOGO_URL = `${BASE_URL}/assets/email/logo.png`;
 const LOGO_ALT = 'CredVault Logo';
 
 // Icon images from CDN (reliable in email clients)
-const ICON_CLOCK = 'https://credvault.app/assets/email/clock.png';
-const ICON_LOCK = 'https://credvault.app/assets/email/lock.png';
-const ICON_SMARTPHONE = 'https://credvault.app/assets/email/smartphone.png';
-const ICON_TROPHY = 'https://credvault.app/assets/email/trophy.png';
-const ICON_SHIELD = 'https://credvault.app/assets/email/shield.png';
-const ICON_CHECKMARK = 'https://credvault.app/assets/email/checked.png';
+const ICON_CLOCK = `${BASE_URL}/assets/email/time.png`;
+const ICON_LOCK = `${BASE_URL}/assets/email/lock.png`;
+const ICON_SMARTPHONE = `${BASE_URL}/assets/email/smartphone.png`;
+const ICON_TROPHY = `${BASE_URL}/assets/email/trophy.png`;
+const ICON_SHIELD = `${BASE_URL}/assets/email/shield.png`;
+const ICON_CHECKMARK = `${BASE_URL}/assets/email/checked.png`;
 
 // Brand colors matching website dark theme CSS
 const C = {
