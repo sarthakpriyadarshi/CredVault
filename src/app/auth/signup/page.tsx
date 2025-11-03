@@ -19,6 +19,9 @@ export default function RecipientSignupPage() {
   })
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
+  const [showResendButton, setShowResendButton] = useState(false)
+  const [resendSuccess, setResendSuccess] = useState(false)
+  const [isResending, setIsResending] = useState(false)
   const router = useRouter()
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -88,19 +91,33 @@ export default function RecipientSignupPage() {
       })
 
       if (result?.error) {
-        let errorMessage = "Account created but sign in failed. Please try logging in."
+        const errorStr = String(result.error)
+        let errorMessage = "Account created successfully! Please verify your email address before signing in. Check your inbox for the verification link. If you don't see it, check your spam folder."
         
-        if (result.error.includes("Invalid email or password")) {
+        // Check for email verification error (most common case after signup)
+        if (errorStr.includes("EMAIL_NOT_VERIFIED") || errorStr.includes("verify your email") || errorStr.includes("Email") && errorStr.includes("verified")) {
+          errorMessage = "Account created successfully! Please verify your email address before signing in. Check your inbox for the verification link. If you don't see it, check your spam folder."
+          setShowResendButton(true)
+        } else if (errorStr.includes("Invalid email or password") || errorStr.includes("Invalid credentials")) {
           errorMessage = "Account created successfully! Please sign in with your credentials."
-        } else if (result.error) {
-          errorMessage = `Account created but sign in failed: ${result.error}. Please try logging in.`
+        } else if (errorStr && errorStr.trim().length > 0) {
+          // Only show generic error if we can't identify the specific error type
+          // Most configuration errors are actually email verification issues
+          if (errorStr.includes("Configuration") || errorStr.includes("CallbackRouteError")) {
+            errorMessage = "Account created successfully! Please verify your email address before signing in. Check your inbox for the verification link. If you don't see it, check your spam folder."
+            setShowResendButton(true)
+          } else {
+            errorMessage = `Account created successfully, but there was an issue: ${errorStr}. Please check your email for verification or try logging in.`
+          }
         }
         
         setError(errorMessage)
       } else if (result?.ok) {
         router.push("/dashboard/recipient")
       } else {
-        setError("Account created but sign in failed. Please try logging in.")
+        // If sign-in fails without error, it's likely email verification
+        setShowResendButton(true)
+        setError("Account created successfully! Please verify your email address before signing in. Check your inbox for the verification link. If you don't see it, check your spam folder.")
       }
     } catch (err: unknown) {
       const errorMessage = err && typeof err === "object" && "message" in err
@@ -166,8 +183,23 @@ export default function RecipientSignupPage() {
           className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-8"
         >
           {error && (
-            <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
-              {error}
+            <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm space-y-2">
+              <p>{error}</p>
+              {showResendButton && (
+                <button
+                  type="button"
+                  onClick={handleResendVerification}
+                  disabled={isResending}
+                  className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-primary"
+                >
+                  {isResending ? "Sending..." : "Resend Email"}
+                </button>
+              )}
+            </div>
+          )}
+          {resendSuccess && (
+            <div className="mb-4 p-3 bg-green-500/10 border border-green-500/20 rounded-lg text-green-400 text-sm">
+              Verification email sent successfully! Please check your inbox and spam folder.
             </div>
           )}
 

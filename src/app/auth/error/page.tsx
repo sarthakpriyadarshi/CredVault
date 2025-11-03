@@ -49,21 +49,34 @@ export default function AuthErrorPage() {
   }, [error, session])
 
   const getErrorMessage = () => {
-    // If we have a custom error message from OAuth, use it
+    // If we have a custom error message from OAuth, check if it's about email verification
     if (errorMessage) {
-      return errorMessage
+      if (errorMessage.includes("verify") || 
+          errorMessage.includes("EMAIL_NOT_VERIFIED") || 
+          errorMessage.includes("email") && errorMessage.includes("verify")) {
+        return errorMessage
+      }
+      // If it's a different error, still return it but continue to check for email verification in switch
     }
 
-    // Otherwise use default messages
+    // Otherwise use default messages based on error type
     switch (error) {
       case "Configuration":
-        return "There is a problem with the server configuration."
+        return "Please verify your email address before signing in. Check your inbox for the verification link. If you don't see it, check your spam folder or request a new verification email."
       case "AccessDenied":
-        return "You do not have permission to sign in. This may happen if you're trying to sign in with an account that has a different role, or if your organization is pending verification. Please make sure you're using the correct login page for your account type."
+        // If we have a custom error message, use it, otherwise show default
+        if (errorMessage && (errorMessage.includes("verify") || errorMessage.includes("email"))) {
+          return errorMessage
+        }
+        return "You do not have permission to sign in. This may happen if you're trying to sign in with an account that has a different role, or if your organization is pending verification. Please make sure you're using the correct login page for your account type. If this is about email verification, check your inbox and spam folder for the verification link."
       case "Verification":
         return "The verification token has expired or has already been used."
       default:
-        return "An error occurred during authentication."
+        // Check if error message contains email verification hints
+        if (errorMessage && (errorMessage.includes("verify") || errorMessage.includes("EMAIL_NOT_VERIFIED"))) {
+          return errorMessage
+        }
+        return errorMessage || "An error occurred during authentication."
     }
   }
 

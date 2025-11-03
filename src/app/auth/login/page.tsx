@@ -17,6 +17,9 @@ export default function RecipientLoginPage() {
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
+  const [showResendButton, setShowResendButton] = useState(false)
+  const [resendSuccess, setResendSuccess] = useState(false)
+  const [isResending, setIsResending] = useState(false)
   const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -36,6 +39,13 @@ export default function RecipientLoginPage() {
         const checkData = await checkResponse.json()
         if (checkData.error) {
           setError(checkData.error)
+          // Check if it's an email verification error
+          if (checkData.error.includes("verify") && checkData.error.includes("email")) {
+            setShowResendButton(true)
+          } else {
+            setShowResendButton(false)
+          }
+          setResendSuccess(false)
           return
         }
       }
@@ -53,9 +63,15 @@ export default function RecipientLoginPage() {
         const errorStr = String(result.error)
         let errorMessage = "Invalid email or password"
         
-        if (errorStr.includes("EMAIL_NOT_VERIFIED") || errorStr.includes("verify your email")) {
-          errorMessage = "Please verify your email address before signing in. Check your inbox for the verification link."
-        } else if (errorStr.includes("VERIFICATION_PENDING") || errorStr.includes("verification")) {
+        // Check for email verification error first (most common after signup)
+        if (errorStr.includes("EMAIL_NOT_VERIFIED") || 
+            errorStr.includes("verify your email") || 
+            errorStr.includes("verify") && errorStr.includes("email") ||
+            errorStr.includes("Configuration") && errorStr.includes("sign")) {
+          errorMessage = "Please verify your email address before signing in. Check your inbox for the verification link. If you don't see it, check your spam folder."
+          setShowResendButton(true)
+        } else if (errorStr.includes("VERIFICATION_PENDING") || errorStr.includes("verification") && errorStr.includes("organization")) {
+          setShowResendButton(false)
           errorMessage = "Your organization is pending verification. Please wait for admin approval."
         } else if (errorStr.includes("Invalid role") || errorStr.includes("registered as")) {
           const parts = errorStr.match(/registered as (\w+), not (\w+)/i)
@@ -72,7 +88,14 @@ export default function RecipientLoginPage() {
             .trim()
           
           if (cleaned && cleaned.length > 0 && cleaned !== "CallbackRouteError") {
-            errorMessage = cleaned
+            // If it's a generic error that might be email verification, check it
+            if (cleaned.includes("Configuration") || cleaned.includes("CallbackRouteError")) {
+              errorMessage = "Please verify your email address before signing in. Check your inbox for the verification link. If you don't see it, check your spam folder."
+              setShowResendButton(true)
+            } else {
+              setShowResendButton(false)
+              errorMessage = cleaned
+            }
           }
         }
         
@@ -99,6 +122,40 @@ export default function RecipientLoginPage() {
     // Store role in cookie before OAuth
     document.cookie = `oauth_role=recipient; path=/; max-age=900; SameSite=Lax`
     signIn(provider, { callbackUrl: "/dashboard/recipient?role=recipient" })
+  }
+
+  const handleResendVerification = async () => {
+    if (!email || !email.includes("@")) {
+      setError("Please enter your email address first")
+      return
+    }
+
+    setIsResending(true)
+    setResendSuccess(false)
+    setError("")
+
+    try {
+      const response = await fetch("/api/v1/auth/request-verification", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        setError(data.error || "Failed to send verification email. Please try again.")
+        setResendSuccess(false)
+      } else {
+        setResendSuccess(true)
+        setError("")
+      }
+    } catch {
+      setError("An error occurred while sending the verification email. Please try again.")
+      setResendSuccess(false)
+    } finally {
+      setIsResending(false)
+    }
   }
 
   return (
@@ -149,8 +206,23 @@ export default function RecipientLoginPage() {
           className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-8"
         >
           {error && (
-            <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
-              {error}
+            <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm space-y-2">
+              <p>{error}</p>
+              {showResendButton && (
+                <button
+                  type="button"
+                  onClick={handleResendVerification}
+                  disabled={isResending}
+                  className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-primary"
+                >
+                  {isResending ? "Sending..." : "Resend Email"}
+                </button>
+              )}
+            </div>
+          )}
+          {resendSuccess && (
+            <div className="mb-4 p-3 bg-green-500/10 border border-green-500/20 rounded-lg text-green-400 text-sm">
+              Verification email sent successfully! Please check your inbox and spam folder.
             </div>
           )}
 

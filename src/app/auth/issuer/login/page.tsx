@@ -19,6 +19,9 @@ function IssuerLoginForm() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const [pendingMessage, setPendingMessage] = useState(false)
+  const [showResendButton, setShowResendButton] = useState(false)
+  const [resendSuccess, setResendSuccess] = useState(false)
+  const [isResending, setIsResending] = useState(false)
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -49,6 +52,13 @@ function IssuerLoginForm() {
             setPendingMessage(true)
           }
           setError(checkData.error)
+          // Check if it's an email verification error
+          if (checkData.error.includes("verify") && checkData.error.includes("email") && !checkData.error.includes("organization")) {
+            setShowResendButton(true)
+          } else {
+            setShowResendButton(false)
+          }
+          setResendSuccess(false)
           return
         }
       }
@@ -66,12 +76,19 @@ function IssuerLoginForm() {
         const errorStr = String(result.error)
         let errorMessage = "Invalid email or password"
         
-        if (errorStr.includes("EMAIL_NOT_VERIFIED") || errorStr.includes("verify your email")) {
-          errorMessage = "Please verify your email address before signing in. Check your inbox for the verification link."
-        } else if (errorStr.includes("VERIFICATION_PENDING") || errorStr.includes("verification")) {
+        // Check for email verification error first (most common after signup)
+        if (errorStr.includes("EMAIL_NOT_VERIFIED") || 
+            errorStr.includes("verify your email") || 
+            errorStr.includes("verify") && errorStr.includes("email") ||
+            errorStr.includes("Configuration") && errorStr.includes("sign")) {
+          errorMessage = "Please verify your email address before signing in. Check your inbox for the verification link. If you don't see it, check your spam folder."
+          setShowResendButton(true)
+        } else if (errorStr.includes("VERIFICATION_PENDING") || (errorStr.includes("verification") && errorStr.includes("organization"))) {
           errorMessage = "Your organization is pending verification. Please wait for admin approval."
           setPendingMessage(true)
+          setShowResendButton(false)
         } else if (errorStr.includes("Invalid role") || errorStr.includes("registered as")) {
+          setShowResendButton(false)
           const parts = errorStr.match(/registered as (\w+), not (\w+)/i)
           if (parts) {
             errorMessage = `This account is registered as ${parts[1]}, not ${parts[2]}. Please use the ${parts[1]} login page.`
@@ -86,11 +103,21 @@ function IssuerLoginForm() {
             .trim()
           
           if (cleaned && cleaned.length > 0 && cleaned !== "CallbackRouteError") {
-            errorMessage = cleaned
+            // If it's a generic error that might be email verification, check it
+            if (cleaned.includes("Configuration") || cleaned.includes("CallbackRouteError")) {
+              errorMessage = "Please verify your email address before signing in. Check your inbox for the verification link. If you don't see it, check your spam folder."
+              setShowResendButton(true)
+            } else {
+              setShowResendButton(false)
+              errorMessage = cleaned
+            }
           }
+        } else {
+          setShowResendButton(false)
         }
         
         setError(errorMessage)
+        setResendSuccess(false)
         return
       }
 
@@ -168,8 +195,23 @@ function IssuerLoginForm() {
             </div>
           )}
           {error && (
-            <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
-              {error}
+            <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm space-y-2">
+              <p>{error}</p>
+              {showResendButton && (
+                <button
+                  type="button"
+                  onClick={handleResendVerification}
+                  disabled={isResending}
+                  className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-primary"
+                >
+                  {isResending ? "Sending..." : "Resend Email"}
+                </button>
+              )}
+            </div>
+          )}
+          {resendSuccess && (
+            <div className="mb-4 p-3 bg-green-500/10 border border-green-500/20 rounded-lg text-green-400 text-sm">
+              Verification email sent successfully! Please check your inbox and spam folder.
             </div>
           )}
 
