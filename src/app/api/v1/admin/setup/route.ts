@@ -3,6 +3,9 @@ import connectDB from "@/lib/db/mongodb"
 import { User } from "@/models"
 import { invalidateAdminExists } from "@/lib/cache/invalidation"
 import { hasAdminUser } from "@/lib/cache/user-cache"
+import crypto from "crypto"
+import { sendEmail } from "@/lib/email/nodemailer"
+import { generateVerificationEmail } from "@/lib/email/templates"
 
 // Check if setup is needed (no admin users exist)
 // This endpoint is called on EVERY page load by SetupChecker component
@@ -99,7 +102,35 @@ export async function POST(req: NextRequest) {
       password: password, // Pass raw password, pre-save hook will hash it
       role: "admin",
       isVerified: true, // Auto-verify first admin
+      emailVerified: false, // Email needs to be verified
     })
+
+    // Generate email verification token
+    const verificationToken = crypto.randomBytes(32).toString("hex")
+    const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
+
+    // Save verification token to user
+    user.emailVerificationToken = verificationToken
+    user.emailVerificationExpires = verificationExpires
+    await user.save()
+
+    // Send verification email
+    try {
+      const verificationLink = `${process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:4300'}/verify-email/${verificationToken}`
+      const emailHtml = generateVerificationEmail({
+        name: user.name,
+        verificationLink,
+      })
+
+      await sendEmail({
+        to: user.email,
+        subject: "Verify Your Email - CredVault",
+        html: emailHtml,
+      })
+    } catch (emailError) {
+      console.error("Failed to send verification email:", emailError)
+      // Don't fail setup if email fails - user can request new verification email
+    }
 
     // Invalidate admin existence cache since we just created the first admin
     // Use background revalidation (false) since we're in a Route Handler, not Server Action
