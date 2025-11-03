@@ -135,6 +135,40 @@ export default function RecipientSignupPage() {
     signIn(provider, { callbackUrl: "/dashboard/recipient?role=recipient" })
   }
 
+  const handleResendVerification = async () => {
+    if (!formData.email || !formData.email.includes("@")) {
+      setError("Please enter your email address first")
+      return
+    }
+
+    setIsResending(true)
+    setResendSuccess(false)
+    setError("")
+
+    try {
+      const response = await fetch("/api/v1/auth/request-verification", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: formData.email }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        setError(data.error || "Failed to send verification email. Please try again.")
+        setResendSuccess(false)
+      } else {
+        setResendSuccess(true)
+        setError("")
+      }
+    } catch {
+      setError("An error occurred while sending the verification email. Please try again.")
+      setResendSuccess(false)
+    } finally {
+      setIsResending(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-black flex items-center justify-center relative overflow-x-hidden">
       {/* Background gradient - fixed to viewport */}
