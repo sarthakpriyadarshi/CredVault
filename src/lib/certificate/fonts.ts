@@ -65,6 +65,30 @@ export function getActualFontName(fontFamily: string): string {
 }
 
 /**
+ * Get the weight and style-specific font family name for node-canvas
+ * Returns the registered family name based on weight and italic (e.g., "Roboto Bold Italic" for weight 700 + italic)
+ */
+export function getWeightedFontName(fontFamily: string, weight: number, italic: boolean = false): string {
+  const variantKey = `${fontFamily}-${weight}${italic ? "-italic" : ""}`
+  if (fontMappings.has(variantKey)) {
+    return fontMappings.get(variantKey) || fontFamily
+  }
+  
+  // If not registered yet, return the expected name
+  if (italic && weight === 700) {
+    return `${fontFamily} Bold Italic`
+  } else if (italic) {
+    return `${fontFamily} Italic`
+  } else if (weight === 700) {
+    return `${fontFamily} Bold`
+  } else if (weight === 400) {
+    return fontFamily
+  } else {
+    return `${fontFamily} ${weight}`
+  }
+}
+
+/**
  * Font file cache directory (fallback for persistent storage)
  * On Vercel/serverless, this won't persist and won't be writable
  * Only used for local development
@@ -102,11 +126,12 @@ function ensureFontCacheDir() {
  * Download a font file from Google Fonts
  * Uses Google Fonts CSS API to get font URLs and downloads TTF files
  * Caches in memory for serverless compatibility
+ * @param italic - If true, downloads the italic variant
  */
-async function downloadFontFile(fontFamily: string, weight: number = 400): Promise<Buffer | null> {
+async function downloadFontFile(fontFamily: string, weight: number = 400, italic: boolean = false): Promise<Buffer | null> {
   try {
     const normalizedName = normalizeFontName(fontFamily)
-    const cacheKey = `${normalizedName}-${weight}`
+    const cacheKey = `${normalizedName}-${weight}${italic ? "-italic" : ""}`
     
     // Check in-memory cache first (serverless-friendly)
     if (fontBufferCache.has(cacheKey)) {
@@ -128,7 +153,10 @@ async function downloadFontFile(fontFamily: string, weight: number = 400): Promi
 
     // Fetch font CSS from Google Fonts
     const fontName = fontFamily.replace(/\s+/g, "+")
-    const cssUrl = `https://fonts.googleapis.com/css2?family=${fontName}:wght@${weight}&display=swap`
+    // Use ital parameter for italic variants: family=Roboto:ital,wght@1,400 for italic
+    const cssUrl = italic
+      ? `https://fonts.googleapis.com/css2?family=${fontName}:ital,wght@1,${weight}&display=swap`
+      : `https://fonts.googleapis.com/css2?family=${fontName}:wght@${weight}&display=swap`
     
     // Use fetch API (available in Node.js 18+)
     const response = await fetch(cssUrl, {
@@ -237,10 +265,11 @@ async function downloadFontFile(fontFamily: string, weight: number = 400): Promi
  * Uses in-memory caching for serverless compatibility
  * Tries to load from cache first, then downloads if needed
  * For system fonts (like Arial), maps to Google Fonts alternatives
+ * @param italic - If true, loads the italic variant
  */
-export async function loadFont(fontFamily: string, weight: number = 400): Promise<boolean> {
+export async function loadFont(fontFamily: string, weight: number = 400, italic: boolean = false): Promise<boolean> {
   // Check if already registered
-  const registerKey = `${fontFamily}-${weight}`
+  const registerKey = `${fontFamily}-${weight}${italic ? "-italic" : ""}`
   if (registeredFonts.has(registerKey)) {
     return true
   }
@@ -255,7 +284,7 @@ export async function loadFont(fontFamily: string, weight: number = 400): Promis
     console.log(`Mapping system font "${fontFamily}" to Google Font "${googleFontAlternative}"`)
     
     // Download and register the Google Font alternative
-    const success = await loadFontFromGoogle(googleFontAlternative, weight)
+    const success = await loadFontFromGoogle(googleFontAlternative, weight, italic)
     
     if (success) {
       // Track the mapping so we know which font to actually use
@@ -271,14 +300,14 @@ export async function loadFont(fontFamily: string, weight: number = 400): Promis
   }
 
   // For non-system fonts, download from Google Fonts
-  return await loadFontFromGoogle(fontFamily, weight)
+  return await loadFontFromGoogle(fontFamily, weight, italic)
 }
 
 /**
  * Load a font from Google Fonts (internal helper)
  */
-async function loadFontFromGoogle(fontFamily: string, weight: number = 400): Promise<boolean> {
-  const registerKey = `${fontFamily}-${weight}`
+async function loadFontFromGoogle(fontFamily: string, weight: number = 400, italic: boolean = false): Promise<boolean> {
+  const registerKey = `${fontFamily}-${weight}${italic ? "-italic" : ""}`
   
   // Check if already registered
   if (registeredFonts.has(registerKey)) {
@@ -287,7 +316,7 @@ async function loadFontFromGoogle(fontFamily: string, weight: number = 400): Pro
 
   try {
     const normalizedName = normalizeFontName(fontFamily)
-    const cacheKey = `${normalizedName}-${weight}`
+    const cacheKey = `${normalizedName}-${weight}${italic ? "-italic" : ""}`
     
     // Try to get font buffer (from cache or download)
     let fontBuffer: Buffer | null = null
@@ -309,7 +338,7 @@ async function loadFontFromGoogle(fontFamily: string, weight: number = 400): Pro
       
       // Download if not cached
       if (!fontBuffer) {
-        fontBuffer = await downloadFontFile(fontFamily, weight)
+        fontBuffer = await downloadFontFile(fontFamily, weight, italic)
       }
     }
 
@@ -326,9 +355,30 @@ async function loadFontFromGoogle(fontFamily: string, weight: number = 400): Pro
     
     try {
       writeFileSync(tempPath, fontBuffer)
-      registerFont(tempPath, { family: fontFamily })
+      
+      // Register font with weight and style-specific family name for node-canvas
+      // node-canvas needs different family names for different weights/styles to distinguish them
+      let fontFamilyName = fontFamily
+      if (italic && weight === 700) {
+        fontFamilyName = `${fontFamily} Bold Italic`
+      } else if (italic) {
+        fontFamilyName = `${fontFamily} Italic`
+      } else if (weight === 700) {
+        fontFamilyName = `${fontFamily} Bold`
+      } else if (weight === 400) {
+        fontFamilyName = fontFamily
+      } else {
+        fontFamilyName = `${fontFamily} ${weight}`
+      }
+      
+      registerFont(tempPath, { family: fontFamilyName })
       registeredFonts.add(registerKey)
-      console.log(`Successfully registered font ${fontFamily} from ${tempPath}`)
+      
+      // Also track the mapping from original family+weight+italic to registered family name
+      const variantKey = `${fontFamily}-${weight}${italic ? "-italic" : ""}`
+      fontMappings.set(variantKey, fontFamilyName)
+      
+      console.log(`Successfully registered font ${fontFamilyName} (weight ${weight}, italic: ${italic}) from ${tempPath}`)
       return true
     } catch (error) {
       console.error(`Failed to register font ${fontFamily}:`, error instanceof Error ? error.message : String(error))

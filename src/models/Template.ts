@@ -9,6 +9,8 @@ export interface IPlaceholder {
   fontFamily?: string
   color?: string
   align?: "left" | "center" | "right"
+  bold?: boolean
+  italic?: boolean
 }
 
 export interface ITemplate extends Document {
@@ -62,6 +64,14 @@ const PlaceholderSchema = new Schema<IPlaceholder>(
       type: String,
       enum: ["left", "center", "right"],
       default: "left",
+    },
+    bold: {
+      type: Boolean,
+      default: false,
+    },
+    italic: {
+      type: Boolean,
+      default: false,
     },
   },
   { _id: false }

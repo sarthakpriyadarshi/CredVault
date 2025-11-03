@@ -91,6 +91,8 @@ async function handler(
           fontFamily?: string
           fontSize?: number
           fontColor?: string
+          bold?: boolean
+          italic?: boolean
         }>
         certificateImage?: string
         badgeImage?: string
@@ -118,6 +120,8 @@ async function handler(
         align: "left" | "center" | "right"
         x?: number
         y?: number
+        bold?: boolean
+        italic?: boolean
       }> = []
 
       for (const field of fields) {
@@ -141,6 +145,8 @@ async function handler(
               align: "center" as const,
               x: field.coordinates.x,
               y: field.coordinates.y,
+              bold: field.bold || false,
+              italic: field.italic || false,
             })
           } else {
             placeholders.push({
@@ -150,6 +156,8 @@ async function handler(
               fontFamily: field.fontFamily || "Arial",
               color: field.fontColor || "#000000",
               align: "center" as const,
+              bold: field.bold || false,
+              italic: field.italic || false,
             })
           }
         } else {
@@ -162,6 +170,8 @@ async function handler(
             align: "center" as const,
             x: field.coordinates!.x,
             y: field.coordinates!.y,
+            bold: field.bold || false,
+            italic: field.italic || false,
           })
         }
       }

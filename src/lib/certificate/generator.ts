@@ -6,7 +6,7 @@
 import sharp from "sharp"
 import { createCanvas, loadImage } from "canvas"
 import { IPlaceholder } from "@/models/Template"
-import { loadFont, getActualFontName } from "./fonts"
+import { loadFont, getActualFontName, getWeightedFontName } from "./fonts"
 
 interface GenerateCertificateOptions {
   templateImageBase64: string // Base64 data URL of the template certificate image (e.g., data:image/png;base64,...)
@@ -82,31 +82,68 @@ export async function generateCertificate(options: GenerateCertificateOptions): 
     ctx.textAlign = "center"
     ctx.textBaseline = "middle"
 
-    // Collect unique font families from placeholders
-    // Load all fonts that are specified, not just Google Fonts
-    const uniqueFontFamilies = new Set<string>()
+    // Collect unique font families and their required variants from placeholders
+    // We need to track which fonts need bold (700) and italic variants
+    const fontVariants = new Map<string, { needsBold: boolean; needsItalic: boolean }>()
     for (const placeholder of placeholders) {
       if (placeholder.fontFamily) {
-        uniqueFontFamilies.add(placeholder.fontFamily)
+        const fontFamily = placeholder.fontFamily
+        const existing = fontVariants.get(fontFamily) || { needsBold: false, needsItalic: false }
+        fontVariants.set(fontFamily, {
+          needsBold: existing.needsBold || (placeholder.bold === true),
+          needsItalic: existing.needsItalic || (placeholder.italic === true),
+        })
       }
     }
 
-    // Preload all required fonts
-    const fontLoadResults = await Promise.all(
-      Array.from(uniqueFontFamilies).map(async (fontFamily) => {
+    // Preload all required font variants
+    const fontLoadResults = new Map<string, { loaded: boolean; weight: number; italic: boolean }>()
+    for (const [fontFamily, variants] of fontVariants.entries()) {
+      // Always load normal weight (400)
+      try {
+        const loaded = await loadFont(fontFamily, 400, false)
+        fontLoadResults.set(`${fontFamily}-400`, { loaded, weight: 400, italic: false })
+      } catch (error) {
+        console.warn(`Failed to load font ${fontFamily} (400):`, error)
+        fontLoadResults.set(`${fontFamily}-400`, { loaded: false, weight: 400, italic: false })
+      }
+
+      // Load bold variant (700) if needed
+      if (variants.needsBold) {
         try {
-          // Try loading the font (will download if needed)
-          const loaded = await loadFont(fontFamily, 400)
-          return { fontFamily, loaded }
+          const loaded = await loadFont(fontFamily, 700, false)
+          fontLoadResults.set(`${fontFamily}-700`, { loaded, weight: 700, italic: false })
         } catch (error) {
-          console.warn(`Failed to load font ${fontFamily}:`, error)
-          return { fontFamily, loaded: false }
+          console.warn(`Failed to load font ${fontFamily} (700):`, error)
+          fontLoadResults.set(`${fontFamily}-700`, { loaded: false, weight: 700, italic: false })
         }
-      })
-    )
+      }
+
+      // Load italic variant (400 italic) if needed
+      if (variants.needsItalic) {
+        try {
+          const loaded = await loadFont(fontFamily, 400, true)
+          fontLoadResults.set(`${fontFamily}-400-italic`, { loaded, weight: 400, italic: true })
+        } catch (error) {
+          console.warn(`Failed to load font ${fontFamily} (400 italic):`, error)
+          fontLoadResults.set(`${fontFamily}-400-italic`, { loaded: false, weight: 400, italic: true })
+        }
+      }
+
+      // Load bold italic variant (700 italic) if both bold and italic are needed
+      if (variants.needsBold && variants.needsItalic) {
+        try {
+          const loaded = await loadFont(fontFamily, 700, true)
+          fontLoadResults.set(`${fontFamily}-700-italic`, { loaded, weight: 700, italic: true })
+        } catch (error) {
+          console.warn(`Failed to load font ${fontFamily} (700 italic):`, error)
+          fontLoadResults.set(`${fontFamily}-700-italic`, { loaded: false, weight: 700, italic: true })
+        }
+      }
+    }
 
     // Log font loading results
-    console.log(`[Certificate Generator] Font loading results:`, fontLoadResults.map(r => `${r.fontFamily}: ${r.loaded ? "loaded" : "failed"}`))
+    console.log(`[Certificate Generator] Font loading results:`, Array.from(fontLoadResults.entries()).map(([key, value]) => `${key}: ${value.loaded ? "loaded" : "failed"}`))
 
     // Draw each placeholder text on the canvas
     for (const placeholder of placeholders) {
@@ -134,13 +171,26 @@ export async function generateCertificate(options: GenerateCertificateOptions): 
       // Get the actual font name to use (handles Arial -> Roboto mapping)
       const actualFontFamily = getActualFontName(originalFontFamily)
       
-      // Check if font was loaded successfully
-      const fontWasLoaded = fontLoadResults.find(r => r.fontFamily === originalFontFamily)?.loaded || false
+      // Determine font weight and style
+      const isBold = placeholder.bold || false
+      const isItalic = placeholder.italic || false
+      const fontWeight = isBold ? 700 : 400
       
-      // Use the actual mapped font family name (e.g., "Roboto" instead of "Arial")
-      const fontString = fontWasLoaded 
-        ? `${fontSize}px "${actualFontFamily}", sans-serif`
-        : `${fontSize}px "${actualFontFamily}", Roboto, sans-serif`
+      // Check if the specific font variant was loaded successfully
+      const fontKey = `${originalFontFamily}-${fontWeight}${isItalic ? "-italic" : ""}`
+      const fontVariant = fontLoadResults.get(fontKey)
+      const fontWasLoaded = fontVariant?.loaded || false
+      
+      // Get the weight and style-specific font family name (e.g., "Roboto Bold Italic" for weight 700 + italic)
+      const weightedFontFamily = fontWasLoaded 
+        ? getWeightedFontName(actualFontFamily, fontWeight, isItalic)
+        : actualFontFamily
+      
+      // Build font string - use the registered font family name directly (no CSS keywords needed)
+      // The family name already includes the weight and style (e.g., "Roboto Bold Italic")
+      const fontString = fontWasLoaded
+        ? `${fontSize}px "${weightedFontFamily}", sans-serif`
+        : `${fontSize}px "${actualFontFamily}", sans-serif`
       
       ctx.font = fontString
       ctx.fillStyle = placeholder.color || "#000000"
@@ -161,7 +211,7 @@ export async function generateCertificate(options: GenerateCertificateOptions): 
 
       // Debug logging
       console.log(`[Certificate Generator] Drawing text "${value}" at (${x}, ${y})`)
-      console.log(`[Certificate Generator] Font: ${fontString}, Color: ${ctx.fillStyle}, Original: ${originalFontFamily}, Actual: ${actualFontFamily}, Loaded: ${fontWasLoaded}`)
+      console.log(`[Certificate Generator] Font: ${fontString}, Color: ${ctx.fillStyle}, Original: ${originalFontFamily}, Actual: ${actualFontFamily}, Bold: ${isBold}, Italic: ${isItalic}, Weight: ${fontWeight}, Loaded: ${fontWasLoaded}`)
       console.log(`[Certificate Generator] Text metrics - width: ${ctx.measureText(String(value)).width}`)
 
       // Draw the text centered at the specified coordinates

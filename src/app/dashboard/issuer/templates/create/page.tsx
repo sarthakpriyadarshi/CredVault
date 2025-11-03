@@ -20,7 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Upload, Trash2, Download, Save, Eye } from "lucide-react"
+import { Upload, Trash2, Download, Save, Eye, Bold, Italic } from "lucide-react"
 import { PrimaryButton } from "@/components/ui/primary-button"
 import { GOOGLE_FONTS } from "@/lib/fonts"
 import { ColorPickerComponent } from "@/components/ui/color-picker"
@@ -36,6 +36,8 @@ interface TemplateField {
   fontFamily?: string
   fontSize?: number
   fontColor?: string
+  bold?: boolean
+  italic?: boolean
 }
 
 
@@ -317,9 +319,20 @@ export default function CreateTemplatePage() {
       const fontFamily = field.fontFamily || selectedFontFamily
       const fontSize = field.fontSize || selectedFontSize
       const fontColor = field.fontColor || selectedFontColor
+      const isBold = field.bold || false
+      const isItalic = field.italic || false
       
       ctx.fillStyle = fontColor
-      ctx.font = `${fontSize}px "${fontFamily}", sans-serif`
+      // Build font string with bold and italic
+      let fontStyle = ""
+      if (isBold && isItalic) {
+        fontStyle = "bold italic "
+      } else if (isBold) {
+        fontStyle = "bold "
+      } else if (isItalic) {
+        fontStyle = "italic "
+      }
+      ctx.font = `${fontStyle}${fontSize}px "${fontFamily}", sans-serif`
       ctx.textAlign = "center"
       ctx.textBaseline = "middle"
       
@@ -537,14 +550,18 @@ export default function CreateTemplatePage() {
         fields: fields.map((f) => {
           // For email fields, coordinates are optional (they may not be displayed)
           if (f.type === "email" && f.x === undefined && f.y === undefined) {
-            return {
+            const fieldData = {
               name: f.name,
               type: f.type,
               coordinates: undefined,
               fontFamily: f.fontFamily || selectedFontFamily,
               fontSize: f.fontSize || selectedFontSize,
               fontColor: f.fontColor || selectedFontColor,
+              bold: f.bold === true, // Explicitly convert to boolean
+              italic: f.italic === true, // Explicitly convert to boolean
             }
+            console.log(`[Create Template] Email field "${f.name}": bold=${fieldData.bold}, italic=${fieldData.italic}`)
+            return fieldData
           }
 
           // Convert coordinates from canvas space to actual image space
@@ -602,7 +619,7 @@ export default function CreateTemplatePage() {
             const canvasFontSize = f.fontSize || selectedFontSize
             const scaledFontSize = Math.round(canvasFontSize * avgScale)
 
-            return {
+            const fieldData = {
               name: f.name,
               type: f.type,
               coordinates: {
@@ -614,21 +631,37 @@ export default function CreateTemplatePage() {
               fontFamily: f.fontFamily || selectedFontFamily,
               fontSize: scaledFontSize, // Scaled font size relative to image
               fontColor: f.fontColor || selectedFontColor,
+              bold: f.bold === true, // Explicitly convert to boolean
+              italic: f.italic === true, // Explicitly convert to boolean
             }
+            console.log(`[Create Template] Field with coordinates "${f.name}": bold=${fieldData.bold}, italic=${fieldData.italic}, original bold=${f.bold}, original italic=${f.italic}`)
+            return fieldData
           }
 
-          return {
+          const fieldData = {
             name: f.name,
             type: f.type,
             coordinates: undefined,
             fontFamily: f.fontFamily || selectedFontFamily,
             fontSize: f.fontSize || selectedFontSize,
             fontColor: f.fontColor || selectedFontColor,
+            bold: f.bold === true, // Explicitly convert to boolean
+            italic: f.italic === true, // Explicitly convert to boolean
           }
+          console.log(`[Create Template] Fallback field "${f.name}": bold=${fieldData.bold}, italic=${fieldData.italic}`)
+          return fieldData
         }),
         certificateImage,
         badgeImage,
       }
+
+      // Debug: Log the template data being sent
+      console.log("[Create Template] Sending template data:", JSON.stringify(templateData, null, 2))
+      console.log("[Create Template] Fields with bold/italic:", templateData.fields.map(f => ({
+        name: f.name,
+        bold: f.bold,
+        italic: f.italic,
+      })))
 
       const res = await fetch("/api/v1/issuer/templates", {
         method: "POST",
@@ -840,6 +873,8 @@ export default function CreateTemplatePage() {
                             fontFamily: selectedFontFamily,
                             fontSize: selectedFontSize,
                             fontColor: selectedFontColor,
+                            bold: false,
+                            italic: false,
                           }
                           setFields([...fields, emailField])
                           setSelectedField(emailField.id)
@@ -964,6 +999,8 @@ export default function CreateTemplatePage() {
                                     fontFamily: selectedFontFamily,
                                     fontSize: selectedFontSize,
                                     fontColor: selectedFontColor,
+                                    bold: false,
+                                    italic: false,
                                   }
 
                                   setFields([...fields, newField])
@@ -1076,6 +1113,43 @@ export default function CreateTemplatePage() {
                               }
                             }}
                           />
+                        </div>
+
+                        <div className="flex items-center gap-1 border-l border-border/50 pl-3">
+                          <Button
+                            type="button"
+                            variant={fields.find((f) => f.id === selectedField)?.bold ? "secondary" : "ghost"}
+                            size="sm"
+                            className={`h-8 w-8 p-0 ${fields.find((f) => f.id === selectedField)?.bold ? "bg-primary/20 text-primary" : ""}`}
+                            onClick={() => {
+                              if (selectedField) {
+                                const currentField = fields.find((f) => f.id === selectedField)
+                                setFields(
+                                  fields.map((f) => (f.id === selectedField ? { ...f, bold: !(currentField?.bold || false) } : f))
+                                )
+                              }
+                            }}
+                            title="Bold"
+                          >
+                            <Bold className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant={fields.find((f) => f.id === selectedField)?.italic ? "secondary" : "ghost"}
+                            size="sm"
+                            className={`h-8 w-8 p-0 ${fields.find((f) => f.id === selectedField)?.italic ? "bg-primary/20 text-primary" : ""}`}
+                            onClick={() => {
+                              if (selectedField) {
+                                const currentField = fields.find((f) => f.id === selectedField)
+                                setFields(
+                                  fields.map((f) => (f.id === selectedField ? { ...f, italic: !(currentField?.italic || false) } : f))
+                                )
+                              }
+                            }}
+                            title="Italic"
+                          >
+                            <Italic className="h-4 w-4" />
+                          </Button>
                         </div>
                       </div>
                     )}
