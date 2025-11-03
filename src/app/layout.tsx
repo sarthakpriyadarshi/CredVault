@@ -2,6 +2,7 @@ import type React from "react"
 import type { Metadata } from "next"
 import { GeistSans } from "geist/font/sans"
 import { GeistMono } from "geist/font/mono"
+import { Analytics } from "@vercel/analytics/react"
 import { Providers } from "@/components/providers"
 import { SetupChecker } from "@/components/setup-checker"
 import "./globals.css"
@@ -75,6 +76,7 @@ html {
         <Providers>
           <SetupChecker>{children}</SetupChecker>
         </Providers>
+        <Analytics />
       </body>
     </html>
   )
