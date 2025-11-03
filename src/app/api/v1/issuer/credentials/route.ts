@@ -9,6 +9,7 @@ import { vaultProtocol, VaultProtocolService } from "@/lib/services/vault-protoc
 import { checkVaultHealth, getHealthErrorMessage } from "@/lib/services/vault-health.service"
 import { sendEmail } from "@/lib/email/nodemailer"
 import { generateCredentialIssuedEmail } from "@/lib/email/templates"
+import { createNotification } from "@/lib/notifications"
 
 // GET - List credentials for issuer's organization
 async function getHandler(
@@ -363,6 +364,18 @@ async function postHandler(
         subject: `New ${template.type === "certificate" ? "Certificate" : template.type === "badge" ? "Badge" : "Credential"} Issued - CredVault`,
         html: emailHtml,
       })
+
+      // Create notification for recipient if they exist
+      const recipientUser = await User.findOne({ email: recipientEmail.toLowerCase() })
+      if (recipientUser) {
+        await createNotification({
+          userId: recipientUser._id,
+          type: "credential_issued",
+          title: "New Credential Issued",
+          message: `You have been issued a new ${template.name || "credential"} by ${issuerOrganization}.`,
+          link: `/verify/${credential._id.toString()}`,
+        })
+      }
     } catch (emailError) {
       console.error("Failed to send credential notification email:", emailError)
       // Don't fail credential issuance if email fails

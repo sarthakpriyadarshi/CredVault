@@ -54,9 +54,27 @@ export const authOptions: NextAuthConfig = {
             throw new Error(`Invalid role. This account is registered as ${user.role}, not ${requestedRole}.`)
           }
 
-          // Check if issuer is verified
-          if (user.role === "issuer" && !user.isVerified) {
-            throw new Error("VERIFICATION_PENDING: Your organization is pending verification. Please wait for admin approval.")
+          // Check if issuer is verified - check organization status directly from DB
+          if (user.role === "issuer") {
+            if (user.organizationId) {
+              const Organization = (await import("@/models")).Organization
+              const organization = await Organization.findById(user.organizationId).select("verificationStatus")
+              if (!organization) {
+                throw new Error("VERIFICATION_PENDING: Organization not found. Please contact support.")
+              }
+              if (organization.verificationStatus !== "approved") {
+                throw new Error(organization.verificationStatus === "pending"
+                  ? "VERIFICATION_PENDING: Your organization is pending verification. Please wait for admin approval."
+                  : "VERIFICATION_REJECTED: Your organization verification was rejected. Please contact support.")
+              }
+              // Organization is approved - sync user.isVerified
+              if (!user.isVerified) {
+                user.isVerified = true
+                await user.save()
+              }
+            } else {
+              throw new Error("VERIFICATION_PENDING: No organization found. Please complete your registration.")
+            }
           }
 
           // Check if email is verified

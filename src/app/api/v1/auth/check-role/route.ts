@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { withDB, handleApiError } from "@/lib/api/middleware"
 import { parseBody, isValidEmail } from "@/lib/api/utils"
-import { User } from "@/models"
+import { User, Organization } from "@/models"
 import connectDB from "@/lib/db/mongodb"
 
 async function handler(req: NextRequest) {
@@ -53,12 +53,39 @@ async function handler(req: NextRequest) {
       )
     }
 
-    // Check issuer verification
-    if (user.role === "issuer" && !user.isVerified) {
-      return NextResponse.json(
-        { error: "Your organization is pending verification. Please wait for admin approval." },
-        { status: 403 }
-      )
+    // Check issuer verification - check organization status directly from DB (not cached user.isVerified)
+    if (user.role === "issuer") {
+      // Always check organization status from database to get latest status
+      if (user.organizationId) {
+        const organization = await Organization.findById(user.organizationId).select("verificationStatus")
+        if (!organization) {
+          return NextResponse.json(
+            { error: "Organization not found. Please contact support." },
+            { status: 404 }
+          )
+        }
+        if (organization.verificationStatus !== "approved") {
+          return NextResponse.json(
+            { 
+              error: organization.verificationStatus === "pending"
+                ? "Your organization is pending verification. Please wait for admin approval."
+                : "Your organization verification was rejected. Please contact support."
+            },
+            { status: 403 }
+          )
+        }
+        // Organization is approved - ensure user.isVerified is also true (sync it)
+        if (!user.isVerified) {
+          user.isVerified = true
+          await user.save()
+        }
+      } else {
+        // User is issuer but has no organization - shouldn't happen, but handle gracefully
+        return NextResponse.json(
+          { error: "No organization found. Please complete your registration." },
+          { status: 403 }
+        )
+      }
     }
 
     // Check if email is verified

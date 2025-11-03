@@ -46,6 +46,19 @@ interface EmailVerificationData {
   verificationLink: string;
 }
 
+interface OrganizationSignupNotificationData {
+  organizationName: string;
+  organizationEmail: string;
+  organizationWebsite?: string;
+  adminDashboardLink: string;
+}
+
+interface OrganizationApprovalNotificationData {
+  organizationName: string;
+  issuerName: string;
+  issuerLoginLink: string;
+}
+
 export function generateVerificationEmail(data: EmailVerificationData): string {
   return `<!DOCTYPE html>
 <html lang="en" style="background:radial-gradient(circle at 10% 20%, ${C.primary10} 0%, transparent 50%), radial-gradient(circle at 90% 80%, ${C.primary5} 0%, transparent 50%), ${C.bgGradient};background-color:${C.bgFallback};">
@@ -269,6 +282,124 @@ ${data.blockchainVerified ? `<div style="display:inline-flex;align-items:center;
 <tr><td style="padding:32px;text-align:center;border-top:1px solid ${C.border};background-color:${C.bg};">
 <p style="margin:8px 0;font-size:13px;color:${C.textMuted};font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Helvetica,'Geist Sans',Roboto,'Helvetica Neue',Arial,sans-serif;">© ${new Date().getFullYear()} CredVault. All rights reserved.</p>
 <p style="margin:8px 0;font-size:13px;color:${C.textMuted};font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Helvetica,'Geist Sans',Roboto,'Helvetica Neue',Arial,sans-serif;">Need help? <a href="mailto:support@credvault.app" style="color:${C.buttonBg};text-decoration:none;font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Helvetica,'Geist Sans',Roboto,'Helvetica Neue',Arial,sans-serif;">Contact Support</a></p>
+</td></tr>
+</table>
+</td></tr>
+</table>
+</td></tr>
+</table>
+</center>
+</body>
+</html>`.trim();
+}
+
+export function generateOrganizationSignupNotificationEmail(data: OrganizationSignupNotificationData): string {
+  return `<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<title>New Organization Registration - CredVault</title>
+<style>a,body,table,td{-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%}table,td{mso-table-lspace:0;mso-table-rspace:0}img{-ms-interpolation-mode:bicubic}a[x-apple-data-detectors]{color:inherit!important;text-decoration:none!important;font-size:inherit!important;font-family:inherit!important;font-weight:inherit!important;line-height:inherit!important}</style>
+</head>
+<body bgcolor="${C.bgFallback}" style="margin:0;padding:0;background:radial-gradient(circle at 10% 20%, ${C.primary10} 0%, transparent 50%), radial-gradient(circle at 90% 80%, ${C.primary5} 0%, transparent 50%), ${C.bgGradient};background-color:${C.bgFallback};font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Helvetica,'Geist Sans',Roboto,'Helvetica Neue',Arial,sans-serif;">
+<center style="width:100%;background-color:${C.bgFallback};">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0;padding:0;width:100%;">
+<tr><td style="padding:40px 20px;">
+<table role="presentation" width="650" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:0 auto;max-width:650px;width:100%;background-color:${C.cardBg};border:1px solid ${C.border};border-radius:12px;overflow:hidden;box-shadow:0 8px 16px rgba(0,0,0,0.4);">
+<tr><td style="position:relative;background-color:${C.cardBg};background-image:radial-gradient(ellipse 50% 50% at 50% 0%, rgba(245, 89, 113, 0.12), transparent 70%);padding:48px 32px;text-align:center;border-bottom:1px solid ${C.border};">
+<table width="100%" cellpadding="0" cellspacing="0" border="0">
+<tr><td align="center">
+<img src="${LOGO_URL}" alt="${LOGO_ALT}" width="60" height="60" style="display:inline-block;vertical-align:middle;margin-right:12px;" />
+<span style="display:inline-block;vertical-align:middle;font-family:'Helvetica Neue',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,'Geist Sans',Roboto,Arial,sans-serif;font-size:28px;font-weight:700;color:${C.textPrimary};letter-spacing:-0.02em;">CredVault</span>
+</td></tr>
+</table>
+</td></tr>
+<tr><td style="padding:40px 32px;">
+<table width="100%" cellpadding="0" cellspacing="0" border="0">
+<tr><td align="center"><h2 style="margin:0 0 24px;font-size:24px;font-weight:700;color:${C.textPrimary};letter-spacing:-0.02em;font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Helvetica,'Geist Sans',Roboto,'Helvetica Neue',Arial,sans-serif;text-align:center;">New Organization Registration</h2></td></tr>
+<tr><td><p style="margin:0 0 16px;font-size:15px;line-height:1.7;color:${C.textSecondary};font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Helvetica,'Geist Sans',Roboto,'Helvetica Neue',Arial,sans-serif;">A new organization has registered on CredVault and is awaiting your verification.</p></td></tr>
+<tr><td>
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:${C.borderLight};border:1px solid ${C.border};border-radius:12px;margin:24px 0;">
+<tr><td style="padding:24px;">
+<h3 style="margin:0 0 16px;font-size:18px;font-weight:700;color:${C.textPrimary};font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Helvetica,'Geist Sans',Roboto,'Helvetica Neue',Arial,sans-serif;">${data.organizationName}</h3>
+<p style="margin:0 0 8px;font-size:14px;color:${C.textMuted};font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Helvetica,'Geist Sans',Roboto,'Helvetica Neue',Arial,sans-serif;">Email: <strong style="color:${C.textPrimary};font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Helvetica,'Geist Sans',Roboto,'Helvetica Neue',Arial,sans-serif;">${data.organizationEmail}</strong></p>
+${data.organizationWebsite ? `<p style="margin:0 0 8px;font-size:14px;color:${C.textMuted};font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Helvetica,'Geist Sans',Roboto,'Helvetica Neue',Arial,sans-serif;">Website: <strong style="color:${C.textPrimary};font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Helvetica,'Geist Sans',Roboto,'Helvetica Neue',Arial,sans-serif;">${data.organizationWebsite}</strong></p>` : ''}
+<p style="margin:16px 0 0;font-size:13px;color:${C.textMuted};font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Helvetica,'Geist Sans',Roboto,'Helvetica Neue',Arial,sans-serif;">Status: <span style="color:${C.buttonBg};font-weight:600;font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Helvetica,'Geist Sans',Roboto,'Helvetica Neue',Arial,sans-serif;">Pending Verification</span></p>
+</td></tr>
+</table>
+</td></tr>
+<tr><td align="center" style="padding:8px 0 32px;">
+<table cellpadding="0" cellspacing="0" border="0">
+<tr><td align="center" style="border-radius:6px;background:linear-gradient(to bottom,${C.primary},${C.primaryDark});border-top:2px solid rgba(255,255,255,0.3);box-shadow:0px 2px 0px 0px rgba(255,255,255,0.3) inset, 0px 4px 8px rgba(0,0,0,0.3), 0px 2px 4px rgba(0,0,0,0.2);">
+<a href="${data.adminDashboardLink}" target="_blank" style="display:inline-block;padding:8px 16px;color:${C.buttonText};text-decoration:none;font-weight:700;font-size:14px;font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Helvetica,'Geist Sans',Roboto,'Helvetica Neue',Arial,sans-serif;">Review Organization</a>
+</td></tr>
+</table>
+</td></tr>
+</table>
+</td></tr>
+<tr><td style="padding:32px;text-align:center;border-top:1px solid ${C.border};background-color:${C.bg};">
+<p style="margin:8px 0;font-size:13px;color:${C.textMuted};font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Helvetica,'Geist Sans',Roboto,'Helvetica Neue',Arial,sans-serif;">© ${new Date().getFullYear()} CredVault. All rights reserved.</p>
+</td></tr>
+</table>
+</td></tr>
+</table>
+</td></tr>
+</table>
+</center>
+</body>
+</html>`.trim();
+}
+
+export function generateOrganizationApprovalNotificationEmail(data: OrganizationApprovalNotificationData): string {
+  return `<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<title>Organization Approved - CredVault</title>
+<style>a,body,table,td{-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%}table,td{mso-table-lspace:0;mso-table-rspace:0}img{-ms-interpolation-mode:bicubic}a[x-apple-data-detectors]{color:inherit!important;text-decoration:none!important;font-size:inherit!important;font-family:inherit!important;font-weight:inherit!important;line-height:inherit!important}</style>
+</head>
+<body bgcolor="${C.bgFallback}" style="margin:0;padding:0;background:radial-gradient(circle at 10% 20%, ${C.primary10} 0%, transparent 50%), radial-gradient(circle at 90% 80%, ${C.primary5} 0%, transparent 50%), ${C.bgGradient};background-color:${C.bgFallback};font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Helvetica,'Geist Sans',Roboto,'Helvetica Neue',Arial,sans-serif;">
+<center style="width:100%;background-color:${C.bgFallback};">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0;padding:0;width:100%;">
+<tr><td style="padding:40px 20px;">
+<table role="presentation" width="650" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:0 auto;max-width:650px;width:100%;background-color:${C.cardBg};border:1px solid ${C.border};border-radius:12px;overflow:hidden;box-shadow:0 8px 16px rgba(0,0,0,0.4);">
+<tr><td style="position:relative;background-color:${C.cardBg};background-image:radial-gradient(ellipse 50% 50% at 50% 0%, rgba(245, 89, 113, 0.12), transparent 70%);padding:48px 32px;text-align:center;border-bottom:1px solid ${C.border};">
+<table width="100%" cellpadding="0" cellspacing="0" border="0">
+<tr><td align="center">
+<img src="${LOGO_URL}" alt="${LOGO_ALT}" width="60" height="60" style="display:inline-block;vertical-align:middle;margin-right:12px;" />
+<span style="display:inline-block;vertical-align:middle;font-family:'Helvetica Neue',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,'Geist Sans',Roboto,Arial,sans-serif;font-size:28px;font-weight:700;color:${C.textPrimary};letter-spacing:-0.02em;">CredVault</span>
+</td></tr>
+</table>
+</td></tr>
+<tr><td style="padding:40px 32px;">
+<table width="100%" cellpadding="0" cellspacing="0" border="0">
+<tr><td align="center"><h2 style="margin:0 0 24px;font-size:24px;font-weight:700;color:${C.textPrimary};letter-spacing:-0.02em;font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Helvetica,'Geist Sans',Roboto,'Helvetica Neue',Arial,sans-serif;text-align:center;">Organization Approved! </h2></td></tr>
+<tr><td><p style="margin:0 0 16px;font-size:15px;line-height:1.7;color:${C.textSecondary};font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Helvetica,'Geist Sans',Roboto,'Helvetica Neue',Arial,sans-serif;">Congratulations <strong style="color:${C.textPrimary};font-weight:600;font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Helvetica,'Geist Sans',Roboto,'Helvetica Neue',Arial,sans-serif;">${data.issuerName}</strong>!</p></td></tr>
+<tr><td><p style="margin:0 0 32px;font-size:15px;line-height:1.7;color:${C.textSecondary};font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Helvetica,'Geist Sans',Roboto,'Helvetica Neue',Arial,sans-serif;">Your organization <strong style="color:${C.textPrimary};font-weight:600;font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Helvetica,'Geist Sans',Roboto,'Helvetica Neue',Arial,sans-serif;">${data.organizationName}</strong> has been approved by our admin team. You can now start issuing credentials to recipients!</p></td></tr>
+<tr><td>
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:${C.borderLight};border:1px solid ${C.border};border-radius:12px;margin:24px 0;">
+<tr><td style="padding:24px;text-align:center;">
+<div style="display:inline-block;margin-bottom:12px;"><img src="${ICON_CHECKMARK}" width="48" height="48" style="display:block;" alt="Checkmark"></div>
+<h3 style="margin:0 0 8px;font-size:18px;font-weight:700;color:${C.textPrimary};font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Helvetica,'Geist Sans',Roboto,'Helvetica Neue',Arial,sans-serif;">${data.organizationName}</h3>
+<p style="margin:0;font-size:14px;color:${C.buttonBg};font-weight:600;font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Helvetica,'Geist Sans',Roboto,'Helvetica Neue',Arial,sans-serif;">✓ Verified Organization</p>
+</td></tr>
+</table>
+</td></tr>
+<tr><td align="center" style="padding:8px 0 32px;">
+<table cellpadding="0" cellspacing="0" border="0">
+<tr><td align="center" style="border-radius:6px;background:linear-gradient(to bottom,${C.primary},${C.primaryDark});border-top:2px solid rgba(255,255,255,0.3);box-shadow:0px 2px 0px 0px rgba(255,255,255,0.3) inset, 0px 4px 8px rgba(0,0,0,0.3), 0px 2px 4px rgba(0,0,0,0.2);">
+<a href="${data.issuerLoginLink}" target="_blank" style="display:inline-block;padding:8px 16px;color:${C.buttonText};text-decoration:none;font-weight:700;font-size:14px;font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Helvetica,'Geist Sans',Roboto,'Helvetica Neue',Arial,sans-serif;">Sign In</a>
+</td></tr>
+</table>
+</td></tr>
+</table>
+</td></tr>
+<tr><td style="padding:32px;text-align:center;border-top:1px solid ${C.border};background-color:${C.bg};">
+<p style="margin:8px 0;font-size:13px;color:${C.textMuted};font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Helvetica,'Geist Sans',Roboto,'Helvetica Neue',Arial,sans-serif;">© ${new Date().getFullYear()} CredVault. All rights reserved.</p>
 </td></tr>
 </table>
 </td></tr>

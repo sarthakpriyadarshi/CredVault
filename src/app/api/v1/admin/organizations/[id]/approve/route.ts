@@ -3,6 +3,7 @@ import { withAdmin, handleApiError } from "@/lib/api/middleware"
 import { Organization, User } from "@/models"
 import connectDB from "@/lib/db/mongodb"
 import { invalidateAllUsers } from "@/lib/cache"
+import { notifyIssuerOfApproval } from "@/lib/notifications"
 
 async function handler(
   req: NextRequest,
@@ -51,6 +52,9 @@ async function handler(
 
     // Invalidate cache for all affected users (use false for Route Handler)
     await invalidateAllUsers(false)
+
+    // Notify issuer about approval
+    await notifyIssuerOfApproval(organization)
 
     return NextResponse.json({
       message: "Organization approved successfully",

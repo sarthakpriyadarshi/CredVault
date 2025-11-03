@@ -7,8 +7,9 @@
 import { NextRequest, NextResponse } from "next/server"
 import { withDB, withAuth, handleApiError } from "@/lib/api/middleware"
 import { methodNotAllowed, successResponse, errorResponse, notFound, forbidden } from "@/lib/api/responses"
-import { Credential, Template, Organization } from "@/models"
+import { Credential, Template, Organization, User } from "@/models"
 import connectDB from "@/lib/db/mongodb"
+import { createNotification } from "@/lib/notifications"
 
 async function verifyCredential(
   req: NextRequest,
@@ -116,6 +117,34 @@ async function verifyCredential(
           organizationVerified: orgVerified,
           issuedAt: cred.issuedAt,
         },
+      }
+    }
+
+    // Notify issuer if credential was verified (only for successful verifications)
+    if (verificationResult.verified && cred.organizationId) {
+      try {
+        // Find issuer users for this organization
+        const issuers = await User.find({
+          organizationId: cred.organizationId,
+          role: "issuer",
+        }).select("_id")
+
+        const template = cred.templateId as any
+        const credentialName = template?.name || "Credential"
+
+        // Create notification for each issuer
+        for (const issuer of issuers) {
+          await createNotification({
+            userId: issuer._id,
+            type: "credential_verified",
+            title: "Credential Verified",
+            message: `Your ${credentialName} credential has been verified by ${cred.recipientEmail || "a recipient"}.`,
+            link: `/dashboard/issuer/credentials`,
+          })
+        }
+      } catch (error) {
+        console.error("Error creating verification notification:", error)
+        // Don't fail verification if notification fails
       }
     }
 
@@ -254,6 +283,31 @@ async function postHandler(
       }
       
       await credential.save()
+
+      // Notify issuer about verification
+      if (credential.organizationId) {
+        try {
+          const issuers = await User.find({
+            organizationId: credential.organizationId,
+            role: "issuer",
+          }).select("_id")
+
+          const template = await Template.findById(credential.templateId).select("name")
+          const credentialName = template?.name || "Credential"
+
+          for (const issuer of issuers) {
+            await createNotification({
+              userId: issuer._id,
+              type: "credential_verified",
+              title: "Credential Verified",
+              message: `Your ${credentialName} credential has been verified by ${credential.recipientEmail || "a recipient"}.`,
+              link: `/dashboard/issuer/credentials`,
+            })
+          }
+        } catch (error) {
+          console.error("Error creating verification notification:", error)
+        }
+      }
 
       return NextResponse.json({
         message: "Credential verified on blockchain successfully",

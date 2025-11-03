@@ -4,4 +4,5 @@ export { default as Organization, type IOrganization } from "./Organization"
 export { default as Template, type ITemplate, type IPlaceholder } from "./Template"
 export { default as Credential, type ICredential, type ICredentialData } from "./Credential"
 export { default as SystemSettings, type ISystemSettings } from "./SystemSettings"
+export { default as Notification, type INotification, type NotificationType } from "./Notification"
 

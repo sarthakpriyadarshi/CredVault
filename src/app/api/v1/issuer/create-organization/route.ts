@@ -3,6 +3,7 @@ import { withIssuerUnverified, handleApiError } from "@/lib/api/middleware"
 import { parseBody } from "@/lib/api/utils"
 import { Organization, User } from "@/models"
 import connectDB from "@/lib/db/mongodb"
+import { notifyAdminsOfOrganizationSignup } from "@/lib/notifications"
 
 async function handler(
   req: NextRequest,
@@ -63,6 +64,14 @@ async function handler(
     // Update user with organization ID
     dbUser.organizationId = organization._id as any
     await dbUser.save()
+
+    // Notify admins about new organization signup
+    await notifyAdminsOfOrganizationSignup({
+      _id: organization._id,
+      name: organization.name,
+      website: organization.website,
+      creatorEmail: dbUser.email, // Pass the email directly
+    })
 
     return NextResponse.json({
       message: "Organization created successfully",

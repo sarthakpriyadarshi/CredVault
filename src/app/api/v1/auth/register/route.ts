@@ -6,6 +6,7 @@ import connectDB from "@/lib/db/mongodb"
 import { invalidateUserRole } from "@/lib/cache/invalidation"
 import { sendEmail } from "@/lib/email/nodemailer"
 import { generateVerificationEmail } from "@/lib/email/templates"
+import { notifyAdminsOfOrganizationSignup } from "@/lib/notifications"
 import crypto from "crypto"
 
 async function handler(req: NextRequest) {
@@ -83,6 +84,19 @@ async function handler(req: NextRequest) {
       isVerified: role === "recipient", // Recipients auto-verified, admins should be created via separate endpoint
       emailVerified: false,
     })
+
+    // Notify admins about new organization signup (after user is created so we can get the email)
+    if (role === "issuer" && organizationId) {
+      const org = await Organization.findById(organizationId)
+      if (org) {
+        await notifyAdminsOfOrganizationSignup({
+          _id: org._id,
+          name: org.name,
+          website: org.website,
+          creatorEmail: email.toLowerCase(), // Pass the email directly since user is now created
+        })
+      }
+    }
 
     // Generate email verification token
     const verificationToken = crypto.randomBytes(32).toString("hex")

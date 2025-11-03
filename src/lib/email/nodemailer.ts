@@ -6,16 +6,6 @@ let transporter: Transporter | null = null
 
 function getTransporter() {
   if (!transporter) {
-    // Log SMTP configuration (without password for security)
-    console.log("📧 Email Configuration Loaded:")
-    console.log("  SMTP_HOST:", process.env.SMTP_HOST || "smtp.gmail.com")
-    console.log("  SMTP_PORT:", process.env.SMTP_PORT || "587")
-    console.log("  SMTP_SECURE:", process.env.SMTP_SECURE === "true")
-    console.log("  SMTP_USER:", process.env.SMTP_USER || "NOT SET")
-    console.log("  SMTP_PASS:", process.env.SMTP_PASS ? "✓ SET (hidden)" : "❌ NOT SET")
-    console.log("  EMAIL_FROM_NAME:", process.env.EMAIL_FROM_NAME || "CredVault")
-    console.log("  EMAIL_FROM_ADDRESS:", process.env.EMAIL_FROM_ADDRESS || process.env.SMTP_USER || "NOT SET")
-    console.log("---")
 
     // Create reusable transporter
     transporter = nodemailer.createTransport({
@@ -26,8 +16,6 @@ function getTransporter() {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
       },
-      debug: true, // Enable debug output
-      logger: true, // Log information to console
     })
   }
   return transporter
@@ -35,14 +23,14 @@ function getTransporter() {
 
 // Verify transporter configuration
 export async function verifyEmailConfig() {
-  console.log("🔍 Verifying email server connection...")
+  console.log("Verifying email server connection...")
   try {
     const transport = getTransporter()
     await transport.verify()
-    console.log("✅ Email server is ready to send messages")
+    console.log("Email server is ready to send messages")
     return true
   } catch (error) {
-    console.error("❌ Email server connection failed:")
+    console.error("Email server connection failed:")
     console.error("  Error:", error)
     if (error && typeof error === "object") {
       if ("code" in error) console.error("  Error Code:", error.code)
@@ -66,15 +54,6 @@ export async function sendEmail({ to, subject, html, text }: EmailOptions) {
   const fromAddress = process.env.EMAIL_FROM_ADDRESS || process.env.SMTP_USER
   const fromString = `"${fromName}" <${fromAddress}>`
 
-  console.log("\n📨 Attempting to send email:")
-  console.log("  From:", fromString)
-  console.log("  To:", to)
-  console.log("  Subject:", subject)
-  console.log("  Auth User:", process.env.SMTP_USER)
-  console.log("  From Address:", fromAddress)
-  console.log("  HTML Length:", html.length, "characters")
-  console.log("---")
-
   try {
     const transport = getTransporter()
     const info = await transport.sendMail({
@@ -85,13 +64,7 @@ export async function sendEmail({ to, subject, html, text }: EmailOptions) {
       text: text || html.replace(/<[^>]*>/g, ""), // Strip HTML tags for text version
     })
 
-    console.log("✅ Email sent successfully!")
-    console.log("  Message ID:", info.messageId)
-    console.log("  Response:", info.response)
-    console.log("  Accepted:", info.accepted)
-    console.log("  Rejected:", info.rejected)
-    console.log("  Envelope:", JSON.stringify(info.envelope, null, 2))
-    console.log("---\n")
+    console.log("Email sent successfully to " + to + " with response: " + info.response)
     
     return { success: true, messageId: info.messageId, info }
   } catch (error) {
@@ -107,13 +80,6 @@ export async function sendEmail({ to, subject, html, text }: EmailOptions) {
       if ("errno" in error) console.error("  Error Number:", error.errno)
       if ("syscall" in error) console.error("  System Call:", error.syscall)
       
-      // Additional iCloud-specific debugging
-      console.error("\n🔍 Debugging Info:")
-      console.error("  Configuration Check:")
-      console.error("    - Auth user matches from address?", process.env.SMTP_USER === fromAddress ? "✓ YES" : "✗ NO (MISMATCH!)")
-      console.error("    - Using custom from address?", process.env.EMAIL_FROM_ADDRESS ? "✓ YES" : "✗ NO")
-      console.error("    - From:", fromString)
-      console.error("    - Auth:", process.env.SMTP_USER)
     }
     
     console.error("---\n")

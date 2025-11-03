@@ -83,8 +83,12 @@ function IssuerLoginForm() {
             errorStr.includes("Configuration") && errorStr.includes("sign")) {
           errorMessage = "Please verify your email address before signing in. Check your inbox for the verification link. If you don't see it, check your spam folder."
           setShowResendButton(true)
-        } else if (errorStr.includes("VERIFICATION_PENDING") || (errorStr.includes("verification") && errorStr.includes("organization"))) {
-          errorMessage = "Your organization is pending verification. Please wait for admin approval."
+        } else if (errorStr.includes("VERIFICATION_PENDING") || errorStr.includes("VERIFICATION_REJECTED") || (errorStr.includes("verification") && errorStr.includes("organization"))) {
+          if (errorStr.includes("VERIFICATION_REJECTED")) {
+            errorMessage = "Your organization verification was rejected. Please contact support."
+          } else {
+            errorMessage = "Your organization is pending verification. Please wait for admin approval."
+          }
           setPendingMessage(true)
           setShowResendButton(false)
         } else if (errorStr.includes("Invalid role") || errorStr.includes("registered as")) {
