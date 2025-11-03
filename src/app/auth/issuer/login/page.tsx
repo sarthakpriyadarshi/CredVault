@@ -66,7 +66,9 @@ function IssuerLoginForm() {
         const errorStr = String(result.error)
         let errorMessage = "Invalid email or password"
         
-        if (errorStr.includes("VERIFICATION_PENDING") || errorStr.includes("verification")) {
+        if (errorStr.includes("EMAIL_NOT_VERIFIED") || errorStr.includes("verify your email")) {
+          errorMessage = "Please verify your email address before signing in. Check your inbox for the verification link."
+        } else if (errorStr.includes("VERIFICATION_PENDING") || errorStr.includes("verification")) {
           errorMessage = "Your organization is pending verification. Please wait for admin approval."
           setPendingMessage(true)
         } else if (errorStr.includes("Invalid role") || errorStr.includes("registered as")) {

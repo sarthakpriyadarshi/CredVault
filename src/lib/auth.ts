@@ -59,6 +59,11 @@ export const authOptions: NextAuthConfig = {
             throw new Error("VERIFICATION_PENDING: Your organization is pending verification. Please wait for admin approval.")
           }
 
+          // Check if email is verified
+          if (!user.emailVerified) {
+            throw new Error("EMAIL_NOT_VERIFIED: Please verify your email address before signing in. Check your inbox for the verification link.")
+          }
+
           return {
             id: user._id.toString(),
             email: user.email,
@@ -167,6 +172,13 @@ export const authOptions: NextAuthConfig = {
               // Store error message for error page to retrieve
               setOAuthError(existingUser.email, errorMessage)
               return false
+            }
+
+            // Check if email is verified (for users who signed up with credentials first)
+            if (!existingUser.emailVerified) {
+              // If user came from OAuth, mark email as verified since OAuth providers verify emails
+              existingUser.emailVerified = true
+              await existingUser.save()
             }
 
             // Update user info if needed

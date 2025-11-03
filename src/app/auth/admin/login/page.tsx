@@ -53,7 +53,9 @@ export default function AdminLoginPage() {
         const errorStr = String(result.error)
         let errorMessage = "Invalid email or password"
         
-        if (errorStr.includes("Invalid role") || errorStr.includes("registered as")) {
+        if (errorStr.includes("EMAIL_NOT_VERIFIED") || errorStr.includes("verify your email")) {
+          errorMessage = "Please verify your email address before signing in. Check your inbox for the verification link."
+        } else if (errorStr.includes("Invalid role") || errorStr.includes("registered as")) {
           const parts = errorStr.match(/registered as (\w+), not (\w+)/i)
           if (parts) {
             errorMessage = `This account is registered as ${parts[1]}, not ${parts[2]}. Please use the ${parts[1]} login page.`

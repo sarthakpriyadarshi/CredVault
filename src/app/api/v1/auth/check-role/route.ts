@@ -61,6 +61,14 @@ async function handler(req: NextRequest) {
       )
     }
 
+    // Check if email is verified
+    if (!user.emailVerified) {
+      return NextResponse.json(
+        { error: "Please verify your email address before signing in. Check your inbox for the verification link." },
+        { status: 403 }
+      )
+    }
+
     // Role matches and credentials are valid
     return NextResponse.json({ 
       success: true,
