@@ -17,6 +17,53 @@ const registeredFonts = new Set<string>()
 // In-memory font buffer cache for serverless functions
 const fontBufferCache = new Map<string, Buffer>()
 
+// Map to track system font to Google Font mappings
+const fontMappings = new Map<string, string>()
+
+// Map common system fonts to Google Fonts alternatives
+// These Google Fonts are visually similar to system fonts
+const systemFontMapping: Record<string, string> = {
+  "Arial": "Roboto",
+  "Arial Black": "Roboto",
+  "Helvetica": "Roboto",
+  "Helvetica Neue": "Roboto",
+  "Times New Roman": "Merriweather",
+  "Times": "Merriweather",
+  "Courier New": "Courier Prime",
+  "Courier": "Courier Prime",
+  "Verdana": "Open Sans",
+  "Georgia": "Crimson Text",
+  "Palatino": "Crimson Text",
+  "Garamond": "EB Garamond",
+  "Bookman": "Merriweather",
+  "Comic Sans MS": "Comic Neue",
+  "Trebuchet MS": "Ubuntu",
+  "Impact": "Anton",
+  "Tahoma": "Noto Sans",
+  "Century Gothic": "Montserrat",
+}
+
+/**
+ * Get the actual font name to use (handles system font mapping)
+ */
+export function getActualFontName(fontFamily: string): string {
+  // Check if this font has been mapped
+  if (fontMappings.has(fontFamily)) {
+    return fontMappings.get(fontFamily) || fontFamily
+  }
+  
+  // Check if it's a system font that needs mapping
+  const mappedFont = Object.keys(systemFontMapping).find(
+    sf => sf.toLowerCase() === fontFamily.toLowerCase()
+  )
+  
+  if (mappedFont) {
+    return systemFontMapping[mappedFont]
+  }
+  
+  return fontFamily
+}
+
 /**
  * Font file cache directory (fallback for persistent storage)
  * On Vercel/serverless, this won't persist and won't be writable
@@ -197,29 +244,6 @@ export async function loadFont(fontFamily: string, weight: number = 400): Promis
   if (registeredFonts.has(registerKey)) {
     return true
   }
-
-  // Map common system fonts to Google Fonts alternatives
-  // These Google Fonts are visually similar to system fonts
-  const systemFontMapping: Record<string, string> = {
-    "Arial": "Roboto",
-    "Arial Black": "Roboto",
-    "Helvetica": "Roboto",
-    "Helvetica Neue": "Roboto",
-    "Times New Roman": "Merriweather",
-    "Times": "Merriweather",
-    "Courier New": "Courier Prime",
-    "Courier": "Courier Prime",
-    "Verdana": "Open Sans",
-    "Georgia": "Crimson Text",
-    "Palatino": "Crimson Text",
-    "Garamond": "EB Garamond",
-    "Bookman": "Merriweather",
-    "Comic Sans MS": "Comic Neue",
-    "Trebuchet MS": "Ubuntu",
-    "Impact": "Anton",
-    "Tahoma": "Noto Sans",
-    "Century Gothic": "Montserrat",
-  }
   
   // Check if it's a system font that needs mapping (case-insensitive)
   const mappedFont = Object.keys(systemFontMapping).find(
@@ -234,7 +258,9 @@ export async function loadFont(fontFamily: string, weight: number = 400): Promis
     const success = await loadFontFromGoogle(googleFontAlternative, weight)
     
     if (success) {
-      // Register the original font name as an alias
+      // Track the mapping so we know which font to actually use
+      fontMappings.set(fontFamily, googleFontAlternative)
+      // Register the original font name as loaded
       registeredFonts.add(registerKey)
       console.log(`Successfully mapped ${fontFamily} to ${googleFontAlternative}`)
       return true

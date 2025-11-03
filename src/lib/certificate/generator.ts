@@ -6,7 +6,7 @@
 import sharp from "sharp"
 import { createCanvas, loadImage } from "canvas"
 import { IPlaceholder } from "@/models/Template"
-import { loadFont } from "./fonts"
+import { loadFont, getActualFontName } from "./fonts"
 
 interface GenerateCertificateOptions {
   templateImageBase64: string // Base64 data URL of the template certificate image (e.g., data:image/png;base64,...)
@@ -128,17 +128,19 @@ export async function generateCertificate(options: GenerateCertificateOptions): 
 
       // Set font properties - use the exact font family from placeholder
       const fontSize = placeholder.fontSize || 16
-      // Use the fontFamily directly from placeholder, not through getFontName which might map it
-      const fontFamily = placeholder.fontFamily || "Arial"
+      // Get the original font name from placeholder
+      const originalFontFamily = placeholder.fontFamily || "Arial"
+      
+      // Get the actual font name to use (handles Arial -> Roboto mapping)
+      const actualFontFamily = getActualFontName(originalFontFamily)
       
       // Check if font was loaded successfully
-      const fontWasLoaded = fontLoadResults.find(r => r.fontFamily === fontFamily)?.loaded || false
+      const fontWasLoaded = fontLoadResults.find(r => r.fontFamily === originalFontFamily)?.loaded || false
       
-      // Use the exact font family name (should be registered by now if it was loadable)
-      // If font wasn't loaded, node-canvas will fall back to system fonts
+      // Use the actual mapped font family name (e.g., "Roboto" instead of "Arial")
       const fontString = fontWasLoaded 
-        ? `${fontSize}px "${fontFamily}", sans-serif`
-        : `${fontSize}px "${fontFamily}", Arial, sans-serif`
+        ? `${fontSize}px "${actualFontFamily}", sans-serif`
+        : `${fontSize}px "${actualFontFamily}", Roboto, sans-serif`
       
       ctx.font = fontString
       ctx.fillStyle = placeholder.color || "#000000"
@@ -159,7 +161,7 @@ export async function generateCertificate(options: GenerateCertificateOptions): 
 
       // Debug logging
       console.log(`[Certificate Generator] Drawing text "${value}" at (${x}, ${y})`)
-      console.log(`[Certificate Generator] Font: ${fontString}, Color: ${ctx.fillStyle}, Family: ${fontFamily}, Loaded: ${fontWasLoaded}`)
+      console.log(`[Certificate Generator] Font: ${fontString}, Color: ${ctx.fillStyle}, Original: ${originalFontFamily}, Actual: ${actualFontFamily}, Loaded: ${fontWasLoaded}`)
       console.log(`[Certificate Generator] Text metrics - width: ${ctx.measureText(String(value)).width}`)
 
       // Draw the text centered at the specified coordinates
