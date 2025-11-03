@@ -189,10 +189,72 @@ async function downloadFontFile(fontFamily: string, weight: number = 400): Promi
  * Register a font for use with node-canvas
  * Uses in-memory caching for serverless compatibility
  * Tries to load from cache first, then downloads if needed
+ * For system fonts (like Arial), maps to Google Fonts alternatives
  */
 export async function loadFont(fontFamily: string, weight: number = 400): Promise<boolean> {
   // Check if already registered
   const registerKey = `${fontFamily}-${weight}`
+  if (registeredFonts.has(registerKey)) {
+    return true
+  }
+
+  // Map common system fonts to Google Fonts alternatives
+  // These Google Fonts are visually similar to system fonts
+  const systemFontMapping: Record<string, string> = {
+    "Arial": "Roboto",
+    "Arial Black": "Roboto",
+    "Helvetica": "Roboto",
+    "Helvetica Neue": "Roboto",
+    "Times New Roman": "Merriweather",
+    "Times": "Merriweather",
+    "Courier New": "Courier Prime",
+    "Courier": "Courier Prime",
+    "Verdana": "Open Sans",
+    "Georgia": "Crimson Text",
+    "Palatino": "Crimson Text",
+    "Garamond": "EB Garamond",
+    "Bookman": "Merriweather",
+    "Comic Sans MS": "Comic Neue",
+    "Trebuchet MS": "Ubuntu",
+    "Impact": "Anton",
+    "Tahoma": "Noto Sans",
+    "Century Gothic": "Montserrat",
+  }
+  
+  // Check if it's a system font that needs mapping (case-insensitive)
+  const mappedFont = Object.keys(systemFontMapping).find(
+    sf => sf.toLowerCase() === fontFamily.toLowerCase()
+  )
+  
+  if (mappedFont) {
+    const googleFontAlternative = systemFontMapping[mappedFont]
+    console.log(`Mapping system font "${fontFamily}" to Google Font "${googleFontAlternative}"`)
+    
+    // Download and register the Google Font alternative
+    const success = await loadFontFromGoogle(googleFontAlternative, weight)
+    
+    if (success) {
+      // Register the original font name as an alias
+      registeredFonts.add(registerKey)
+      console.log(`Successfully mapped ${fontFamily} to ${googleFontAlternative}`)
+      return true
+    } else {
+      console.warn(`Failed to load Google Font alternative for ${fontFamily}`)
+      return false
+    }
+  }
+
+  // For non-system fonts, download from Google Fonts
+  return await loadFontFromGoogle(fontFamily, weight)
+}
+
+/**
+ * Load a font from Google Fonts (internal helper)
+ */
+async function loadFontFromGoogle(fontFamily: string, weight: number = 400): Promise<boolean> {
+  const registerKey = `${fontFamily}-${weight}`
+  
+  // Check if already registered
   if (registeredFonts.has(registerKey)) {
     return true
   }
