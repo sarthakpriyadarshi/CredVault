@@ -185,7 +185,7 @@ async function handler(
           // Continue with credential creation even if image generation fails
         }
 
-        await Credential.create({
+        const credential = await Credential.create({
           templateId: template._id,
           organizationId,
           recipientEmail: emailValue,
@@ -207,8 +207,8 @@ async function handler(
             issuerName: user?.name as string || "Unknown Issuer",
             issuerOrganization: organizationName,
             issuedDate: new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }),
-            credentialId: template._id.toString(),
-            viewCredentialLink: `${process.env.NEXTAUTH_URL}/profile/${emailValue}`,
+            credentialId: credential._id.toString(),
+            viewCredentialLink: `${process.env.NEXTAUTH_URL}/verify/${credential._id.toString()}`,
             blockchainVerified: useBlockchain || false,
           })
 

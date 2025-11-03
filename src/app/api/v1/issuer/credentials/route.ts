@@ -354,7 +354,7 @@ async function postHandler(
         issuerOrganization,
         issuedDate: new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }),
         credentialId: credential._id.toString(),
-        viewCredentialLink: `${process.env.NEXTAUTH_URL}/profile/${credential._id.toString()}`,
+        viewCredentialLink: `${process.env.NEXTAUTH_URL}/verify/${credential._id.toString()}`,
         blockchainVerified: credential.isOnBlockchain || false,
       })
 
