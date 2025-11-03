@@ -104,6 +104,14 @@ async function handler(
 
     // Process each row
     for (let i = 1; i < lines.length; i++) {
+      // Fetch organization name for email
+      let organizationName = "Unknown Organization";
+      try {
+        const org = await (await import("@/models")).Organization.findById(organizationId);
+        if (org && org.name) organizationName = org.name;
+      } catch {
+        // Ignore error, fallback to default
+      }
       const values = lines[i].split(",").map((v) => v.trim())
       const emailValue = values[headers.indexOf(emailHeader)]?.toLowerCase().trim()
       const recipientName = values[0] || "Unknown"
@@ -195,11 +203,13 @@ async function handler(
         try {
           const emailHtml = generateCredentialIssuedEmail({
             recipientName,
-            credentialTitle: template.name || (template.type === "certificate" ? "Certificate" : template.type === "badge" ? "Badge" : "Credential"),
+            credentialName: template.name || (template.type === "certificate" ? "Certificate" : template.type === "badge" ? "Badge" : "Credential"),
             issuerName: user?.name as string || "Unknown Issuer",
+            issuerOrganization: organizationName,
             issuedDate: new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }),
-            verificationUrl: `${process.env.NEXTAUTH_URL}/profile/${emailValue}`,
-            isOnBlockchain: useBlockchain || false,
+            credentialId: template._id.toString(),
+            viewCredentialLink: `${process.env.NEXTAUTH_URL}/profile/${emailValue}`,
+            blockchainVerified: useBlockchain || false,
           })
 
           await sendEmail({
