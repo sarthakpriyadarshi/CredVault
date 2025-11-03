@@ -749,16 +749,20 @@ export default function CreateTemplatePage() {
                       <Label className="text-sm font-semibold">Credential Type</Label>
                       <div className="space-y-2">
                         {(["certificate", "badge", "both"] as const).map((type) => (
-                          <div key={type} className="flex items-center gap-2">
+                          <label
+                            key={type}
+                            htmlFor={type}
+                            className="flex items-center gap-3 cursor-pointer"
+                          >
                             <Checkbox
                               checked={templateType === type}
                               onCheckedChange={() => setTemplateType(type)}
                               id={type}
                             />
-                            <Label htmlFor={type} className="font-normal capitalize cursor-pointer">
+                            <span className="font-normal capitalize flex-1">
                               {type}
-                            </Label>
-                          </div>
+                            </span>
+                          </label>
                         ))}
                       </div>
                     </div>

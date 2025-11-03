@@ -236,12 +236,15 @@ export default function IssuePage() {
                     {/* Options */}
                     {currentTemplate && (
                       <div className="space-y-4 pt-4 border-t border-border/50">
-                        <div className="flex items-center gap-3 p-4 bg-primary/10 rounded-lg">
+                        <label 
+                          htmlFor="blockchain" 
+                          className="flex items-center gap-3 cursor-pointer"
+                        >
                           <Checkbox checked={useBlockchain} onCheckedChange={setUseBlockchain} id="blockchain" />
-                          <Label htmlFor="blockchain" className="font-normal cursor-pointer flex-1">
+                          <span className="font-normal flex-1">
                             Register on Blockchain
-                          </Label>
-                        </div>
+                          </span>
+                        </label>
                       </div>
                     )}
 
