@@ -23,6 +23,7 @@ import {
 import { Upload, Trash2, Download, Save, Eye } from "lucide-react"
 import { PrimaryButton } from "@/components/ui/primary-button"
 import { GOOGLE_FONTS } from "@/lib/fonts"
+import { ColorPickerComponent } from "@/components/ui/color-picker"
 
 interface TemplateField {
   id: string
@@ -1058,20 +1059,18 @@ export default function CreateTemplatePage() {
                         </div>
 
                         <div className="flex items-center gap-2">
-                          <Label className="text-xs text-muted-foreground whitespace-nowrap">Color:</Label>
-                          <input
-                            type="color"
+                          <ColorPickerComponent
+                            label="Color:"
                             value={fields.find((f) => f.id === selectedField)?.fontColor || selectedFontColor}
-                            onChange={(e) => {
+                            onChange={(color) => {
                               if (selectedField) {
                                 setFields(
-                                  fields.map((f) => (f.id === selectedField ? { ...f, fontColor: e.target.value } : f))
+                                  fields.map((f) => (f.id === selectedField ? { ...f, fontColor: color } : f))
                                 )
                               } else {
-                                setSelectedFontColor(e.target.value)
+                                setSelectedFontColor(color)
                               }
                             }}
-                            className="h-8 w-12 cursor-pointer bg-background border-2 border-primary/70 rounded transition-colors"
                           />
                         </div>
                       </div>

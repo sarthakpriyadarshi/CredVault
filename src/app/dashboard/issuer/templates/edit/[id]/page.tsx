@@ -24,6 +24,7 @@ import { Upload, Trash2, Save, Loader2 } from "lucide-react"
 import { PrimaryButton } from "@/components/ui/primary-button"
 import { GOOGLE_FONTS } from "@/lib/fonts"
 import { LoadingScreen } from "@/components/loading-screen"
+import { ColorPickerComponent } from "@/components/ui/color-picker"
 
 interface TemplateField {
   id: string
@@ -61,12 +62,17 @@ export default function EditTemplatePage() {
   const [selectedFontSize] = useState(16)
   const [selectedFontColor] = useState("#000000")
   const [isDragging, setIsDragging] = useState(false)
-  const [isResizing, setIsResizing] = useState(false)
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
-  const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0 })
+  const [dragCurrent, setDragCurrent] = useState({ x: 0, y: 0 })
   const [isMovingField, setIsMovingField] = useState(false)
   const [movingFieldId, setMovingFieldId] = useState<string | null>(null)
   const [fieldDragOffset, setFieldDragOffset] = useState({ x: 0, y: 0 })
+  
+  // New field creation states
+  const [showNewField, setShowNewField] = useState(false)
+  const [newFieldName, setNewFieldName] = useState("")
+  const [newFieldType, setNewFieldType] = useState<"text" | "email" | "number" | "date" | "id">("text")
+  const [pendingField, setPendingField] = useState<{ x: number; y: number; width: number; height: number } | null>(null)
 
   // Modal states for error and success messages
   const [showErrorModal, setShowErrorModal] = useState(false)
@@ -349,7 +355,23 @@ export default function EditTemplatePage() {
       ctx.textAlign = "left"
       ctx.textBaseline = "alphabetic"
     })
-  }, [certificateImage, fields, selectedField, selectedFontFamily, selectedFontSize, selectedFontColor])
+
+    // Draw dragging rectangle if creating new field
+    if (isDragging && dragStart.x && dragCurrent.x) {
+      const x = Math.min(dragStart.x, dragCurrent.x)
+      const y = Math.min(dragStart.y, dragCurrent.y)
+      const width = Math.abs(dragCurrent.x - dragStart.x)
+      const height = Math.abs(dragCurrent.y - dragStart.y)
+
+      ctx.strokeStyle = "#DB2777"
+      ctx.lineWidth = 2
+      ctx.setLineDash([5, 5])
+      ctx.strokeRect(x, y, width, height)
+      ctx.fillStyle = "rgba(219, 39, 119, 0.1)"
+      ctx.fillRect(x, y, width, height)
+      ctx.setLineDash([])
+    }
+  }, [certificateImage, fields, selectedField, selectedFontFamily, selectedFontSize, selectedFontColor, isDragging, dragStart, dragCurrent])
 
   // Effect to redraw canvas when dependencies change
   useEffect(() => {
@@ -407,17 +429,41 @@ export default function EditTemplatePage() {
     }
   }
 
-  const updateField = (id: string, updates: Partial<TemplateField>) => {
-    setFields(fields.map((f) => (f.id === id ? { ...f, ...updates } : f)))
+  // Add new field from dialog
+  const handleAddNewField = () => {
+    if (!newFieldName.trim() || !pendingField) {
+      setModalMessage("Please enter a field name")
+      setShowErrorModal(true)
+      return
+    }
+
+    const newField: TemplateField = {
+      id: `field-${Date.now()}`,
+      name: newFieldName,
+      type: newFieldType,
+      x: newFieldType === "email" ? undefined : pendingField.x,
+      y: newFieldType === "email" ? undefined : pendingField.y,
+      width: pendingField.width,
+      height: pendingField.height,
+      fontFamily: selectedFontFamily,
+      fontSize: selectedFontSize,
+      fontColor: selectedFontColor,
+    }
+
+    setFields([...fields, newField])
+    setSelectedField(newField.id)
+    setShowNewField(false)
+    setPendingField(null)
+    setNewFieldName("")
+    setNewFieldType("text")
   }
 
   const handleCanvasMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    const canvas = canvasRef.current
-    if (!canvas || !certificateImage) return
+    if (!canvasRef.current || !certificateImage) return
 
-    const rect = canvas.getBoundingClientRect()
-    const x = (e.clientX - rect.left) * (canvas.width / rect.width)
-    const y = (e.clientY - rect.top) * (canvas.height / rect.height)
+    const rect = canvasRef.current.getBoundingClientRect()
+    const x = (e.clientX - rect.left) * (canvasRef.current.width / rect.width)
+    const y = (e.clientY - rect.top) * (canvasRef.current.height / rect.height)
 
     // Check if clicking on existing field (only those with coordinates)
     const clickedField = fields.find(
@@ -433,9 +479,15 @@ export default function EditTemplatePage() {
         x: x - clickedField.x,
         y: y - clickedField.y,
       })
+      setDragStart({ x, y })
+      setDragCurrent({ x, y })
       return
     }
 
+    // Start dragging to create new field
+    setIsDragging(true)
+    setDragStart({ x, y })
+    setDragCurrent({ x, y })
     setSelectedField(null)
   }
 
@@ -465,7 +517,11 @@ export default function EditTemplatePage() {
         }
         return prevFields
       })
+      setDragCurrent({ x: currentX, y: currentY })
       canvas.style.cursor = "grabbing"
+    } else if (isDragging) {
+      setDragCurrent({ x: currentX, y: currentY })
+      canvas.style.cursor = "crosshair"
     } else {
       // Check if hovering over a field (only those with coordinates)
       const hoveredField = fields.find(
@@ -473,19 +529,50 @@ export default function EditTemplatePage() {
       )
       canvas.style.cursor = hoveredField ? "grab" : "crosshair"
     }
-  }, [certificateImage, isMovingField, movingFieldId, fieldDragOffset, fields])
+  }, [certificateImage, isMovingField, movingFieldId, fieldDragOffset, isDragging, fields])
 
-  const handleCanvasMouseUp = () => {
+  const handleCanvasMouseUp = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!canvasRef.current) {
+      setIsDragging(false)
+      setIsMovingField(false)
+      setMovingFieldId(null)
+      return
+    }
+
+    // Handle field movement
     if (isMovingField && movingFieldId) {
       setIsMovingField(false)
       setMovingFieldId(null)
       setFieldDragOffset({ x: 0, y: 0 })
-      if (canvasRef.current) {
-        canvasRef.current.style.cursor = "grab"
-      }
+      canvasRef.current.style.cursor = "grab"
+      return
     }
-    setIsDragging(false)
-    setIsResizing(false)
+
+    // Handle new field creation
+    if (isDragging) {
+      const rect = canvasRef.current.getBoundingClientRect()
+      const endX = (e.clientX - rect.left) * (canvasRef.current.width / rect.width)
+      const endY = (e.clientY - rect.top) * (canvasRef.current.height / rect.height)
+
+      // Calculate width and height from drag
+      const width = Math.max(Math.abs(endX - dragStart.x), 50)
+      const height = Math.max(Math.abs(endY - dragStart.y), 20)
+      const x = Math.min(dragStart.x, endX)
+      const y = Math.min(dragStart.y, endY)
+
+      // Store the pending field and open dialog to name it
+      setPendingField({ x, y, width, height })
+      setShowNewField(true)
+      setNewFieldName("")
+      setNewFieldType("text")
+
+      setIsDragging(false)
+      setDragCurrent({ x: 0, y: 0 })
+      canvasRef.current.style.cursor = "crosshair"
+    } else {
+      setIsDragging(false)
+      setIsMovingField(false)
+    }
   }
 
   const calculateImageScale = (
@@ -682,8 +769,6 @@ export default function EditTemplatePage() {
   if (status === "unauthenticated" || (status === "authenticated" && (!session || session.user?.role !== "issuer"))) {
     return null
   }
-
-  const selectedFieldData = fields.find((f) => f.id === selectedField)
 
   return (
     <div className="min-h-screen w-full bg-black relative">
@@ -882,85 +967,6 @@ export default function EditTemplatePage() {
                     {fields.length === 0 && <p className="text-xs text-muted-foreground text-center py-4">No fields added yet</p>}
                   </Card>
 
-                  {/* Field Customization (only when selected) */}
-                  {selectedFieldData && (
-                    <Card className="p-6 border border-border/50 bg-card/50 backdrop-blur space-y-4">
-                      <h3 className="font-semibold text-foreground">Customize Field</h3>
-                      <div className="space-y-3">
-                        <div className="space-y-1.5">
-                          <Label htmlFor="field-name-input" className="text-xs">
-                            Field Name
-                          </Label>
-                          <Input
-                            id="field-name-input"
-                            value={selectedFieldData.name}
-                            onChange={(e) => updateField(selectedFieldData.id, { name: e.target.value })}
-                            className="h-8 text-xs bg-background/50"
-                          />
-                        </div>
-
-                        <div className="space-y-1.5">
-                          <Label htmlFor="font-select" className="text-xs">
-                            Font Family
-                          </Label>
-                          <Select
-                            value={selectedFieldData.fontFamily || selectedFontFamily}
-                            onValueChange={(value) => updateField(selectedFieldData.id, { fontFamily: value })}
-                          >
-                            <SelectTrigger id="font-select" className="h-8 text-xs bg-background/50">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent className="max-h-[200px]">
-                              {GOOGLE_FONTS.map((font) => (
-                                <SelectItem key={font} value={font} style={{ fontFamily: font }}>
-                                  {font}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div className="space-y-1.5">
-                          <Label htmlFor="font-size-input" className="text-xs">
-                            Font Size (px)
-                          </Label>
-                          <Input
-                            id="font-size-input"
-                            type="number"
-                            value={selectedFieldData.fontSize || selectedFontSize}
-                            onChange={(e) => updateField(selectedFieldData.id, { fontSize: parseInt(e.target.value) || 16 })}
-                            min="8"
-                            max="72"
-                            className="h-8 text-xs bg-background/50"
-                          />
-                        </div>
-
-                        <div className="space-y-1.5">
-                          <Label htmlFor="font-color-input" className="text-xs">
-                            Font Color
-                          </Label>
-                          <input
-                            id="font-color-input"
-                            type="color"
-                            value={selectedFieldData.fontColor || selectedFontColor}
-                            onChange={(e) => updateField(selectedFieldData.id, { fontColor: e.target.value })}
-                            className="h-8 w-full cursor-pointer bg-background border-2 border-primary/70 rounded transition-colors"
-                          />
-                        </div>
-
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => deleteField(selectedFieldData.id)}
-                          className="w-full text-xs"
-                        >
-                          <Trash2 className="h-3 w-3 mr-1" />
-                          Delete Field
-                        </Button>
-                      </div>
-                    </Card>
-                  )}
-
                   {/* Save Button */}
                   <div className="flex gap-2">
                     <Button variant="outline" onClick={() => router.push("/dashboard/issuer/templates")} className="flex-1">
@@ -1042,21 +1048,17 @@ export default function EditTemplatePage() {
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-2">
-                          <Label className="text-xs text-muted-foreground whitespace-nowrap">Color:</Label>
-                          <input
-                            type="color"
-                            value={fields.find((f) => f.id === selectedField)?.fontColor || selectedFontColor}
-                            onChange={(e) => {
-                              if (selectedField) {
-                                setFields(
-                                  fields.map((f) => (f.id === selectedField ? { ...f, fontColor: e.target.value } : f))
-                                )
-                              }
-                            }}
-                            className="h-8 w-12 cursor-pointer bg-background border-2 border-primary/70 rounded transition-colors"
-                          />
-                        </div>
+                        <ColorPickerComponent
+                          label="Color:"
+                          value={fields.find((f) => f.id === selectedField)?.fontColor || selectedFontColor}
+                          onChange={(color) => {
+                            if (selectedField) {
+                              setFields(
+                                fields.map((f) => (f.id === selectedField ? { ...f, fontColor: color } : f))
+                              )
+                            }
+                          }}
+                        />
                       </div>
                     )}
 
@@ -1102,6 +1104,56 @@ export default function EditTemplatePage() {
           crossOrigin="anonymous"
         />
       )}
+
+      {/* Add New Field Dialog */}
+      <Dialog open={showNewField} onOpenChange={setShowNewField}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add New Field</DialogTitle>
+            <DialogDescription>Enter a name and type for the new field you created.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="new-field-name">Field Name</Label>
+              <Input
+                id="new-field-name"
+                value={newFieldName}
+                onChange={(e) => setNewFieldName(e.target.value)}
+                placeholder="e.g., Recipient Name"
+                autoFocus
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="new-field-type">Field Type</Label>
+              <Select value={newFieldType} onValueChange={(value: "text" | "email" | "number" | "date" | "id") => setNewFieldType(value)}>
+                <SelectTrigger id="new-field-type">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="text">Text</SelectItem>
+                  <SelectItem value="email">Email</SelectItem>
+                  <SelectItem value="number">Number</SelectItem>
+                  <SelectItem value="date">Date</SelectItem>
+                  <SelectItem value="id">ID</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button variant="outline" onClick={() => {
+              setShowNewField(false)
+              setPendingField(null)
+              setNewFieldName("")
+              setNewFieldType("text")
+            }}>
+              Cancel
+            </Button>
+            <PrimaryButton onClick={handleAddNewField}>
+              Add Field
+            </PrimaryButton>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Error Modal */}
       <Dialog open={showErrorModal} onOpenChange={setShowErrorModal}>
