@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from "next/server"
 import { withIssuer, handleApiError } from "@/lib/api/middleware"
 import { parseBody, isValidEmail, getPagination, createPaginatedResponse } from "@/lib/api/utils"
-import { Credential, Template, User } from "@/models"
+import { Credential, Template, User, Organization } from "@/models"
 import connectDB from "@/lib/db/mongodb"
 import mongoose from "mongoose"
 import { generateCertificate, generateBadge } from "@/lib/certificate"
 import { vaultProtocol, VaultProtocolService } from "@/lib/services/vault-protocol.service"
 import { checkVaultHealth, getHealthErrorMessage } from "@/lib/services/vault-health.service"
+import { sendEmail } from "@/lib/email/nodemailer"
+import { generateCredentialIssuedEmail } from "@/lib/email/templates"
 
 // GET - List credentials for issuer's organization
 async function getHandler(
@@ -336,6 +338,35 @@ async function postHandler(
       blockchainTxId: credential.blockchainTxId,
       isOnBlockchain: credential.isOnBlockchain,
     })
+
+    // Send notification email to recipient
+    try {
+      const recipientName = data.Name || data.name || "Recipient"
+      
+      // Fetch organization for email
+      const organization = await Organization.findById(organizationId)
+      const issuerOrganization = organization?.name || "Unknown Organization"
+      
+      const emailHtml = generateCredentialIssuedEmail({
+        recipientName,
+        credentialName: template.name || (template.type === "certificate" ? "Certificate" : template.type === "badge" ? "Badge" : "Credential"),
+        issuerName: user?.name as string || "Unknown Issuer",
+        issuerOrganization,
+        issuedDate: new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }),
+        credentialId: credential._id.toString(),
+        viewCredentialLink: `${process.env.NEXTAUTH_URL}/profile/${credential._id.toString()}`,
+        blockchainVerified: credential.isOnBlockchain || false,
+      })
+
+      await sendEmail({
+        to: recipientEmail,
+        subject: `New ${template.type === "certificate" ? "Certificate" : template.type === "badge" ? "Badge" : "Credential"} Issued - CredVault`,
+        html: emailHtml,
+      })
+    } catch (emailError) {
+      console.error("Failed to send credential notification email:", emailError)
+      // Don't fail credential issuance if email fails
+    }
 
     return NextResponse.json(
       {

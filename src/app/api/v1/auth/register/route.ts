@@ -4,6 +4,9 @@ import { parseBody, isValidEmail } from "@/lib/api/utils"
 import { User, Organization } from "@/models"
 import connectDB from "@/lib/db/mongodb"
 import { invalidateUserRole } from "@/lib/cache/invalidation"
+import { sendEmail } from "@/lib/email/nodemailer"
+import { generateVerificationEmail } from "@/lib/email/templates"
+import crypto from "crypto"
 
 async function handler(req: NextRequest) {
   if (req.method !== "POST") {
@@ -80,6 +83,33 @@ async function handler(req: NextRequest) {
       isVerified: role === "recipient", // Recipients auto-verified, admins should be created via separate endpoint
       emailVerified: false,
     })
+
+    // Generate email verification token
+    const verificationToken = crypto.randomBytes(32).toString("hex")
+    const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
+
+    // Save verification token to user
+    user.emailVerificationToken = verificationToken
+    user.emailVerificationExpires = verificationExpires
+    await user.save()
+
+    // Send verification email
+    try {
+      const verificationLink = `${process.env.NEXTAUTH_URL}/verify-email/${verificationToken}`
+      const emailHtml = generateVerificationEmail({
+        name: user.name,
+        verificationLink,
+      })
+
+      await sendEmail({
+        to: user.email,
+        subject: "Verify Your Email - CredVault",
+        html: emailHtml,
+      })
+    } catch (emailError) {
+      console.error("Failed to send verification email:", emailError)
+      // Don't fail registration if email fails - user can request new verification email
+    }
 
     // Invalidate user role cache for this new user
     // Use background revalidation since the user doesn't exist in cache yet

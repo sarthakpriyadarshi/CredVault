@@ -5,6 +5,8 @@ import { Credential, Template, User } from "@/models"
 import connectDB from "@/lib/db/mongodb"
 import mongoose from "mongoose"
 import { generateCertificate, generateBadge } from "@/lib/certificate"
+import { sendEmail } from "@/lib/email/nodemailer"
+import { generateCredentialIssuedEmail } from "@/lib/email/templates"
 
 async function handler(
   req: NextRequest,
@@ -188,6 +190,27 @@ async function handler(
           status: "active",
           issuedAt: new Date(),
         })
+
+        // Send notification email to recipient
+        try {
+          const emailHtml = generateCredentialIssuedEmail({
+            recipientName,
+            credentialTitle: template.name || (template.type === "certificate" ? "Certificate" : template.type === "badge" ? "Badge" : "Credential"),
+            issuerName: user?.name as string || "Unknown Issuer",
+            issuedDate: new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }),
+            verificationUrl: `${process.env.NEXTAUTH_URL}/profile/${emailValue}`,
+            isOnBlockchain: useBlockchain || false,
+          })
+
+          await sendEmail({
+            to: emailValue,
+            subject: `New ${template.type === "certificate" ? "Certificate" : template.type === "badge" ? "Badge" : "Credential"} Issued - CredVault`,
+            html: emailHtml,
+          })
+        } catch (emailError) {
+          console.error(`Failed to send notification email to ${emailValue}:`, emailError)
+          // Don't fail credential issuance if email fails
+        }
 
         records.push({
           recipientName,

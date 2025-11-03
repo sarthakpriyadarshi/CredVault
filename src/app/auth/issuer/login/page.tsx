@@ -224,7 +224,7 @@ function IssuerLoginForm() {
                 </div>
                 <span className="text-zinc-300">Remember me</span>
               </label>
-              <Link href="#" className="text-sm text-primary hover:text-primary/80">
+              <Link href="/forgot-password" className="text-sm text-primary hover:text-primary/80">
                 Forgot password?
               </Link>
             </div>

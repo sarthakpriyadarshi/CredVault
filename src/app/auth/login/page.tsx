@@ -84,10 +84,10 @@ export default function RecipientLoginPage() {
         setError("Login failed. Please try again.")
       }
     } catch (err: unknown) {
-      const errorMessage = err && typeof err === "object" && "message" in err && typeof err.message === "string"
-        ? err.message
-        : "An error occurred. Please try again."
-      setError(errorMessage)
+      const errorMessage = err && typeof err === "object" && "message" in err && typeof (err as { message?: unknown }).message === "string"
+        ? (err as { message: string }).message
+        : "An unknown error occurred.";
+      setError(errorMessage);
     } finally {
       setIsLoading(false)
     }
@@ -205,7 +205,7 @@ export default function RecipientLoginPage() {
                 </div>
                 <span className="text-zinc-300">Remember me</span>
               </label>
-              <Link href="#" className="text-sm text-primary hover:text-primary/80">
+              <Link href="/forgot-password" className="text-sm text-primary hover:text-primary/80">
                 Forgot password?
               </Link>
             </div>

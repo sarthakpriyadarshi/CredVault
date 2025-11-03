@@ -9,6 +9,10 @@ export interface IUser extends Document {
   organizationId?: mongoose.Types.ObjectId
   isVerified: boolean
   emailVerified: boolean
+  emailVerificationToken?: string
+  emailVerificationExpires?: Date
+  resetPasswordToken?: string
+  resetPasswordExpires?: Date
   image?: string
   // Profile fields
   profilePublic?: boolean
@@ -97,6 +101,22 @@ const UserSchema = new Schema<IUser>(
       default: null,
       trim: true,
     },
+    emailVerificationToken: {
+      type: String,
+      default: null,
+    },
+    emailVerificationExpires: {
+      type: Date,
+      default: null,
+    },
+    resetPasswordToken: {
+      type: String,
+      default: null,
+    },
+    resetPasswordExpires: {
+      type: Date,
+      default: null,
+    },
   },
   {
     timestamps: true,
@@ -123,8 +143,8 @@ UserSchema.pre("save", async function (next) {
     const salt = await bcrypt.genSalt(10)
     this.password = await bcrypt.hash(this.password, salt)
     next()
-  } catch (error: any) {
-    next(error)
+  } catch (error: unknown) {
+    next(error as Error)
   }
 })
 
