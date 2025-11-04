@@ -64,6 +64,10 @@ export default function CreateTemplatePage() {
   const [isMovingField, setIsMovingField] = useState(false)
   const [movingFieldId, setMovingFieldId] = useState<string | null>(null)
   const [fieldDragOffset, setFieldDragOffset] = useState({ x: 0, y: 0 })
+  const [isResizing, setIsResizing] = useState(false)
+  const [resizingFieldId, setResizingFieldId] = useState<string | null>(null)
+  const [resizeHandle, setResizeHandle] = useState<string | null>(null)
+  const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, fieldX: 0, fieldY: 0, fieldWidth: 0, fieldHeight: 0 })
   const [saving, setSaving] = useState(false)
   const imageRef = useRef<HTMLImageElement | null>(null)
   const animationFrameRef = useRef<number | null>(null)
@@ -131,12 +135,117 @@ export default function CreateTemplatePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fields, selectedField, isDragging, dragStart, dragCurrent, isMovingField, selectedFontFamily, selectedFontSize, selectedFontColor])
 
+  // Helper function to get resize handle position
+  const getResizeHandlePosition = useCallback((field: TemplateField, handle: string): { x: number; y: number } => {
+    if (field.x === undefined || field.y === undefined) {
+      return { x: 0, y: 0 }
+    }
+    const handleSize = 8
+    const halfHandle = handleSize / 2
+    switch (handle) {
+      case "nw": return { x: field.x - halfHandle, y: field.y - halfHandle } // top-left
+      case "n": return { x: field.x + field.width / 2 - halfHandle, y: field.y - halfHandle } // top-center
+      case "ne": return { x: field.x + field.width - halfHandle, y: field.y - halfHandle } // top-right
+      case "w": return { x: field.x - halfHandle, y: field.y + field.height / 2 - halfHandle } // middle-left
+      case "e": return { x: field.x + field.width - halfHandle, y: field.y + field.height / 2 - halfHandle } // middle-right
+      case "sw": return { x: field.x - halfHandle, y: field.y + field.height - halfHandle } // bottom-left
+      case "s": return { x: field.x + field.width / 2 - halfHandle, y: field.y + field.height - halfHandle } // bottom-center
+      case "se": return { x: field.x + field.width - halfHandle, y: field.y + field.height - halfHandle } // bottom-right
+      default: return { x: 0, y: 0 }
+    }
+  }, [])
+
+  // Helper function to detect which resize handle is clicked
+  const getResizeHandleAt = useCallback((field: TemplateField, x: number, y: number): string | null => {
+    const handleSize = 8
+    const handles = ["nw", "n", "ne", "w", "e", "sw", "s", "se"]
+    
+    for (const handle of handles) {
+      const pos = getResizeHandlePosition(field, handle)
+      if (x >= pos.x && x <= pos.x + handleSize && y >= pos.y && y <= pos.y + handleSize) {
+        return handle
+      }
+    }
+    return null
+  }, [getResizeHandlePosition])
+
+  // Helper function to calculate maximum font size that fits within field dimensions
+  const calculateMaxFontSize = useCallback((field: TemplateField, text: string, fontFamily: string, isBold: boolean, isItalic: boolean): number => {
+    if (!canvasRef.current || field.x === undefined || field.y === undefined) {
+      return 72 // Default max
+    }
+
+    const ctx = canvasRef.current.getContext("2d")
+    if (!ctx) return 72
+
+    // Use a reasonable padding to ensure text doesn't touch edges
+    const padding = 4
+    const maxWidth = field.width - padding * 2
+    const maxHeight = field.height - padding * 2
+
+    // Binary search for maximum font size that fits
+    let minSize = 8
+    let maxSize = 200 // Reasonable upper limit
+    let bestSize = minSize
+
+    while (minSize <= maxSize) {
+      const testSize = Math.floor((minSize + maxSize) / 2)
+      
+      // Build font string
+      let fontStyle = ""
+      if (isBold && isItalic) {
+        fontStyle = "bold italic "
+      } else if (isBold) {
+        fontStyle = "bold "
+      } else if (isItalic) {
+        fontStyle = "italic "
+      }
+      ctx.font = `${fontStyle}${testSize}px "${fontFamily}", sans-serif`
+      
+      const metrics = ctx.measureText(text)
+      const textWidth = metrics.width
+      // Approximate text height (font size is usually close to actual height)
+      const textHeight = testSize * 1.2 // Add some buffer for descenders/ascenders
+
+      if (textWidth <= maxWidth && textHeight <= maxHeight) {
+        bestSize = testSize
+        minSize = testSize + 1
+      } else {
+        maxSize = testSize - 1
+      }
+    }
+
+    return Math.min(bestSize, 72) // Cap at 72px
+  }, [])
+
   const handleCanvasMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!canvasRef.current || previewMode || !certificateImage) return
 
     const rect = canvasRef.current.getBoundingClientRect()
     const x = (e.clientX - rect.left) * (canvasRef.current.width / rect.width)
     const y = (e.clientY - rect.top) * (canvasRef.current.height / rect.height)
+
+    // Check if clicking on a resize handle first
+    if (selectedField) {
+      const selectedFieldObj = fields.find((f) => f.id === selectedField && f.x !== undefined && f.y !== undefined)
+      if (selectedFieldObj) {
+        const handle = getResizeHandleAt(selectedFieldObj, x, y)
+        if (handle) {
+          setIsResizing(true)
+          setResizingFieldId(selectedField)
+          setResizeHandle(handle)
+          setResizeStart({
+            x,
+            y,
+            fieldX: selectedFieldObj.x!,
+            fieldY: selectedFieldObj.y!,
+            fieldWidth: selectedFieldObj.width,
+            fieldHeight: selectedFieldObj.height,
+          })
+          return
+        }
+      }
+    }
 
     // Check if clicking on existing field (only those with coordinates)
     const clickedField = fields.find(
@@ -177,7 +286,81 @@ export default function CreateTemplatePage() {
     const currentX = (e.clientX - rect.left) * (canvasRef.current.width / rect.width)
     const currentY = (e.clientY - rect.top) * (canvasRef.current.height / rect.height)
 
-    if (isMovingField && movingFieldId) {
+    if (isResizing && resizingFieldId && resizeHandle) {
+      // Update field dimensions based on resize handle
+      setFields((prevFields) => {
+        const field = prevFields.find((f) => f.id === resizingFieldId)
+        if (!field || field.x === undefined || field.y === undefined) return prevFields
+
+        const deltaX = currentX - resizeStart.x
+        const deltaY = currentY - resizeStart.y
+        let newX = resizeStart.fieldX
+        let newY = resizeStart.fieldY
+        let newWidth = resizeStart.fieldWidth
+        let newHeight = resizeStart.fieldHeight
+
+        // Handle different resize directions
+        if (resizeHandle.includes("w")) {
+          // Left edge
+          newX = Math.max(0, resizeStart.fieldX + deltaX)
+          newWidth = Math.max(50, resizeStart.fieldWidth - deltaX)
+        }
+        if (resizeHandle.includes("e")) {
+          // Right edge
+          newWidth = Math.max(50, resizeStart.fieldWidth + deltaX)
+        }
+        if (resizeHandle.includes("n")) {
+          // Top edge
+          newY = Math.max(0, resizeStart.fieldY + deltaY)
+          newHeight = Math.max(20, resizeStart.fieldHeight - deltaY)
+        }
+        if (resizeHandle.includes("s")) {
+          // Bottom edge
+          newHeight = Math.max(20, resizeStart.fieldHeight + deltaY)
+        }
+
+        // Ensure field stays within canvas bounds
+        newX = Math.max(0, Math.min(newX, canvasRef.current!.width - newWidth))
+        newY = Math.max(0, Math.min(newY, canvasRef.current!.height - newHeight))
+        newWidth = Math.min(newWidth, canvasRef.current!.width - newX)
+        newHeight = Math.min(newHeight, canvasRef.current!.height - newY)
+
+        return prevFields.map((f) => {
+          if (f.id === resizingFieldId) {
+            const updatedField = { ...f, x: newX, y: newY, width: newWidth, height: newHeight }
+            
+            // Validate font size after resize - ensure it still fits
+            if (updatedField.fontSize !== undefined) {
+              const fontFamily = updatedField.fontFamily || selectedFontFamily
+              const isBold = updatedField.bold || false
+              const isItalic = updatedField.italic || false
+              const maxSize = calculateMaxFontSize(updatedField, updatedField.name, fontFamily, isBold, isItalic)
+              
+              // Only cap to maximum, allow smaller sizes (don't enforce minimum)
+              if (updatedField.fontSize > maxSize) {
+                updatedField.fontSize = maxSize
+              }
+            }
+            
+            return updatedField
+          }
+          return f
+        })
+      })
+
+      // Update cursor based on resize handle
+      const cursorMap: Record<string, string> = {
+        nw: "nw-resize",
+        n: "n-resize",
+        ne: "ne-resize",
+        w: "w-resize",
+        e: "e-resize",
+        sw: "sw-resize",
+        s: "s-resize",
+        se: "se-resize",
+      }
+      canvasRef.current.style.cursor = cursorMap[resizeHandle] || "default"
+    } else if (isMovingField && movingFieldId) {
       // Update the field position in real-time (only for fields with coordinates)
       setFields((prevFields) => {
         const field = prevFields.find((f) => f.id === movingFieldId)
@@ -195,6 +378,28 @@ export default function CreateTemplatePage() {
       setDragCurrent({ x: currentX, y: currentY })
       canvasRef.current.style.cursor = "crosshair"
     } else if (!previewMode) {
+      // Check if hovering over a resize handle
+      if (selectedField) {
+        const selectedFieldObj = fields.find((f) => f.id === selectedField && f.x !== undefined && f.y !== undefined)
+        if (selectedFieldObj) {
+          const handle = getResizeHandleAt(selectedFieldObj, currentX, currentY)
+          if (handle) {
+            const cursorMap: Record<string, string> = {
+              nw: "nw-resize",
+              n: "n-resize",
+              ne: "ne-resize",
+              w: "w-resize",
+              e: "e-resize",
+              sw: "sw-resize",
+              s: "s-resize",
+              se: "se-resize",
+            }
+            canvasRef.current.style.cursor = cursorMap[handle] || "default"
+            return
+          }
+        }
+      }
+
       // Check if hovering over a field (only those with coordinates)
       const hoveredField = fields.find(
         (f) => f.x !== undefined && f.y !== undefined && currentX >= f.x && currentX <= f.x + f.width && currentY >= f.y && currentY <= f.y + f.height
@@ -203,13 +408,25 @@ export default function CreateTemplatePage() {
     } else {
       canvasRef.current.style.cursor = "default"
     }
-  }, [certificateImage, isMovingField, movingFieldId, fieldDragOffset, isDragging, previewMode, fields])
+  }, [certificateImage, isMovingField, movingFieldId, fieldDragOffset, isDragging, previewMode, fields, isResizing, resizingFieldId, resizeHandle, resizeStart, selectedField, getResizeHandleAt, calculateMaxFontSize, selectedFontFamily])
 
   const handleCanvasMouseUp = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!canvasRef.current) {
       setIsDragging(false)
       setIsMovingField(false)
       setMovingFieldId(null)
+      setIsResizing(false)
+      setResizingFieldId(null)
+      setResizeHandle(null)
+      return
+    }
+
+    // Handle field resizing
+    if (isResizing && resizingFieldId) {
+      setIsResizing(false)
+      setResizingFieldId(null)
+      setResizeHandle(null)
+      canvasRef.current.style.cursor = "default"
       return
     }
 
@@ -336,11 +553,37 @@ export default function CreateTemplatePage() {
       ctx.textAlign = "center"
       ctx.textBaseline = "middle"
       
+      // Save context and set up clipping to prevent text overflow
+      ctx.save()
+      ctx.beginPath()
+      ctx.rect(field.x, field.y, field.width, field.height)
+      ctx.clip()
+      
       // Calculate center position
       const centerX = field.x + field.width / 2
       const centerY = field.y + field.height / 2
       
       ctx.fillText(field.name, centerX, centerY)
+      
+      // Restore context to remove clipping
+      ctx.restore()
+      
+      // Draw resize handles for selected fields
+      if (isSelected && !previewMode) {
+        const handleSize = 8
+        const handles = ["nw", "n", "ne", "w", "e", "sw", "s", "se"]
+        
+        ctx.fillStyle = "#DB2777"
+        ctx.strokeStyle = "#FFFFFF"
+        ctx.lineWidth = 1.5
+        
+        handles.forEach((handle) => {
+          const pos = getResizeHandlePosition(field, handle)
+          // Draw handle square
+          ctx.fillRect(pos.x, pos.y, handleSize, handleSize)
+          ctx.strokeRect(pos.x, pos.y, handleSize, handleSize)
+        })
+      }
       
       // Reset text alignment for other operations
       ctx.textAlign = "left"
@@ -427,10 +670,22 @@ export default function CreateTemplatePage() {
       
       // Update optional fields to match Name field styling
       if (isEmailField || isIssueDateField || isExpiryDateField) {
+        let fontSize = nameField.fontSize || selectedFontSize
+        
+        // If field has coordinates, validate font size to prevent overflow
+        if (f.x !== undefined && f.y !== undefined) {
+          const fontFamily = nameField.fontFamily || selectedFontFamily
+          const isBold = nameField.bold || false
+          const isItalic = nameField.italic || false
+          const maxSize = calculateMaxFontSize(f, f.name, fontFamily, isBold, isItalic)
+          // Only cap to maximum - save exactly as propagated (no minimum enforcement)
+          fontSize = Math.min(fontSize, maxSize)
+        }
+        
         return {
           ...f,
           fontFamily: nameField.fontFamily,
-          fontSize: nameField.fontSize,
+          fontSize,
           fontColor: nameField.fontColor,
           bold: nameField.bold,
           italic: nameField.italic,
@@ -1257,12 +1512,39 @@ export default function CreateTemplatePage() {
                           <div className="flex items-center gap-1.5">
                             <Input
                               type="number"
-                              min="8"
+                              min="1"
                               max="72"
                               value={fields.find((f) => f.id === selectedField)?.fontSize || selectedFontSize}
                               onChange={(e) => {
-                                const size = parseInt(e.target.value) || 16
+                                const inputValue = e.target.value
+                                // Allow empty input for user to type freely
+                                if (inputValue === "") {
+                                  if (selectedField) {
+                                    const updatedFields = fields.map((f) => (f.id === selectedField ? { ...f, fontSize: undefined } : f))
+                                    setFields(updatedFields)
+                                  } else {
+                                    setSelectedFontSize(16)
+                                  }
+                                  return
+                                }
+                                
+                                let size = parseInt(inputValue)
+                                if (isNaN(size)) return
+                                
                                 if (selectedField) {
+                                  const field = fields.find((f) => f.id === selectedField)
+                                  if (field && field.x !== undefined && field.y !== undefined) {
+                                    // Calculate maximum allowed font size based on field dimensions
+                                    const fontFamily = field.fontFamily || selectedFontFamily
+                                    const isBold = field.bold || false
+                                    const isItalic = field.italic || false
+                                    const maxSize = calculateMaxFontSize(field, field.name, fontFamily, isBold, isItalic)
+                                    
+                                    // Only cap to maximum allowed - save exactly as user typed (no minimum enforcement)
+                                    size = Math.min(size, maxSize)
+                                  }
+                                  
+                                  // Save exactly as user typed (no automatic changes)
                                   const updatedFields = fields.map((f) => (f.id === selectedField ? { ...f, fontSize: size } : f))
                                   const updatedField = updatedFields.find((f) => f.id === selectedField)
                                   // If Name field was updated, propagate styling to optional fields
