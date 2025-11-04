@@ -1416,34 +1416,47 @@ export default function CreateTemplatePage() {
                       💡 Note: Drag on canvas to add fields, or use the buttons above to add Email, Issue Date, Expiry Date, or QR Code fields.
                     </p>
 
-                    <div className="space-y-2 max-h-64 overflow-y-auto">
-                      {fields.map((field) => (
-                        <div
-                          key={field.id}
-                          onClick={() => setSelectedField(field.id)}
-                          className={`p-3 rounded-lg cursor-pointer transition-all ${
-                            selectedField === field.id
-                              ? "bg-primary/20 border border-primary"
-                              : "bg-background/50 border border-border/50 hover:bg-background/70"
-                          }`}
-                        >
-                          <div className="flex items-center justify-between mb-2">
-                            <p className="font-medium text-sm text-foreground">{field.name}</p>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                deleteField(field.id)
-                              }}
-                              className="text-destructive hover:text-destructive/80"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
+                    <div className="space-y-2 max-h-64 overflow-y-auto scrollbar-thin">
+                      {fields.map((field) => {
+                        // Format field info based on type and coordinates
+                        let fieldInfo = ""
+                        if (field.type === "qr" && field.x !== undefined && field.y !== undefined) {
+                          // QR codes show position and size
+                          fieldInfo = `qr • (${Math.round(field.x)}, ${Math.round(field.y)}) • ${Math.round(field.width)}×${Math.round(field.height)}`
+                        } else if (field.x !== undefined && field.y !== undefined) {
+                          // Other fields with coordinates show position
+                          fieldInfo = `${field.type} • (${Math.round(field.x)}, ${Math.round(field.y)})`
+                        } else {
+                          // Fields without coordinates
+                          fieldInfo = `${field.type} • (Not displayed)`
+                        }
+
+                        return (
+                          <div
+                            key={field.id}
+                            onClick={() => setSelectedField(field.id)}
+                            className={`p-3 rounded-lg cursor-pointer transition-all ${
+                              selectedField === field.id
+                                ? "bg-primary/20 border border-primary"
+                                : "bg-background/50 border border-border/50 hover:bg-background/70"
+                            }`}
+                          >
+                            <div className="flex items-center justify-between mb-2">
+                              <p className="font-medium text-sm text-foreground">{field.name}</p>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  deleteField(field.id)
+                                }}
+                                className="text-destructive hover:text-destructive/80"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
+                            <p className="text-xs text-muted-foreground">{fieldInfo}</p>
                           </div>
-                          <p className="text-xs text-muted-foreground">
-                            {field.type} {field.x !== undefined && field.y !== undefined ? `• (${Math.round(field.x)}, ${Math.round(field.y)})` : "• (Not displayed)"}
-                          </p>
-                        </div>
-                      ))}
+                        )
+                      })}
                     </div>
 
                     {fields.length === 0 && <p className="text-xs text-muted-foreground text-center py-4">No fields added yet</p>}
@@ -1464,19 +1477,27 @@ export default function CreateTemplatePage() {
                             </DialogDescription>
                           </DialogHeader>
                           <div className="space-y-4">
-                            <div className="space-y-2">
-                              <Label htmlFor="field-name">Field Name *</Label>
-                              <Input
-                                id="field-name"
-                                value={newFieldName}
-                                onChange={(e) => setNewFieldName(e.target.value)}
-                                placeholder="e.g., Recipient Name"
-                                autoFocus
-                              />
-                            </div>
+                            {newFieldType !== "qr" && (
+                              <div className="space-y-2">
+                                <Label htmlFor="field-name">Field Name *</Label>
+                                <Input
+                                  id="field-name"
+                                  value={newFieldName}
+                                  onChange={(e) => setNewFieldName(e.target.value)}
+                                  placeholder="e.g., Recipient Name"
+                                  autoFocus
+                                />
+                              </div>
+                            )}
                             <div className="space-y-2">
                               <Label htmlFor="field-type">Field Type</Label>
-                              <Select value={newFieldType} onValueChange={(v: "text" | "email" | "number" | "date" | "id" | "qr") => setNewFieldType(v)}>
+                              <Select value={newFieldType} onValueChange={(v: "text" | "email" | "number" | "date" | "id" | "qr") => {
+                                setNewFieldType(v)
+                                // Auto-set name to "QR Code" when QR Code type is selected
+                                if (v === "qr") {
+                                  setNewFieldName("QR Code")
+                                }
+                              }}>
                                 <SelectTrigger id="field-type">
                                   <SelectValue />
                                 </SelectTrigger>
@@ -1490,6 +1511,13 @@ export default function CreateTemplatePage() {
                                 </SelectContent>
                               </Select>
                             </div>
+                            {newFieldType === "qr" && (
+                              <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                                <p className="text-xs text-blue-700 dark:text-blue-400">
+                                  Field name will be automatically set to &quot;QR Code&quot;
+                                </p>
+                              </div>
+                            )}
                             {pendingField && (
                               <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
                                 <p className="text-xs text-blue-700 dark:text-blue-400">
@@ -1570,14 +1598,22 @@ export default function CreateTemplatePage() {
                                     setSelectedField(field.id)
                                   } else if (isQRCodeField && pendingField) {
                                     // QR code field - auto-set name to "QR Code" and require coordinates
+                                    // Ensure square aspect ratio for QR codes
+                                    const size = Math.max(pendingField.width, pendingField.height, 50) // Use larger dimension, minimum 50px
+                                    // Center the QR code on the drawn area
+                                    const centerX = pendingField.x + pendingField.width / 2
+                                    const centerY = pendingField.y + pendingField.height / 2
+                                    const qrX = centerX - size / 2
+                                    const qrY = centerY - size / 2
+                                    
                                     const qrCodeField: TemplateField = {
                                       id: Date.now().toString(),
                                       name: "QR Code", // Auto-set name
                                       type: "qr",
-                                      x: pendingField.x,
-                                      y: pendingField.y,
-                                      width: pendingField.width,
-                                      height: pendingField.height,
+                                      x: Math.max(0, Math.min(qrX, (canvasRef.current?.width || 800) - size)), // Ensure within canvas bounds
+                                      y: Math.max(0, Math.min(qrY, (canvasRef.current?.height || 600) - size)), // Ensure within canvas bounds
+                                      width: size,
+                                      height: size,
                                       // QR codes don't use font styling
                                       fontFamily: selectedFontFamily,
                                       fontSize: selectedFontSize,

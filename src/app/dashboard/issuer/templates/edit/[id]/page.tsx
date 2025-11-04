@@ -25,6 +25,7 @@ import { PrimaryButton } from "@/components/ui/primary-button"
 import { GOOGLE_FONTS } from "@/lib/fonts"
 import { LoadingScreen } from "@/components/loading-screen"
 import { ColorPickerComponent } from "@/components/ui/color-picker"
+import { generateDummyQRCodeBrowser } from "@/lib/qrcode/browser-generator"
 
 interface TemplateField {
   id: string
@@ -49,6 +50,7 @@ export default function EditTemplatePage() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const imageRef = useRef<HTMLImageElement | null>(null)
   const badgeImageRef = useRef<HTMLImageElement | null>(null)
+  const qrCodeImagesRef = useRef<Map<string, HTMLImageElement>>(new Map())
   
   const [loading, setLoading] = useState(true)
   const [templateName, setTemplateName] = useState("")
@@ -175,34 +177,60 @@ export default function EditTemplatePage() {
                 actualImageHeight
               )
               
-              // Convert center coordinates from image space to canvas space
-              const canvasX = p.x / scaleX
-              const canvasY = p.y / scaleY
+              // QR codes are stored with top-left coordinates, not center coordinates
+              const isQRCode = p.type === "qr"
               
-              // Convert width/height if provided
-              const canvasWidth = p.width ? p.width / scaleX : 200
-              const canvasHeight = p.height ? p.height / scaleY : 40
-              
-              // Calculate top-left corner from center
-              const topLeftX = canvasX - canvasWidth / 2
-              const topLeftY = canvasY - canvasHeight / 2
-              
-              // Convert font size back to canvas scale
-              const canvasFontSize = p.fontSize ? Math.round(p.fontSize / ((scaleX + scaleY) / 2)) : 16
-              
-              return {
-                id: `field-${Date.now()}-${index}`,
-                name: p.fieldName || p.name || `Field ${index + 1}`,
-                type: p.type || "text",
-                x: topLeftX,
-                y: topLeftY,
-                width: canvasWidth,
-                height: canvasHeight,
-                fontFamily: p.fontFamily || "Roboto",
-                fontSize: canvasFontSize,
-                fontColor: p.fontColor || p.color || "#000000",
-                bold: p.bold || false,
-                italic: p.italic || false,
+              if (isQRCode) {
+                // QR codes: x and y are already top-left coordinates
+                const canvasX = p.x / scaleX
+                const canvasY = p.y / scaleY
+                const canvasWidth = p.width ? p.width / scaleX : 150
+                const canvasHeight = p.height ? p.height / scaleY : 150
+                
+                return {
+                  id: `field-${Date.now()}-${index}`,
+                  name: p.fieldName || p.name || "QR Code",
+                  type: p.type || "qr",
+                  x: canvasX,
+                  y: canvasY,
+                  width: canvasWidth,
+                  height: canvasHeight,
+                  fontFamily: p.fontFamily || "Roboto",
+                  fontSize: 16,
+                  fontColor: p.fontColor || p.color || "#000000",
+                  bold: false,
+                  italic: false,
+                }
+              } else {
+                // Other fields: x and y are center coordinates (for text fields)
+                const canvasX = p.x / scaleX
+                const canvasY = p.y / scaleY
+                
+                // Convert width/height if provided
+                const canvasWidth = p.width ? p.width / scaleX : 200
+                const canvasHeight = p.height ? p.height / scaleY : 40
+                
+                // Calculate top-left corner from center
+                const topLeftX = canvasX - canvasWidth / 2
+                const topLeftY = canvasY - canvasHeight / 2
+                
+                // Convert font size back to canvas scale
+                const canvasFontSize = p.fontSize ? Math.round(p.fontSize / ((scaleX + scaleY) / 2)) : 16
+                
+                return {
+                  id: `field-${Date.now()}-${index}`,
+                  name: p.fieldName || p.name || `Field ${index + 1}`,
+                  type: p.type || "text",
+                  x: topLeftX,
+                  y: topLeftY,
+                  width: canvasWidth,
+                  height: canvasHeight,
+                  fontFamily: p.fontFamily || "Roboto",
+                  fontSize: canvasFontSize,
+                  fontColor: p.fontColor || p.color || "#000000",
+                  bold: p.bold || false,
+                  italic: p.italic || false,
+                }
               }
             } else {
               // Email field without coordinates
@@ -225,38 +253,122 @@ export default function EditTemplatePage() {
           setFields(loadedFields)
         } else if (template.placeholders && Array.isArray(template.placeholders)) {
           // Fallback: Load placeholders without coordinate conversion
-          const loadedFields = template.placeholders.map((p: { fieldName?: string; name?: string; type?: string; x?: number; y?: number; width?: number; height?: number; fontFamily?: string; fontSize?: number; color?: string; fontColor?: string; bold?: boolean; italic?: boolean }, index: number) => ({
+          const loadedFields = template.placeholders.map((p: { fieldName?: string; name?: string; type?: string; x?: number; y?: number; width?: number; height?: number; fontFamily?: string; fontSize?: number; color?: string; fontColor?: string; bold?: boolean; italic?: boolean }, index: number) => {
+            const isQRCode = p.type === "qr"
+            // QR codes are stored with top-left coordinates
+            if (isQRCode && p.x !== undefined && p.y !== undefined) {
+              return {
+                id: `field-${Date.now()}-${index}`,
+                name: p.fieldName || p.name || "QR Code",
+                type: p.type || "qr",
+                x: p.x,
+                y: p.y,
+                width: p.width || 150,
+                height: p.height || 150,
+                fontFamily: p.fontFamily || "Roboto",
+                fontSize: 16,
+                fontColor: p.fontColor || p.color || "#000000",
+                bold: false,
+                italic: false,
+              }
+            }
+            // Other fields - handle as center coordinates
+            if (p.x !== undefined && p.y !== undefined) {
+              const canvasWidth = p.width || 200
+              const canvasHeight = p.height || 40
+              const topLeftX = p.x - canvasWidth / 2
+              const topLeftY = p.y - canvasHeight / 2
+              return {
+                id: `field-${Date.now()}-${index}`,
+                name: p.fieldName || p.name || `Field ${index + 1}`,
+                type: p.type || "text",
+                x: topLeftX,
+                y: topLeftY,
+                width: canvasWidth,
+                height: canvasHeight,
+                fontFamily: p.fontFamily || "Roboto",
+                fontSize: p.fontSize || 16,
+                fontColor: p.fontColor || p.color || "#000000",
+                bold: p.bold || false,
+                italic: p.italic || false,
+              }
+            }
+            // Field without coordinates
+            return {
+              id: `field-${Date.now()}-${index}`,
+              name: p.fieldName || p.name || `Field ${index + 1}`,
+              type: p.type || "text",
+              x: undefined,
+              y: undefined,
+              width: 200,
+              height: 40,
+              fontFamily: p.fontFamily || "Roboto",
+              fontSize: p.fontSize || 16,
+              fontColor: p.fontColor || p.color || "#000000",
+              bold: p.bold || false,
+              italic: p.italic || false,
+            }
+          })
+          setFields(loadedFields)
+        }
+      } else if (template.placeholders && Array.isArray(template.placeholders)) {
+        // No image, just load placeholders as-is
+        const loadedFields = template.placeholders.map((p: { fieldName?: string; name?: string; type?: string; x?: number; y?: number; width?: number; height?: number; fontFamily?: string; fontSize?: number; color?: string; fontColor?: string; bold?: boolean; italic?: boolean }, index: number) => {
+          const isQRCode = p.type === "qr"
+          // QR codes are stored with top-left coordinates
+          if (isQRCode && p.x !== undefined && p.y !== undefined) {
+            return {
+              id: `field-${Date.now()}-${index}`,
+              name: p.fieldName || p.name || "QR Code",
+              type: p.type || "qr",
+              x: p.x,
+              y: p.y,
+              width: p.width || 150,
+              height: p.height || 150,
+              fontFamily: p.fontFamily || "Roboto",
+              fontSize: 16,
+              fontColor: p.fontColor || p.color || "#000000",
+              bold: false,
+              italic: false,
+            }
+          }
+          // Other fields - handle as center coordinates
+          if (p.x !== undefined && p.y !== undefined) {
+            const canvasWidth = p.width || 200
+            const canvasHeight = p.height || 40
+            const topLeftX = p.x - canvasWidth / 2
+            const topLeftY = p.y - canvasHeight / 2
+            return {
+              id: `field-${Date.now()}-${index}`,
+              name: p.fieldName || p.name || `Field ${index + 1}`,
+              type: p.type || "text",
+              x: topLeftX,
+              y: topLeftY,
+              width: canvasWidth,
+              height: canvasHeight,
+              fontFamily: p.fontFamily || "Roboto",
+              fontSize: p.fontSize || 16,
+              fontColor: p.fontColor || p.color || "#000000",
+              bold: p.bold || false,
+              italic: p.italic || false,
+            }
+          }
+          // Field without coordinates
+          return {
             id: `field-${Date.now()}-${index}`,
             name: p.fieldName || p.name || `Field ${index + 1}`,
             type: p.type || "text",
-            x: p.x,
-            y: p.y,
-            width: p.width || 200,
-            height: p.height || 40,
+            x: undefined,
+            y: undefined,
+            width: 200,
+            height: 40,
             fontFamily: p.fontFamily || "Roboto",
             fontSize: p.fontSize || 16,
             fontColor: p.fontColor || p.color || "#000000",
             bold: p.bold || false,
             italic: p.italic || false,
-          }))
-          setFields(loadedFields)
-        }
-      } else if (template.placeholders && Array.isArray(template.placeholders)) {
-        // No image, just load placeholders as-is
-        const loadedFields = template.placeholders.map((p: { fieldName?: string; name?: string; type?: string; x?: number; y?: number; width?: number; height?: number; fontFamily?: string; fontSize?: number; color?: string; fontColor?: string; bold?: boolean; italic?: boolean }, index: number) => ({
-          id: `field-${Date.now()}-${index}`,
-          name: p.fieldName || p.name || `Field ${index + 1}`,
-          type: p.type || "text",
-          x: p.x,
-          y: p.y,
-          width: p.width || 200,
-          height: p.height || 40,
-          fontFamily: p.fontFamily || "Roboto",
-          fontSize: p.fontSize || 16,
-          fontColor: p.fontColor || p.color || "#000000",
-          bold: p.bold || false,
-          italic: p.italic || false,
-        }))
+          }
+        })
         setFields(loadedFields)
       }
       
@@ -335,6 +447,46 @@ export default function EditTemplatePage() {
       const isSelected = field.id === selectedField
       const borderColor = isSelected ? "#DB2777" : "#666"
       const fillColor = isSelected ? "rgba(219, 39, 119, 0.1)" : "rgba(100, 100, 100, 0.1)"
+
+      // Handle QR code fields differently
+      if (field.type === "qr") {
+        // Draw QR code placeholder box
+        ctx.fillStyle = fillColor
+        ctx.fillRect(field.x, field.y, field.width, field.height)
+
+        // Draw border
+        ctx.strokeStyle = borderColor
+        ctx.lineWidth = isSelected ? 2 : 1
+        ctx.strokeRect(field.x, field.y, field.width, field.height)
+
+        // Try to load and draw QR code image
+        const qrImage = qrCodeImagesRef.current.get(field.id)
+        if (qrImage) {
+          ctx.drawImage(qrImage, field.x, field.y, field.width, field.height)
+        } else {
+          // Draw placeholder text while QR code loads
+          ctx.fillStyle = "#666"
+          ctx.font = "12px Arial"
+          ctx.textAlign = "center"
+          ctx.textBaseline = "middle"
+          ctx.fillText("QR Code", field.x + field.width / 2, field.y + field.height / 2)
+          
+          // Generate and load QR code asynchronously (browser-compatible)
+          generateDummyQRCodeBrowser("https://credvault.app", Math.max(field.width, field.height))
+            .then((dataUrl: string) => {
+              const img = new Image()
+              img.onload = () => {
+                qrCodeImagesRef.current.set(field.id, img)
+                drawCanvas() // Redraw to show QR code
+              }
+              img.src = dataUrl
+            })
+            .catch((error: unknown) => {
+              console.error("Error generating dummy QR code:", error)
+            })
+        }
+        return
+      }
 
       // Draw field box
       ctx.fillStyle = fillColor
@@ -533,14 +685,22 @@ export default function EditTemplatePage() {
       setSelectedField(newField.id)
     } else if (isQRCodeField && pendingField) {
       // QR code field - auto-set name to "QR Code" and require coordinates
+      // Ensure square aspect ratio for QR codes
+      const size = Math.max(pendingField.width, pendingField.height, 50) // Use larger dimension, minimum 50px
+      // Center the QR code on the drawn area
+      const centerX = pendingField.x + pendingField.width / 2
+      const centerY = pendingField.y + pendingField.height / 2
+      const qrX = centerX - size / 2
+      const qrY = centerY - size / 2
+      
       const qrCodeField: TemplateField = {
         id: `field-${Date.now()}`,
         name: "QR Code", // Auto-set name
         type: "qr",
-        x: pendingField.x,
-        y: pendingField.y,
-        width: pendingField.width,
-        height: pendingField.height,
+        x: Math.max(0, Math.min(qrX, (canvasRef.current?.width || CANVAS_WIDTH) - size)), // Ensure within canvas bounds
+        y: Math.max(0, Math.min(qrY, (canvasRef.current?.height || CANVAS_HEIGHT) - size)), // Ensure within canvas bounds
+        width: size,
+        height: size,
         // QR codes don't use font styling
         fontFamily: selectedFontFamily,
         fontSize: selectedFontSize,
@@ -1220,34 +1380,47 @@ export default function EditTemplatePage() {
                       💡 Click on fields in the canvas to move them
                     </p>
 
-                    <div className="space-y-2 max-h-64 overflow-y-auto">
-                      {fields.map((field) => (
-                        <div
-                          key={field.id}
-                          onClick={() => setSelectedField(field.id)}
-                          className={`p-3 rounded-lg cursor-pointer transition-all ${
-                            selectedField === field.id
-                              ? "bg-primary/20 border border-primary"
-                              : "bg-background/50 border border-border/50 hover:bg-background/70"
-                          }`}
-                        >
-                          <div className="flex items-center justify-between mb-2">
-                            <p className="font-medium text-sm text-foreground">{field.name}</p>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                deleteField(field.id)
-                              }}
-                              className="text-destructive hover:text-destructive/80"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
+                    <div className="space-y-2 max-h-64 overflow-y-auto scrollbar-thin">
+                      {fields.map((field) => {
+                        // Format field info based on type and coordinates
+                        let fieldInfo = ""
+                        if (field.type === "qr" && field.x !== undefined && field.y !== undefined) {
+                          // QR codes show position and size
+                          fieldInfo = `qr • (${Math.round(field.x)}, ${Math.round(field.y)}) • ${Math.round(field.width)}×${Math.round(field.height)}`
+                        } else if (field.x !== undefined && field.y !== undefined) {
+                          // Other fields with coordinates show position
+                          fieldInfo = `${field.type} • (${Math.round(field.x)}, ${Math.round(field.y)})`
+                        } else {
+                          // Fields without coordinates
+                          fieldInfo = `${field.type} • (Not displayed)`
+                        }
+
+                        return (
+                          <div
+                            key={field.id}
+                            onClick={() => setSelectedField(field.id)}
+                            className={`p-3 rounded-lg cursor-pointer transition-all ${
+                              selectedField === field.id
+                                ? "bg-primary/20 border border-primary"
+                                : "bg-background/50 border border-border/50 hover:bg-background/70"
+                            }`}
+                          >
+                            <div className="flex items-center justify-between mb-2">
+                              <p className="font-medium text-sm text-foreground">{field.name}</p>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  deleteField(field.id)
+                                }}
+                                className="text-destructive hover:text-destructive/80"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
+                            <p className="text-xs text-muted-foreground">{fieldInfo}</p>
                           </div>
-                          <p className="text-xs text-muted-foreground">
-                            {field.type} {field.x !== undefined && field.y !== undefined ? `• (${Math.round(field.x)}, ${Math.round(field.y)})` : "• (Not displayed)"}
-                          </p>
-                        </div>
-                      ))}
+                        )
+                      })}
                     </div>
 
                     {fields.length === 0 && <p className="text-xs text-muted-foreground text-center py-4">No fields added yet</p>}
@@ -1436,19 +1609,27 @@ export default function EditTemplatePage() {
             <DialogDescription>Enter a name and type for the new field you created.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="new-field-name">Field Name</Label>
-              <Input
-                id="new-field-name"
-                value={newFieldName}
-                onChange={(e) => setNewFieldName(e.target.value)}
-                placeholder="e.g., Recipient Name"
-                autoFocus
-              />
-            </div>
+            {newFieldType !== "qr" && (
+              <div className="space-y-2">
+                <Label htmlFor="new-field-name">Field Name *</Label>
+                <Input
+                  id="new-field-name"
+                  value={newFieldName}
+                  onChange={(e) => setNewFieldName(e.target.value)}
+                  placeholder="e.g., Recipient Name"
+                  autoFocus
+                />
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="new-field-type">Field Type</Label>
-              <Select value={newFieldType} onValueChange={(value: "text" | "email" | "number" | "date" | "id" | "qr") => setNewFieldType(value)}>
+              <Select value={newFieldType} onValueChange={(value: "text" | "email" | "number" | "date" | "id" | "qr") => {
+                setNewFieldType(value)
+                // Auto-set name to "QR Code" when QR Code type is selected
+                if (value === "qr") {
+                  setNewFieldName("QR Code")
+                }
+              }}>
                 <SelectTrigger id="new-field-type">
                   <SelectValue />
                 </SelectTrigger>
@@ -1462,6 +1643,13 @@ export default function EditTemplatePage() {
                 </SelectContent>
               </Select>
             </div>
+            {newFieldType === "qr" && (
+              <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                <p className="text-xs text-blue-700 dark:text-blue-400">
+                  Field name will be automatically set to &quot;QR Code&quot;
+                </p>
+              </div>
+            )}
           </div>
           <div className="flex justify-end gap-2 mt-4">
             <Button variant="outline" onClick={() => {

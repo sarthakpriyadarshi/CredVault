@@ -62,21 +62,74 @@ export async function generateDummyQRCodeBrowser(url: string, size: number): Pro
     }
   }
 
-  // Draw logo placeholder in center
+  // Draw logo in center
   const logoSize = size * 0.15
   const logoX = (size - logoSize) / 2
   const logoY = (size - logoSize) / 2
+  const logoBgSize = logoSize + cellSize * 2
+  const logoBgX = logoX - cellSize
+  const logoBgY = logoY - cellSize
+  const centerX = size / 2
+  const centerY = size / 2
   
-  // White background for logo
-  ctx.fillStyle = "#FFFFFF"
-  ctx.fillRect(logoX - cellSize, logoY - cellSize, logoSize + cellSize * 2, logoSize + cellSize * 2)
+  // Create radial gradient: black center to black with pink tint at edges
+  const gradient = ctx.createRadialGradient(
+    centerX, centerY, 0, // Start at center, radius 0
+    centerX, centerY, logoBgSize / 2 // End at logo background size
+  )
+  gradient.addColorStop(0, "#000000") // Black center
+  gradient.addColorStop(0.7, "#1a0a0f") // Dark black with slight pink tint
+  gradient.addColorStop(1, "#2d0f1a") // Black with more pink tint at edges
   
-  // Draw "CV" text as placeholder
-  ctx.fillStyle = "#000000"
-  ctx.font = `bold ${logoSize * 0.4}px Arial`
-  ctx.textAlign = "center"
-  ctx.textBaseline = "middle"
-  ctx.fillText("CV", size / 2, size / 2)
+  // Draw rounded square gradient background for logo
+  const cornerRadius = logoBgSize * 0.15 // 15% of size for rounded corners
+  ctx.fillStyle = gradient
+  ctx.beginPath()
+  ctx.moveTo(logoBgX + cornerRadius, logoBgY)
+  ctx.lineTo(logoBgX + logoBgSize - cornerRadius, logoBgY)
+  ctx.quadraticCurveTo(logoBgX + logoBgSize, logoBgY, logoBgX + logoBgSize, logoBgY + cornerRadius)
+  ctx.lineTo(logoBgX + logoBgSize, logoBgY + logoBgSize - cornerRadius)
+  ctx.quadraticCurveTo(logoBgX + logoBgSize, logoBgY + logoBgSize, logoBgX + logoBgSize - cornerRadius, logoBgY + logoBgSize)
+  ctx.lineTo(logoBgX + cornerRadius, logoBgY + logoBgSize)
+  ctx.quadraticCurveTo(logoBgX, logoBgY + logoBgSize, logoBgX, logoBgY + logoBgSize - cornerRadius)
+  ctx.lineTo(logoBgX, logoBgY + cornerRadius)
+  ctx.quadraticCurveTo(logoBgX, logoBgY, logoBgX + cornerRadius, logoBgY)
+  ctx.closePath()
+  ctx.fill()
+  
+  // Load and draw actual logo
+  try {
+    const logoImg = new Image()
+    logoImg.crossOrigin = "anonymous"
+    
+    // Load logo from public folder
+    await new Promise<void>((resolve, reject) => {
+      logoImg.onload = () => resolve()
+      logoImg.onerror = () => {
+        // Fallback to "CV" text if logo fails to load
+        ctx.fillStyle = "#000000"
+        ctx.font = `bold ${logoSize * 0.4}px Arial`
+        ctx.textAlign = "center"
+        ctx.textBaseline = "middle"
+        ctx.fillText("CV", size / 2, size / 2)
+        resolve()
+      }
+      logoImg.src = "/logo.svg"
+    })
+    
+    // Draw logo if it loaded successfully
+    if (logoImg.complete && logoImg.naturalWidth > 0) {
+      ctx.drawImage(logoImg, logoX, logoY, logoSize, logoSize)
+    }
+  } catch (error) {
+    // Fallback to "CV" text if logo loading fails
+    console.warn("Failed to load logo for QR code:", error)
+    ctx.fillStyle = "#000000"
+    ctx.font = `bold ${logoSize * 0.4}px Arial`
+    ctx.textAlign = "center"
+    ctx.textBaseline = "middle"
+    ctx.fillText("CV", size / 2, size / 2)
+  }
 
   return canvas.toDataURL("image/png")
 }

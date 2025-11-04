@@ -228,3 +228,54 @@ body {
 .animate-shiny-text {
   animation: shiny-text 3s ease-in-out infinite;
 }
+
+/* Modern scrollbar styling - Global pink/primary color scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--primary) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: var(--primary);
+  border-radius: 3px;
+  transition: background-color 0.2s ease;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  opacity: 0.8;
+}
+
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary) transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: var(--primary);
+    border-radius: 3px;
+    transition: background-color 0.2s ease;
+  }
+
+  .scrollbar-thin:hover::-webkit-scrollbar-thumb {
+    opacity: 0.8;
+  }
+}
