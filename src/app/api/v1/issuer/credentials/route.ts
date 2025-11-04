@@ -197,6 +197,9 @@ async function postHandler(
       recipientId = recipientUser._id
     }
 
+    // Check if template has QR code placeholder
+    const hasQRCodePlaceholder = template.placeholders.some((p) => p.type === "qr" && p.x !== undefined && p.y !== undefined)
+    
     // Generate certificate/badge images if template has them
     let certificateUrl: string | undefined = undefined
     let badgeUrl: string | undefined = undefined
@@ -205,140 +208,295 @@ async function postHandler(
     let vaultUrl: string | undefined = undefined
     let vaultGatewayUrl: string | undefined = undefined
     let blockchainTxId: string | undefined = undefined
+    let credentialIdForQR: mongoose.Types.ObjectId | undefined = undefined
 
-    try {
-      // Generate certificate if template type is "certificate" or "both"
-      if ((template.type === "certificate" || template.type === "both") && template.certificateImage) {
-        // Only generate for placeholders that have coordinates (displayed on certificate)
-        const displayedPlaceholders = template.placeholders.filter(
-          (p) => p.x !== undefined && p.y !== undefined
+    // If QR code is present, we need to create credential first, then generate QR code, then update credential
+    if (hasQRCodePlaceholder) {
+      try {
+        // Step 1: Create credential document first (without certificate image)
+        const tempCredential = await Credential.create({
+          templateId: template._id,
+          organizationId,
+          recipientEmail,
+          recipientId,
+          credentialData: data,
+          type: template.type,
+          isOnBlockchain: useBlockchain || false,
+          status: "active",
+          issuedAt: new Date(),
+        })
+        
+        credentialIdForQR = new mongoose.Types.ObjectId(tempCredential._id.toString())
+        
+        // Step 2: Generate verification URL
+        const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:4300"
+        const verificationUrl = `${baseUrl}/verify/${credentialIdForQR.toString()}`
+        
+        // Step 3: Prepare QR code data for certificate generation
+        const qrCodeData: Record<string, string> = {}
+        const qrPlaceholders = template.placeholders.filter((p) => p.type === "qr")
+        for (const qrPlaceholder of qrPlaceholders) {
+          qrCodeData[qrPlaceholder.fieldName] = verificationUrl
+        }
+        
+        // Step 4: Generate certificate with QR code
+        if ((template.type === "certificate" || template.type === "both") && template.certificateImage) {
+          const displayedPlaceholders = template.placeholders.filter(
+            (p) => p.x !== undefined && p.y !== undefined
+          )
+
+          if (displayedPlaceholders.length > 0) {
+            certificateUrl = await generateCertificate({
+              templateImageBase64: template.certificateImage,
+              placeholders: displayedPlaceholders,
+              data,
+              qrCodeData,
+            })
+          }
+        }
+        
+        // Step 5: Generate badge with QR code if needed
+        if ((template.type === "badge" || template.type === "both") && template.badgeImage) {
+          const displayedPlaceholders = template.placeholders.filter(
+            (p) => p.x !== undefined && p.y !== undefined
+          )
+
+          if (displayedPlaceholders.length > 0) {
+            badgeUrl = await generateBadge({
+              templateImageBase64: template.badgeImage,
+              placeholders: displayedPlaceholders,
+              data,
+              qrCodeData,
+            })
+          }
+        }
+        
+        // Step 6: Handle blockchain if enabled
+        if (useBlockchain && certificateUrl) {
+          try {
+            const buffer = VaultProtocolService.base64ToBuffer(certificateUrl)
+            const extension = VaultProtocolService.getFileExtension(certificateUrl)
+            const fileName = `certificate_${recipientEmail}_${Date.now()}${extension}`
+
+            const vaultResponse = await vaultProtocol.issueCertificate(buffer, fileName, recipientEmail)
+            
+            if (vaultResponse.success) {
+              vaultFid = vaultResponse.data.fid
+              vaultCid = vaultResponse.data.cid
+              vaultUrl = vaultResponse.data.vaultUrl
+              vaultGatewayUrl = vaultResponse.data.gatewayUrl
+              blockchainTxId = vaultResponse.data.transactionHash
+            }
+          } catch (vaultError) {
+            console.error("VAULT Protocol error:", vaultError)
+            // Continue without VAULT Protocol if it fails
+          }
+        } else if (useBlockchain && badgeUrl && !vaultFid) {
+          try {
+            const buffer = VaultProtocolService.base64ToBuffer(badgeUrl)
+            const extension = VaultProtocolService.getFileExtension(badgeUrl)
+            const fileName = `badge_${recipientEmail}_${Date.now()}${extension}`
+
+            const vaultResponse = await vaultProtocol.issueCertificate(buffer, fileName, recipientEmail)
+            
+            if (vaultResponse.success) {
+              vaultFid = vaultResponse.data.fid
+              vaultCid = vaultResponse.data.cid
+              vaultUrl = vaultResponse.data.vaultUrl
+              vaultGatewayUrl = vaultResponse.data.gatewayUrl
+              blockchainTxId = vaultResponse.data.transactionHash
+            }
+          } catch (vaultError) {
+            console.error("VAULT Protocol error:", vaultError)
+          }
+        }
+        
+        // Step 7: Update credential with certificate/badge and blockchain data
+        tempCredential.certificateUrl = certificateUrl
+        tempCredential.badgeUrl = badgeUrl
+        tempCredential.vaultFid = vaultFid
+        tempCredential.vaultCid = vaultCid
+        tempCredential.vaultUrl = vaultUrl
+        tempCredential.vaultGatewayUrl = vaultGatewayUrl
+        tempCredential.blockchainTxId = blockchainTxId
+        tempCredential.blockchainNetwork = useBlockchain ? "VAULT Protocol / Quorum" : undefined
+        await tempCredential.save()
+        
+        // Success - credential is now complete
+        // Continue with notification email below
+      } catch (error) {
+        // Rollback: Delete credential if any step failed
+        if (credentialIdForQR) {
+          try {
+            await Credential.findByIdAndDelete(credentialIdForQR)
+            console.log("Rolled back credential creation due to error:", error)
+          } catch (deleteError) {
+            console.error("Failed to delete credential during rollback:", deleteError)
+          }
+        }
+        console.error("Error in QR code credential issuance:", error)
+        return NextResponse.json(
+          { error: `Failed to issue credential with QR code: ${error instanceof Error ? error.message : "Unknown error"}` },
+          { status: 500 }
         )
+      }
+    } else {
+      // Normal flow without QR code
+      try {
+        // Generate certificate if template type is "certificate" or "both"
+        if ((template.type === "certificate" || template.type === "both") && template.certificateImage) {
+          // Only generate for placeholders that have coordinates (displayed on certificate)
+          const displayedPlaceholders = template.placeholders.filter(
+            (p) => p.x !== undefined && p.y !== undefined
+          )
 
-        if (displayedPlaceholders.length > 0) {
-          certificateUrl = await generateCertificate({
-            templateImageBase64: template.certificateImage,
-            placeholders: displayedPlaceholders,
-            data,
-          })
+          if (displayedPlaceholders.length > 0) {
+            certificateUrl = await generateCertificate({
+              templateImageBase64: template.certificateImage,
+              placeholders: displayedPlaceholders,
+              data,
+            })
 
-          // If blockchain is enabled, upload certificate to VAULT Protocol
-          if (useBlockchain && certificateUrl) {
-            try {
-              const buffer = VaultProtocolService.base64ToBuffer(certificateUrl)
-              const extension = VaultProtocolService.getFileExtension(certificateUrl)
-              const fileName = `certificate_${recipientEmail}_${Date.now()}${extension}`
+            // If blockchain is enabled, upload certificate to VAULT Protocol
+            if (useBlockchain && certificateUrl) {
+              try {
+                const buffer = VaultProtocolService.base64ToBuffer(certificateUrl)
+                const extension = VaultProtocolService.getFileExtension(certificateUrl)
+                const fileName = `certificate_${recipientEmail}_${Date.now()}${extension}`
 
-              const vaultResponse = await vaultProtocol.issueCertificate(buffer, fileName, recipientEmail)
-              
-              console.log("VAULT Protocol Response (Certificate):", JSON.stringify(vaultResponse, null, 2))
-              
-              if (vaultResponse.success) {
-                vaultFid = vaultResponse.data.fid
-                vaultCid = vaultResponse.data.cid
-                vaultUrl = vaultResponse.data.vaultUrl
-                vaultGatewayUrl = vaultResponse.data.gatewayUrl
-                blockchainTxId = vaultResponse.data.transactionHash
+                const vaultResponse = await vaultProtocol.issueCertificate(buffer, fileName, recipientEmail)
                 
-                console.log("Assigned VAULT values (Certificate):", { vaultFid, vaultCid, vaultUrl, blockchainTxId })
-                // Note: vaultIssuer is retrieved later via getCertificate or verifyCertificate
+                console.log("VAULT Protocol Response (Certificate):", JSON.stringify(vaultResponse, null, 2))
+                
+                if (vaultResponse.success) {
+                  vaultFid = vaultResponse.data.fid
+                  vaultCid = vaultResponse.data.cid
+                  vaultUrl = vaultResponse.data.vaultUrl
+                  vaultGatewayUrl = vaultResponse.data.gatewayUrl
+                  blockchainTxId = vaultResponse.data.transactionHash
+                  
+                  console.log("Assigned VAULT values (Certificate):", { vaultFid, vaultCid, vaultUrl, blockchainTxId })
+                  // Note: vaultIssuer is retrieved later via getCertificate or verifyCertificate
+                }
+              } catch (vaultError) {
+                console.error("VAULT Protocol error:", vaultError)
+                // Continue without VAULT Protocol if it fails
               }
-            } catch (vaultError) {
-              console.error("VAULT Protocol error:", vaultError)
-              // Continue without VAULT Protocol if it fails
             }
           }
         }
-      }
 
-      // Generate badge if template type is "badge" or "both"
-      if ((template.type === "badge" || template.type === "both") && template.badgeImage) {
-        // Only generate for placeholders that have coordinates (displayed on badge)
-        const displayedPlaceholders = template.placeholders.filter(
-          (p) => p.x !== undefined && p.y !== undefined
-        )
+        // Generate badge if template type is "badge" or "both"
+        if ((template.type === "badge" || template.type === "both") && template.badgeImage) {
+          // Only generate for placeholders that have coordinates (displayed on badge)
+          const displayedPlaceholders = template.placeholders.filter(
+            (p) => p.x !== undefined && p.y !== undefined
+          )
 
-        if (displayedPlaceholders.length > 0) {
-          badgeUrl = await generateBadge({
-            templateImageBase64: template.badgeImage,
-            placeholders: displayedPlaceholders,
-            data,
-          })
+          if (displayedPlaceholders.length > 0) {
+            badgeUrl = await generateBadge({
+              templateImageBase64: template.badgeImage,
+              placeholders: displayedPlaceholders,
+              data,
+            })
 
-          // If blockchain is enabled and certificate wasn't uploaded, upload badge to VAULT Protocol
-          if (useBlockchain && badgeUrl && !vaultFid) {
-            try {
-              const buffer = VaultProtocolService.base64ToBuffer(badgeUrl)
-              const extension = VaultProtocolService.getFileExtension(badgeUrl)
-              const fileName = `badge_${recipientEmail}_${Date.now()}${extension}`
+            // If blockchain is enabled and certificate wasn't uploaded, upload badge to VAULT Protocol
+            if (useBlockchain && badgeUrl && !vaultFid) {
+              try {
+                const buffer = VaultProtocolService.base64ToBuffer(badgeUrl)
+                const extension = VaultProtocolService.getFileExtension(badgeUrl)
+                const fileName = `badge_${recipientEmail}_${Date.now()}${extension}`
 
-              const vaultResponse = await vaultProtocol.issueCertificate(buffer, fileName, recipientEmail)
-              
-              console.log("VAULT Protocol Response (Badge):", JSON.stringify(vaultResponse, null, 2))
-              
-              if (vaultResponse.success) {
-                vaultFid = vaultResponse.data.fid
-                vaultCid = vaultResponse.data.cid
-                vaultUrl = vaultResponse.data.vaultUrl
-                vaultGatewayUrl = vaultResponse.data.gatewayUrl
-                blockchainTxId = vaultResponse.data.transactionHash
+                const vaultResponse = await vaultProtocol.issueCertificate(buffer, fileName, recipientEmail)
                 
-                console.log("Assigned VAULT values (Badge):", { vaultFid, vaultCid, vaultUrl, blockchainTxId })
-                // Note: vaultIssuer is retrieved later via getCertificate or verifyCertificate
+                console.log("VAULT Protocol Response (Badge):", JSON.stringify(vaultResponse, null, 2))
+                
+                if (vaultResponse.success) {
+                  vaultFid = vaultResponse.data.fid
+                  vaultCid = vaultResponse.data.cid
+                  vaultUrl = vaultResponse.data.vaultUrl
+                  vaultGatewayUrl = vaultResponse.data.gatewayUrl
+                  blockchainTxId = vaultResponse.data.transactionHash
+                  
+                  console.log("Assigned VAULT values (Badge):", { vaultFid, vaultCid, vaultUrl, blockchainTxId })
+                  // Note: vaultIssuer is retrieved later via getCertificate or verifyCertificate
+                }
+              } catch (vaultError) {
+                console.error("VAULT Protocol error:", vaultError)
+                // Continue without VAULT Protocol if it fails
               }
-            } catch (vaultError) {
-              console.error("VAULT Protocol error:", vaultError)
-              // Continue without VAULT Protocol if it fails
             }
           }
         }
+      } catch (error) {
+        console.error("Error generating certificate/badge images:", error)
+        // Continue with credential creation even if image generation fails
+        // The credential will still be created but without certificateUrl/badgeUrl
       }
-    } catch (error) {
-      console.error("Error generating certificate/badge images:", error)
-      // Continue with credential creation even if image generation fails
-      // The credential will still be created but without certificateUrl/badgeUrl
+
+      // Log values before creating credential
+      console.log("Creating credential with VAULT values:", {
+        vaultFid,
+        vaultCid,
+        vaultUrl,
+        vaultGatewayUrl,
+        blockchainTxId,
+        isOnBlockchain: useBlockchain || false,
+      })
+
+      // Create credential
+      const credential = await Credential.create({
+        templateId: template._id,
+        organizationId,
+        recipientEmail,
+        recipientId,
+        credentialData: data,
+        type: template.type,
+        certificateUrl,
+        badgeUrl,
+        isOnBlockchain: useBlockchain || false,
+        blockchainTxId,
+        vaultFid,
+        vaultCid,
+        vaultUrl,
+        vaultGatewayUrl,
+        // vaultIssuer will be set later when certificate is verified
+        blockchainNetwork: useBlockchain ? "VAULT Protocol / Quorum" : undefined,
+        status: "active",
+        issuedAt: new Date(),
+      })
+
+      // Log what was actually saved to MongoDB
+      console.log("Credential saved to MongoDB:", {
+        id: credential._id.toString(),
+        vaultFid: credential.vaultFid,
+        vaultCid: credential.vaultCid,
+        vaultUrl: credential.vaultUrl,
+        blockchainTxId: credential.blockchainTxId,
+        isOnBlockchain: credential.isOnBlockchain,
+      })
     }
 
-    // Log values before creating credential
-    console.log("Creating credential with VAULT values:", {
-      vaultFid,
-      vaultCid,
-      vaultUrl,
-      vaultGatewayUrl,
-      blockchainTxId,
-      isOnBlockchain: useBlockchain || false,
-    })
-
-    // Create credential
-    const credential = await Credential.create({
-      templateId: template._id,
-      organizationId,
-      recipientEmail,
-      recipientId,
-      credentialData: data,
-      type: template.type,
-      certificateUrl,
-      badgeUrl,
-      isOnBlockchain: useBlockchain || false,
-      blockchainTxId,
-      vaultFid,
-      vaultCid,
-      vaultUrl,
-      vaultGatewayUrl,
-      // vaultIssuer will be set later when certificate is verified
-      blockchainNetwork: useBlockchain ? "VAULT Protocol / Quorum" : undefined,
-      status: "active",
-      issuedAt: new Date(),
-    })
-
-    // Log what was actually saved to MongoDB
-    console.log("Credential saved to MongoDB:", {
-      id: credential._id.toString(),
-      vaultFid: credential.vaultFid,
-      vaultCid: credential.vaultCid,
-      vaultUrl: credential.vaultUrl,
-      blockchainTxId: credential.blockchainTxId,
-      isOnBlockchain: credential.isOnBlockchain,
-    })
+    // If QR code was handled above, get the credential
+    let credential
+    if (hasQRCodePlaceholder && credentialIdForQR) {
+      credential = await Credential.findById(credentialIdForQR)
+      if (!credential) {
+        return NextResponse.json({ error: "Failed to retrieve created credential" }, { status: 500 })
+      }
+    } else {
+      // Credential was created in the else block above
+      // Find the most recently created credential for this recipient and template
+      credential = await Credential.findOne({
+        templateId: template._id,
+        organizationId,
+        recipientEmail,
+      }).sort({ issuedAt: -1 })
+      
+      if (!credential) {
+        return NextResponse.json({ error: "Failed to retrieve created credential" }, { status: 500 })
+      }
+    }
 
     // Send notification email to recipient
     try {

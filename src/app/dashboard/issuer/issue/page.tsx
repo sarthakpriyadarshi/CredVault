@@ -39,6 +39,7 @@ export default function IssuePage() {
   const [showErrorDialog, setShowErrorDialog] = useState(false)
   const [showSuccessDialog, setShowSuccessDialog] = useState(false)
   const [dialogMessage, setDialogMessage] = useState("")
+  const [templateDetails, setTemplateDetails] = useState<Template | null>(null)
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -86,10 +87,51 @@ export default function IssuePage() {
 
   const currentTemplate = templates.find((t) => t.id === selectedTemplate)
 
+  // Fetch full template details when selected
+  useEffect(() => {
+    if (selectedTemplate && currentTemplate) {
+      const fetchTemplateDetails = async () => {
+        try {
+          const res = await fetch(`/api/v1/issuer/templates/${selectedTemplate}`, {
+            credentials: "include",
+          })
+          
+          if (res.ok) {
+            const data = await res.json()
+            const template = data.template || data
+            // Map placeholders to fields format
+            const fields = (template.placeholders || template.fields || []).map((f: any) => ({
+              name: f.fieldName || f.name || "",
+              type: f.type || "text",
+            }))
+            setTemplateDetails({
+              ...currentTemplate,
+              fields,
+            })
+          } else {
+            // Fallback to currentTemplate if fetch fails
+            setTemplateDetails(currentTemplate)
+          }
+        } catch (error) {
+          console.error("Error loading template details:", error)
+          // Fallback to currentTemplate if fetch fails
+          setTemplateDetails(currentTemplate)
+        }
+      }
+      
+      fetchTemplateDetails()
+    } else {
+      setTemplateDetails(null)
+    }
+  }, [selectedTemplate, currentTemplate])
+
+  // Use templateDetails if available, otherwise fallback to currentTemplate
+  const activeTemplate = templateDetails || currentTemplate
+
   // Auto-fill Issue Date when template is selected
   useEffect(() => {
-    if (currentTemplate) {
-      const issueDateField = currentTemplate.fields.find(
+    if (activeTemplate && activeTemplate.fields && activeTemplate.fields.length > 0) {
+      const issueDateField = activeTemplate.fields.find(
         (f) => f.name.toLowerCase().trim() === "issue date" && f.type === "date"
       )
       
@@ -102,11 +144,11 @@ export default function IssuePage() {
         }))
       }
     }
-  }, [currentTemplate])
+  }, [activeTemplate])
 
   const handleFieldChange = (fieldName: string, value: string) => {
     // Prevent modification of Issue Date field
-    const issueDateField = currentTemplate?.fields.find(
+    const issueDateField = activeTemplate?.fields?.find(
       (f) => f.name.toLowerCase().trim() === "issue date" && f.type === "date"
     )
     if (issueDateField && fieldName === issueDateField.name) {
@@ -116,14 +158,14 @@ export default function IssuePage() {
   }
 
   const handleIssue = async () => {
-    if (!selectedTemplate || !currentTemplate) {
+    if (!selectedTemplate || !activeTemplate || !activeTemplate.fields || activeTemplate.fields.length === 0) {
       setDialogMessage("Please select a template")
       setShowErrorDialog(true)
       return
     }
 
     // Validate required fields (email)
-    const emailFields = currentTemplate.fields.filter((f) => f.type === "email")
+    const emailFields = activeTemplate.fields.filter((f) => f.type === "email")
     const hasEmail = emailFields.some((f) => formData[f.name] && formData[f.name].trim())
     if (!hasEmail) {
       setDialogMessage("Please fill in at least one email field")
@@ -132,7 +174,7 @@ export default function IssuePage() {
     }
 
     // Validate Name field (case-insensitive)
-    const nameField = currentTemplate.fields.find((f) => f.name.toLowerCase().trim() === "name")
+    const nameField = activeTemplate.fields.find((f) => f.name.toLowerCase().trim() === "name")
     if (nameField && (!formData[nameField.name] || !formData[nameField.name].trim())) {
       setDialogMessage("Please fill in the Name field")
       setShowErrorDialog(true)
@@ -140,7 +182,7 @@ export default function IssuePage() {
     }
 
     // Validate Issue Date field (case-insensitive, must be type "date")
-    const issueDateField = currentTemplate.fields.find(
+    const issueDateField = activeTemplate.fields.find(
       (f) => f.name.toLowerCase().trim() === "issue date" && f.type === "date"
     )
     if (issueDateField && (!formData[issueDateField.name] || !formData[issueDateField.name].trim())) {
@@ -176,8 +218,8 @@ export default function IssuePage() {
       setShowSuccessDialog(true)
       // Reset form but preserve auto-filled Issue Date if template is still selected
       const resetFormData: Record<string, string> = {}
-      if (currentTemplate) {
-        const issueDateField = currentTemplate.fields.find(
+      if (activeTemplate && activeTemplate.fields) {
+        const issueDateField = activeTemplate.fields.find(
           (f) => f.name.toLowerCase().trim() === "issue date" && f.type === "date"
         )
         if (issueDateField) {
@@ -266,17 +308,19 @@ export default function IssuePage() {
                     </div>
 
                     {/* Dynamic Fields */}
-                    {currentTemplate && (
+                    {activeTemplate && activeTemplate.fields && activeTemplate.fields.length > 0 && (
                       <div className="space-y-4 pt-4 border-t border-border/50">
                         <h3 className="font-semibold text-foreground">Fill Credential Details</h3>
-                        {currentTemplate.fields.map((field) => {
-                          const isIssueDate = field.name.toLowerCase().trim() === "issue date" && field.type === "date"
-                          const isExpiryDate = field.name.toLowerCase().trim() === "expiry date" && field.type === "date"
-                          const isName = field.name.toLowerCase().trim() === "name"
-                          const isEmail = field.type === "email"
-                          const isRequired = isEmail || isName || isIssueDate
-                          
-                          return (
+                        {activeTemplate.fields
+                          .filter((field) => field.type !== "qr") // Exclude QR code fields from form
+                          .map((field) => {
+                            const isIssueDate = field.name.toLowerCase().trim() === "issue date" && field.type === "date"
+                            const isExpiryDate = field.name.toLowerCase().trim() === "expiry date" && field.type === "date"
+                            const isName = field.name.toLowerCase().trim() === "name"
+                            const isEmail = field.type === "email"
+                            const isRequired = isEmail || isName || isIssueDate
+                            
+                            return (
                             <div key={field.name} className="space-y-2">
                               <Label htmlFor={field.name} className="text-sm">
                                 {field.name} {isRequired && "*"}
@@ -301,7 +345,7 @@ export default function IssuePage() {
                     )}
 
                     {/* Options */}
-                    {currentTemplate && (
+                    {activeTemplate && (
                       <div className="space-y-4 pt-4 border-t border-border/50">
                         <label 
                           htmlFor="blockchain" 
@@ -316,7 +360,7 @@ export default function IssuePage() {
                     )}
 
                     {/* Action Buttons */}
-                    {currentTemplate && (
+                    {activeTemplate && (
                       <div className="flex gap-2 justify-end pt-4 border-t border-border/50">
                         <Button variant="outline" onClick={() => setFormData({})}>
                           Clear Form

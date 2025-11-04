@@ -113,13 +113,26 @@ export default function BulkIssuancePage() {
         const data = await res.json()
         const template = data.template || data
         const fields = template.placeholders || template.fields || []
-        setTemplateFields(fields.map((f: any) => ({
+        
+        if (fields.length === 0) {
+          console.warn("Template has no fields/placeholders")
+          setTemplateFields([])
+          return
+        }
+        
+        const mappedFields = fields.map((f: any) => ({
           name: f.fieldName || f.name || "",
           type: f.type || "text",
-        })))
+        })).filter((f: any) => f.name) // Filter out any fields without names
+        
+        setTemplateFields(mappedFields)
+      } else {
+        console.error("Failed to fetch template details:", res.status, res.statusText)
+        setTemplateFields([])
       }
     } catch (error) {
       console.error("Error loading template details:", error)
+      setTemplateFields([])
     }
   }
 
@@ -479,26 +492,28 @@ export default function BulkIssuancePage() {
                         <>
                           <div className="p-3 bg-background/50 rounded-lg font-mono text-xs space-y-1">
                             <p className="text-foreground font-semibold mb-2">Required Fields:</p>
-                            {templateFields.map((field, idx) => {
-                              const isEmail = field.type === "email"
-                              const isName = field.name.toLowerCase().trim() === "name"
-                              const isIssueDate = field.name.toLowerCase().trim() === "issue date" && field.type === "date"
-                              const isExpiryDate = field.name.toLowerCase().trim() === "expiry date" && field.type === "date"
-                              const isRequired = isEmail || isName || isIssueDate
-                              
-                              return (
-                                <p key={idx}>
-                                  {field.name} {isRequired && <span className="text-primary">(Required)</span>}
-                                  {isIssueDate && <span className="text-muted-foreground text-[10px] ml-1">(Auto-filled)</span>}
-                                  {isExpiryDate && <span className="text-muted-foreground text-[10px] ml-1">(Optional)</span>}
-                                </p>
-                              )
-                            })}
+                            {templateFields
+                              .filter((field) => field.type !== "qr") // Exclude QR code fields from CSV
+                              .map((field, idx) => {
+                                const isEmail = field.type === "email"
+                                const isName = field.name.toLowerCase().trim() === "name"
+                                const isIssueDate = field.name.toLowerCase().trim() === "issue date" && field.type === "date"
+                                const isExpiryDate = field.name.toLowerCase().trim() === "expiry date" && field.type === "date"
+                                const isRequired = isEmail || isName || isIssueDate
+                                
+                                return (
+                                  <p key={idx}>
+                                    {field.name} {isRequired && <span className="text-primary">(Required)</span>}
+                                    {isIssueDate && <span className="text-muted-foreground text-[10px] ml-1">(Auto-filled)</span>}
+                                    {isExpiryDate && <span className="text-muted-foreground text-[10px] ml-1">(Optional)</span>}
+                                  </p>
+                                )
+                              })}
                           </div>
                           <div className="p-3 bg-background/50 rounded-lg font-mono text-xs">
                             <p className="text-foreground font-semibold mb-2">Example:</p>
-                            <p>{templateFields.map((f) => f.name).join(",")}</p>
-                            <p>{templateFields.map(() => "Sample Value").join(",")}</p>
+                            <p>{templateFields.filter((f) => f.type !== "qr").map((f) => f.name).join(",")}</p>
+                            <p>{templateFields.filter((f) => f.type !== "qr").map(() => "Sample Value").join(",")}</p>
                           </div>
                         </>
                       ) : (

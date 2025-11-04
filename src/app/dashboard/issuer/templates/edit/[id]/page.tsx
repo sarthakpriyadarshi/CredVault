@@ -29,7 +29,7 @@ import { ColorPickerComponent } from "@/components/ui/color-picker"
 interface TemplateField {
   id: string
   name: string
-  type: "text" | "email" | "number" | "date" | "id"
+  type: "text" | "email" | "number" | "date" | "id" | "qr"
   x?: number
   y?: number
   width: number
@@ -73,7 +73,7 @@ export default function EditTemplatePage() {
   // New field creation states
   const [showNewField, setShowNewField] = useState(false)
   const [newFieldName, setNewFieldName] = useState("")
-  const [newFieldType, setNewFieldType] = useState<"text" | "email" | "number" | "date" | "id">("text")
+  const [newFieldType, setNewFieldType] = useState<"text" | "email" | "number" | "date" | "id" | "qr">("text")
   const [pendingField, setPendingField] = useState<{ x: number; y: number; width: number; height: number } | null>(null)
 
   // Modal states for error and success messages
@@ -476,10 +476,29 @@ export default function EditTemplatePage() {
 
   // Add new field from dialog
   const handleAddNewField = () => {
-    if (!newFieldName.trim()) {
+    // QR code fields don't require a name - auto-set to "QR Code"
+    const isQRCodeField = newFieldType === "qr"
+    
+    if (!isQRCodeField && !newFieldName.trim()) {
       setModalMessage("Please enter a field name")
       setShowErrorModal(true)
       return
+    }
+
+    // Check if QR code field already exists
+    if (isQRCodeField) {
+      const hasQRCodeField = fields.some((f) => f.type === "qr")
+      if (hasQRCodeField) {
+        setModalMessage("QR Code field already exists. Only one QR Code field is allowed.")
+        setShowErrorModal(true)
+        return
+      }
+      // QR codes must have coordinates (drawn on canvas)
+      if (!pendingField) {
+        setModalMessage("Please draw the QR code field on the canvas")
+        setShowErrorModal(true)
+        return
+      }
     }
 
     // For email fields, coordinates are always optional
@@ -512,6 +531,25 @@ export default function EditTemplatePage() {
       }
       setFields([...fields, newField])
       setSelectedField(newField.id)
+    } else if (isQRCodeField && pendingField) {
+      // QR code field - auto-set name to "QR Code" and require coordinates
+      const qrCodeField: TemplateField = {
+        id: `field-${Date.now()}`,
+        name: "QR Code", // Auto-set name
+        type: "qr",
+        x: pendingField.x,
+        y: pendingField.y,
+        width: pendingField.width,
+        height: pendingField.height,
+        // QR codes don't use font styling
+        fontFamily: selectedFontFamily,
+        fontSize: selectedFontSize,
+        fontColor: selectedFontColor,
+        bold: false,
+        italic: false,
+      }
+      setFields([...fields, qrCodeField])
+      setSelectedField(qrCodeField.id)
     } else {
       // For other fields, require coordinates from pendingField
       if (!pendingField) {
@@ -1135,6 +1173,48 @@ export default function EditTemplatePage() {
                       >
                         + Add Expiry Date Field
                       </Button>
+                      <Button
+                        onClick={() => {
+                          // Check if QR code field already exists
+                          const hasQRCodeField = fields.some((f) => f.type === "qr")
+                          if (hasQRCodeField) {
+                            setModalMessage("QR Code field already exists. Only one QR Code field is allowed.")
+                            setShowErrorModal(true)
+                            return
+                          }
+                          if (!canvasRef.current || !certificateImage) {
+                            setModalMessage("Please upload a certificate image first.")
+                            setShowErrorModal(true)
+                            return
+                          }
+                          // Create QR code in center of canvas
+                          const canvas = canvasRef.current
+                          const qrSize = 150 // Default QR code size
+                          const x = (canvas.width - qrSize) / 2
+                          const y = (canvas.height - qrSize) / 2
+                          
+                          const qrCodeField: TemplateField = {
+                            id: `field-${Date.now()}`,
+                            name: "QR Code",
+                            type: "qr",
+                            x,
+                            y,
+                            width: qrSize,
+                            height: qrSize,
+                            fontFamily: selectedFontFamily,
+                            fontSize: selectedFontSize,
+                            fontColor: selectedFontColor,
+                            bold: false,
+                            italic: false,
+                          }
+                          setFields([...fields, qrCodeField])
+                          setSelectedField(qrCodeField.id)
+                        }}
+                        variant="outline"
+                        className="w-full justify-start text-xs h-7"
+                      >
+                        + Add QR Code
+                      </Button>
                     </div>
                     <p className="text-xs text-muted-foreground italic">
                       💡 Click on fields in the canvas to move them
@@ -1368,7 +1448,7 @@ export default function EditTemplatePage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="new-field-type">Field Type</Label>
-              <Select value={newFieldType} onValueChange={(value: "text" | "email" | "number" | "date" | "id") => setNewFieldType(value)}>
+              <Select value={newFieldType} onValueChange={(value: "text" | "email" | "number" | "date" | "id" | "qr") => setNewFieldType(value)}>
                 <SelectTrigger id="new-field-type">
                   <SelectValue />
                 </SelectTrigger>
@@ -1378,6 +1458,7 @@ export default function EditTemplatePage() {
                   <SelectItem value="number">Number</SelectItem>
                   <SelectItem value="date">Date</SelectItem>
                   <SelectItem value="id">ID</SelectItem>
+                  <SelectItem value="qr">QR Code</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -1391,7 +1472,7 @@ export default function EditTemplatePage() {
             }}>
               Cancel
             </Button>
-            <PrimaryButton onClick={handleAddNewField}>
+            <PrimaryButton onClick={handleAddNewField} disabled={newFieldType !== "qr" && !newFieldName.trim()}>
               Add Field
             </PrimaryButton>
           </div>

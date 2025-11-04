@@ -24,13 +24,14 @@ import { Upload, Trash2, Download, Save, Eye, Bold, Italic } from "lucide-react"
 import { PrimaryButton } from "@/components/ui/primary-button"
 import { GOOGLE_FONTS } from "@/lib/fonts"
 import { ColorPickerComponent } from "@/components/ui/color-picker"
+import { generateDummyQRCodeBrowser } from "@/lib/qrcode/browser-generator"
 
 interface TemplateField {
   id: string
   name: string
-  type: "text" | "email" | "number" | "date" | "id"
-  x?: number // Optional - email and expiry date fields may not have coordinates if not displayed
-  y?: number // Optional - email and expiry date fields may not have coordinates if not displayed
+  type: "text" | "email" | "number" | "date" | "id" | "qr"
+  x?: number // Optional - email and expiry date fields may not have coordinates if not displayed. For QR codes, this is the top-left x coordinate
+  y?: number // Optional - email and expiry date fields may not have coordinates if not displayed. For QR codes, this is the top-left y coordinate
   width: number
   height: number
   fontFamily?: string
@@ -55,7 +56,7 @@ export default function CreateTemplatePage() {
   const [newCategory, setNewCategory] = useState("")
   const [showNewField, setShowNewField] = useState(false)
   const [newFieldName, setNewFieldName] = useState("")
-  const [newFieldType, setNewFieldType] = useState<"text" | "email" | "number" | "date" | "id">("text")
+  const [newFieldType, setNewFieldType] = useState<"text" | "email" | "number" | "date" | "id" | "qr">("text")
   const [previewMode, setPreviewMode] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
@@ -71,6 +72,7 @@ export default function CreateTemplatePage() {
   const [saving, setSaving] = useState(false)
   const imageRef = useRef<HTMLImageElement | null>(null)
   const animationFrameRef = useRef<number | null>(null)
+  const qrCodeImagesRef = useRef<Map<string, HTMLImageElement>>(new Map())
   const [selectedFontFamily, setSelectedFontFamily] = useState<string>("Arial")
   const [selectedFontSize, setSelectedFontSize] = useState<number>(16)
   const [selectedFontColor, setSelectedFontColor] = useState<string>("#FFFFFF")
@@ -299,24 +301,56 @@ export default function CreateTemplatePage() {
         let newWidth = resizeStart.fieldWidth
         let newHeight = resizeStart.fieldHeight
 
-        // Handle different resize directions
-        if (resizeHandle.includes("w")) {
-          // Left edge
-          newX = Math.max(0, resizeStart.fieldX + deltaX)
-          newWidth = Math.max(50, resizeStart.fieldWidth - deltaX)
-        }
-        if (resizeHandle.includes("e")) {
-          // Right edge
-          newWidth = Math.max(50, resizeStart.fieldWidth + deltaX)
-        }
-        if (resizeHandle.includes("n")) {
-          // Top edge
-          newY = Math.max(0, resizeStart.fieldY + deltaY)
-          newHeight = Math.max(20, resizeStart.fieldHeight - deltaY)
-        }
-        if (resizeHandle.includes("s")) {
-          // Bottom edge
-          newHeight = Math.max(20, resizeStart.fieldHeight + deltaY)
+        // For QR codes, maintain square aspect ratio
+        const resizingField = prevFields.find((f) => f.id === resizingFieldId)
+        const isQRCode = resizingField?.type === "qr"
+        
+        if (isQRCode) {
+          // For QR codes, use the larger dimension to maintain square
+          if (resizeHandle.includes("w") || resizeHandle.includes("e")) {
+            newWidth = Math.max(50, resizeStart.fieldWidth + deltaX)
+            newHeight = newWidth // Keep square
+            if (resizeHandle.includes("w")) {
+              newX = resizeStart.fieldX + resizeStart.fieldWidth - newWidth
+            }
+          } else if (resizeHandle.includes("n") || resizeHandle.includes("s")) {
+            newHeight = Math.max(50, resizeStart.fieldHeight + deltaY)
+            newWidth = newHeight // Keep square
+            if (resizeHandle.includes("n")) {
+              newY = resizeStart.fieldY + resizeStart.fieldHeight - newHeight
+            }
+          } else {
+            // Corner handles - use average of both deltas
+            const size = Math.max(50, resizeStart.fieldWidth + (deltaX + deltaY) / 2)
+            newWidth = size
+            newHeight = size
+            if (resizeHandle.includes("w")) {
+              newX = resizeStart.fieldX + resizeStart.fieldWidth - size
+            }
+            if (resizeHandle.includes("n")) {
+              newY = resizeStart.fieldY + resizeStart.fieldHeight - size
+            }
+          }
+        } else {
+          // Handle different resize directions for regular fields
+          if (resizeHandle.includes("w")) {
+            // Left edge
+            newX = Math.max(0, resizeStart.fieldX + deltaX)
+            newWidth = Math.max(50, resizeStart.fieldWidth - deltaX)
+          }
+          if (resizeHandle.includes("e")) {
+            // Right edge
+            newWidth = Math.max(50, resizeStart.fieldWidth + deltaX)
+          }
+          if (resizeHandle.includes("n")) {
+            // Top edge
+            newY = Math.max(0, resizeStart.fieldY + deltaY)
+            newHeight = Math.max(20, resizeStart.fieldHeight - deltaY)
+          }
+          if (resizeHandle.includes("s")) {
+            // Bottom edge
+            newHeight = Math.max(20, resizeStart.fieldHeight + deltaY)
+          }
         }
 
         // Ensure field stays within canvas bounds
@@ -522,6 +556,46 @@ export default function CreateTemplatePage() {
       const isSelected = field.id === selectedField
       const borderColor = isSelected ? "#DB2777" : "#666"
       const fillColor = isSelected ? "rgba(219, 39, 119, 0.1)" : "rgba(100, 100, 100, 0.1)"
+
+      // Handle QR code fields differently
+      if (field.type === "qr") {
+        // Draw QR code placeholder box
+        ctx.fillStyle = fillColor
+        ctx.fillRect(field.x, field.y, field.width, field.height)
+
+        // Draw border
+        ctx.strokeStyle = borderColor
+        ctx.lineWidth = isSelected ? 2 : 1
+        ctx.strokeRect(field.x, field.y, field.width, field.height)
+
+        // Try to load and draw QR code image
+        const qrImage = qrCodeImagesRef.current.get(field.id)
+        if (qrImage) {
+          ctx.drawImage(qrImage, field.x, field.y, field.width, field.height)
+        } else {
+          // Draw placeholder text while QR code loads
+          ctx.fillStyle = "#666"
+          ctx.font = "12px Arial"
+          ctx.textAlign = "center"
+          ctx.textBaseline = "middle"
+          ctx.fillText("QR Code", field.x + field.width / 2, field.y + field.height / 2)
+          
+          // Generate and load QR code asynchronously (browser-compatible)
+          generateDummyQRCodeBrowser("https://credvault.app", Math.max(field.width, field.height))
+            .then((dataUrl: string) => {
+              const img = new Image()
+              img.onload = () => {
+                qrCodeImagesRef.current.set(field.id, img)
+                drawCanvas() // Redraw to show QR code
+              }
+              img.src = dataUrl
+            })
+            .catch((error: unknown) => {
+              console.error("Error generating dummy QR code:", error)
+            })
+        }
+        return
+      }
 
       // Draw field box
       ctx.fillStyle = fillColor
@@ -865,6 +939,43 @@ export default function CreateTemplatePage() {
 
           // Convert coordinates from canvas space to actual image space
           if (f.x !== undefined && f.y !== undefined) {
+            // Handle QR code fields differently - store top-left corner and size
+            if (f.type === "qr") {
+              const topLeft = convertCanvasToImageCoords(
+                f.x,
+                f.y,
+                canvasWidth,
+                canvasHeight,
+                actualImageWidth,
+                actualImageHeight
+              )
+              const bottomRight = convertCanvasToImageCoords(
+                f.x + f.width,
+                f.y + f.height,
+                canvasWidth,
+                canvasHeight,
+                actualImageWidth,
+                actualImageHeight
+              )
+              const imageWidth = Math.round(Math.abs(bottomRight.x - topLeft.x))
+              const imageHeight = Math.round(Math.abs(bottomRight.y - topLeft.y))
+              
+              // For QR codes, use the larger dimension to maintain square
+              const qrSize = Math.max(imageWidth, imageHeight)
+              
+              const fieldData = {
+                name: f.name,
+                type: f.type,
+                coordinates: {
+                  x: Math.round(topLeft.x),
+                  y: Math.round(topLeft.y),
+                  width: qrSize,
+                  height: qrSize,
+                },
+              }
+              return fieldData
+            }
+            
             // Get scale factor for this image
             const { scaleX, scaleY } = calculateImageScale(
               canvasWidth,
@@ -958,8 +1069,9 @@ export default function CreateTemplatePage() {
       console.log("[Create Template] Sending template data:", JSON.stringify(templateData, null, 2))
       console.log("[Create Template] Fields with bold/italic:", templateData.fields.map(f => ({
         name: f.name,
-        bold: f.bold,
-        italic: f.italic,
+        type: f.type,
+        bold: "bold" in f ? f.bold : undefined,
+        italic: "italic" in f ? f.italic : undefined,
       })))
 
       const res = await fetch("/api/v1/issuer/templates", {
@@ -1261,9 +1373,47 @@ export default function CreateTemplatePage() {
                       >
                         + Add Expiry Date Field
                       </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          // Check if QR code field already exists
+                          const hasQRCodeField = fields.some((f) => f.type === "qr")
+                          if (hasQRCodeField) {
+                            setModalMessage("QR Code field already exists. Only one QR Code field is allowed.")
+                            setShowErrorModal(true)
+                            return
+                          }
+                          if (!canvasRef.current || !certificateImage) {
+                            setModalMessage("Please upload a certificate image first.")
+                            setShowErrorModal(true)
+                            return
+                          }
+                          // Create QR code in center of canvas
+                          const canvas = canvasRef.current
+                          const qrSize = 150 // Default QR code size
+                          const x = (canvas.width - qrSize) / 2
+                          const y = (canvas.height - qrSize) / 2
+                          
+                          const qrCodeField: TemplateField = {
+                            id: Date.now().toString(),
+                            name: "QR Code",
+                            type: "qr",
+                            x,
+                            y,
+                            width: qrSize,
+                            height: qrSize,
+                          }
+                          setFields([...fields, qrCodeField])
+                          setSelectedField(qrCodeField.id)
+                        }}
+                        className="text-xs h-7 w-full"
+                      >
+                        + Add QR Code
+                      </Button>
                     </div>
                     <p className="text-xs text-muted-foreground italic">
-                      💡 Note: Drag on canvas to add fields, or use the buttons above to add Email, Issue Date, or Expiry Date fields (not displayed on certificate).
+                      💡 Note: Drag on canvas to add fields, or use the buttons above to add Email, Issue Date, Expiry Date, or QR Code fields.
                     </p>
 
                     <div className="space-y-2 max-h-64 overflow-y-auto">
@@ -1326,7 +1476,7 @@ export default function CreateTemplatePage() {
                             </div>
                             <div className="space-y-2">
                               <Label htmlFor="field-type">Field Type</Label>
-                              <Select value={newFieldType} onValueChange={(v: "text" | "email" | "number" | "date" | "id") => setNewFieldType(v)}>
+                              <Select value={newFieldType} onValueChange={(v: "text" | "email" | "number" | "date" | "id" | "qr") => setNewFieldType(v)}>
                                 <SelectTrigger id="field-type">
                                   <SelectValue />
                                 </SelectTrigger>
@@ -1336,6 +1486,7 @@ export default function CreateTemplatePage() {
                                   <SelectItem value="number">Number</SelectItem>
                                   <SelectItem value="date">Date</SelectItem>
                                   <SelectItem value="id">ID</SelectItem>
+                                  <SelectItem value="qr">QR Code</SelectItem>
                                 </SelectContent>
                               </Select>
                             </div>
@@ -1347,7 +1498,7 @@ export default function CreateTemplatePage() {
                               </div>
                             )}
                             <p className="text-xs text-muted-foreground italic">
-                              * Required fields: Email, Name (any type), Issue Date (date type). Expiry Date (date type) is optional.
+                              * Required fields: Email, Name (any type), Issue Date (date type). Expiry Date (date type) is optional. QR Code fields are auto-generated and don&apos;t require input during credential issuance.
                             </p>
                             <div className="flex gap-2 justify-end">
                               <Button
@@ -1362,10 +1513,29 @@ export default function CreateTemplatePage() {
                               </Button>
                               <PrimaryButton
                                 onClick={() => {
-                                  if (!newFieldName.trim()) {
+                                  // QR code fields don't require a name - auto-set to "QR Code"
+                                  const isQRCodeField = newFieldType === "qr"
+                                  
+                                  if (!isQRCodeField && !newFieldName.trim()) {
                                     setModalMessage("Please enter a field name")
                                     setShowErrorModal(true)
                                     return
+                                  }
+
+                                  // Check if QR code field already exists
+                                  if (isQRCodeField) {
+                                    const hasQRCodeField = fields.some((f) => f.type === "qr")
+                                    if (hasQRCodeField) {
+                                      setModalMessage("QR Code field already exists. Only one QR Code field is allowed.")
+                                      setShowErrorModal(true)
+                                      return
+                                    }
+                                    // QR codes must have coordinates (drawn on canvas)
+                                    if (!pendingField) {
+                                      setModalMessage("Please draw the QR code field on the canvas")
+                                      setShowErrorModal(true)
+                                      return
+                                    }
                                   }
 
                                   // For email fields, coordinates are always optional
@@ -1398,6 +1568,25 @@ export default function CreateTemplatePage() {
                                     }
                                     setFields([...fields, field])
                                     setSelectedField(field.id)
+                                  } else if (isQRCodeField && pendingField) {
+                                    // QR code field - auto-set name to "QR Code" and require coordinates
+                                    const qrCodeField: TemplateField = {
+                                      id: Date.now().toString(),
+                                      name: "QR Code", // Auto-set name
+                                      type: "qr",
+                                      x: pendingField.x,
+                                      y: pendingField.y,
+                                      width: pendingField.width,
+                                      height: pendingField.height,
+                                      // QR codes don't use font styling
+                                      fontFamily: selectedFontFamily,
+                                      fontSize: selectedFontSize,
+                                      fontColor: selectedFontColor,
+                                      bold: false,
+                                      italic: false,
+                                    }
+                                    setFields([...fields, qrCodeField])
+                                    setSelectedField(qrCodeField.id)
                                   } else {
                                     // For other fields, require coordinates from pendingField
                                     if (!pendingField) {
@@ -1436,7 +1625,7 @@ export default function CreateTemplatePage() {
                                   setNewFieldName("")
                                   setNewFieldType("text")
                                 }}
-                                disabled={!newFieldName.trim()}
+                                disabled={newFieldType !== "qr" && !newFieldName.trim()}
                               >
                                 Add Field
                               </PrimaryButton>

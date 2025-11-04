@@ -2,9 +2,11 @@ import mongoose, { Schema, Document, Model } from "mongoose"
 
 export interface IPlaceholder {
   fieldName: string
-  type: "text" | "number" | "date" | "email" | "id" | "custom"
-  x?: number // Optional - email fields may not have coordinates if not displayed
-  y?: number // Optional - email fields may not have coordinates if not displayed
+  type: "text" | "number" | "date" | "email" | "id" | "custom" | "qr"
+  x?: number // Optional - email fields may not have coordinates if not displayed. For QR codes, this is the top-left x coordinate
+  y?: number // Optional - email fields may not have coordinates if not displayed. For QR codes, this is the top-left y coordinate
+  width?: number // Optional - for QR codes, this is the size (width and height are the same for QR codes)
+  height?: number // Optional - for QR codes, this is the size (width and height are the same for QR codes)
   fontSize?: number
   fontFamily?: string
   color?: string
@@ -37,8 +39,16 @@ const PlaceholderSchema = new Schema<IPlaceholder>(
     },
     type: {
       type: String,
-      enum: ["text", "number", "date", "email", "id", "custom"],
+      enum: ["text", "number", "date", "email", "id", "custom", "qr"],
       required: [true, "Field type is required"],
+    },
+    width: {
+      type: Number,
+      required: false, // For QR codes, this stores the size
+    },
+    height: {
+      type: Number,
+      required: false, // For QR codes, this stores the size
     },
     x: {
       type: Number,

@@ -1,17 +1,26 @@
 /**
  * Certificate and badge generator
  * Uses sharp and canvas to generate certificates from templates
+ * 
+ * SERVER-ONLY: This file uses Node.js modules and cannot run in the browser
  */
+
+// Mark as server-only to prevent bundling in client
+if (typeof window !== "undefined") {
+  throw new Error("This module can only be used on the server side")
+}
 
 import sharp from "sharp"
 import { createCanvas, loadImage } from "canvas"
 import { IPlaceholder } from "@/models/Template"
 import { loadFont, getActualFontName, getWeightedFontName } from "./fonts"
+import { generateQRCodeWithLogo } from "@/lib/qrcode/generator"
 
 interface GenerateCertificateOptions {
   templateImageBase64: string // Base64 data URL of the template certificate image (e.g., data:image/png;base64,...)
   placeholders: IPlaceholder[]
   data: Record<string, string> // Field name -> value mapping
+  qrCodeData?: Record<string, string> // QR code field name -> URL mapping
 }
 
 /**
@@ -157,6 +166,13 @@ export async function generateCertificate(options: GenerateCertificateOptions): 
         continue
       }
 
+      // Handle QR code fields differently
+      if (placeholder.type === "qr") {
+        // QR codes are handled separately during credential issuance
+        // Skip here as QR code URL is generated at issuance time
+        continue
+      }
+
       // Get the value for this field
       const value = data[placeholder.fieldName]
       if (!value) {
@@ -220,8 +236,35 @@ export async function generateCertificate(options: GenerateCertificateOptions): 
       ctx.fillText(String(value), x, y)
     }
 
-    // Convert canvas to buffer
-    const certificateBuffer = canvas.toBuffer("image/png")
+    // Convert canvas to buffer temporarily for QR code processing
+    let certificateBuffer = canvas.toBuffer("image/png")
+    
+    // Handle QR code placeholders - add them after text is drawn
+    const qrPlaceholders = placeholders.filter((p) => p.type === "qr" && p.x !== undefined && p.y !== undefined && p.width && p.height)
+    if (qrPlaceholders.length > 0 && options.qrCodeData) {
+      // Reload the canvas with current image
+      const currentImage = await loadImage(certificateBuffer)
+      const qrCanvas = createCanvas(width, height)
+      const qrCtx = qrCanvas.getContext("2d")
+      qrCtx.drawImage(currentImage, 0, 0, width, height)
+      
+      for (const qrPlaceholder of qrPlaceholders) {
+        const qrUrl = options.qrCodeData[qrPlaceholder.fieldName]
+        if (qrUrl && qrPlaceholder.width && qrPlaceholder.height) {
+          // Generate QR code with logo (uses default logo from public/logo.svg)
+          const qrSize = Math.max(qrPlaceholder.width, qrPlaceholder.height)
+          const qrCodeDataUrl = await generateQRCodeWithLogo(qrUrl, qrSize)
+          
+          // Load QR code image
+          const qrImage = await loadImage(qrCodeDataUrl)
+          
+          // Draw QR code at specified position (top-left corner)
+          qrCtx.drawImage(qrImage, qrPlaceholder.x!, qrPlaceholder.y!, qrSize, qrSize)
+        }
+      }
+      
+      certificateBuffer = qrCanvas.toBuffer("image/png")
+    }
 
     // Convert buffer to base64 data URL
     const base64 = certificateBuffer.toString("base64")
@@ -240,7 +283,7 @@ export async function generateCertificate(options: GenerateCertificateOptions): 
  * Returns a base64 data URL
  */
 export async function generateBadge(options: GenerateCertificateOptions): Promise<string> {
-  // Badge generation is similar to certificate
+  // Badge generation is similar to certificate (supports QR codes too)
   return generateCertificate(options)
 }
 

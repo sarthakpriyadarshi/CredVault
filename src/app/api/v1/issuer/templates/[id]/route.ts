@@ -114,12 +114,14 @@ async function handler(
       const placeholders: Array<{
         fieldName: string
         type: string
-        fontSize: number
-        fontFamily: string
-        color: string
-        align: "left" | "center" | "right"
+        fontSize?: number
+        fontFamily?: string
+        color?: string
+        align?: "left" | "center" | "right"
         x?: number
         y?: number
+        width?: number // For QR code fields
+        height?: number // For QR code fields
         bold?: boolean
         italic?: boolean
       }> = []

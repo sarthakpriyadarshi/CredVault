@@ -94,7 +94,7 @@ async function postHandler(
       useBlockchain?: boolean
       fields: Array<{
         name: string
-        type: "text" | "email" | "number" | "date" | "id"
+        type: "text" | "email" | "number" | "date" | "id" | "qr"
         coordinates?: { x: number; y: number; width: number; height: number } // Optional for email fields
         fontFamily?: string
         fontSize?: number
@@ -132,12 +132,14 @@ async function postHandler(
         const placeholders: Array<{
           fieldName: string
           type: string
-          fontSize: number
-          fontFamily: string
-          color: string
-          align: "left" | "center" | "right"
+          fontSize?: number
+          fontFamily?: string
+          color?: string
+          align?: "left" | "center" | "right"
           x?: number
           y?: number
+          width?: number // For QR code fields
+          height?: number // For QR code fields
           bold?: boolean
           italic?: boolean
         }> = []
@@ -149,16 +151,38 @@ async function postHandler(
           const isExpiryDateField = field.type === "date" && field.name.toLowerCase().trim() === "expiry date"
           
           // Only require coordinates for fields that are not email or optional date fields
-          if (!isEmailField && !isIssueDateField && !isExpiryDateField) {
+          // QR code fields always require coordinates
+          const isQRCodeField = field.type === "qr"
+          if (!isEmailField && !isIssueDateField && !isExpiryDateField && !isQRCodeField) {
             if (!field.coordinates || field.coordinates.x === undefined || field.coordinates.y === undefined) {
               return NextResponse.json({ 
                 error: `Field "${field.name}" (${field.type}) must have coordinates` 
               }, { status: 400 })
             }
           }
+          
+          // QR code fields must have coordinates and width/height
+          if (isQRCodeField) {
+            if (!field.coordinates || field.coordinates.x === undefined || field.coordinates.y === undefined || 
+                !field.coordinates.width || !field.coordinates.height) {
+              return NextResponse.json({ 
+                error: `QR Code field "${field.name}" must have coordinates and size` 
+              }, { status: 400 })
+            }
+          }
 
           // Build placeholder object - for email fields and optional date fields without coordinates, omit x/y entirely
-          if (isEmailField || isIssueDateField || isExpiryDateField) {
+          if (isQRCodeField) {
+            // QR code field - store coordinates and size
+            placeholders.push({
+              fieldName: field.name,
+              type: field.type,
+              x: field.coordinates!.x,
+              y: field.coordinates!.y,
+              width: field.coordinates!.width,
+              height: field.coordinates!.height,
+            })
+          } else if (isEmailField || isIssueDateField || isExpiryDateField) {
             // Email or optional date field - coordinates are optional
             if (field.coordinates && field.coordinates.x !== undefined && field.coordinates.y !== undefined) {
               // Field with coordinates (displayed on certificate)
