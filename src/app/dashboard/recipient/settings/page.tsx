@@ -18,32 +18,19 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { ChevronRight, Save, User, Lock, Bell, Edit2, Upload } from "lucide-react"
+import { ChevronRight, Save, Lock, Bell, Edit2 } from "lucide-react"
 import { PrimaryButton } from "@/components/ui/primary-button"
 import { LoadingScreen } from "@/components/loading-screen"
 
 export default function RecipientSettingsPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
-  const [activeSection, setActiveSection] = useState("profile")
+  const [activeSection, setActiveSection] = useState("notifications")
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [showChangePassword, setShowChangePassword] = useState(false)
-
-  const [profile, setProfile] = useState({
-    id: "",
-    name: "",
-    email: "",
-    image: null as string | null,
-    profilePublic: true,
-    description: "",
-    linkedin: "",
-    github: "",
-    twitter: "",
-    website: "",
-  })
 
   const { update: updateSession } = useSession()
 
@@ -63,86 +50,11 @@ export default function RecipientSettingsPage() {
     } else if (status === "authenticated" && session?.user?.role !== "recipient") {
       router.push("/auth/login")
     } else if (status === "authenticated" && session?.user?.role === "recipient") {
-      loadProfile()
+      setLoading(false)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, status, router])
 
-  const loadProfile = async () => {
-    setLoading(true)
-    try {
-      const res = await fetch("/api/v1/recipient/profile", {
-        credentials: "include",
-      })
-
-      if (!res.ok) {
-        if (res.status === 401) {
-          router.push("/auth/login")
-          return
-        }
-        console.error("Failed to fetch profile")
-      } else {
-        const data = await res.json()
-        setProfile({
-          id: data.profile.id || "",
-          name: data.profile.name || "",
-          email: data.profile.email || "",
-          image: data.profile.image || null,
-          profilePublic: data.profile.profilePublic ?? true,
-          description: data.profile.description || "",
-          linkedin: data.profile.linkedin || "",
-          github: data.profile.github || "",
-          twitter: data.profile.twitter || "",
-          website: data.profile.website || "",
-        })
-      }
-    } catch (error) {
-      console.error("Error loading profile:", error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleSaveProfile = async () => {
-    setSaving(true)
-    setError(null)
-    setSuccess(null)
-
-    try {
-      const res = await fetch("/api/v1/recipient/profile", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-                              body: JSON.stringify({
-                                name: profile.name.trim(),
-                                description: profile.description.trim() || null,
-                                linkedin: profile.linkedin.trim() || null,
-                                github: profile.github.trim() || null,
-                                twitter: profile.twitter.trim() || null,
-                                website: profile.website.trim() || null,
-                                profilePublic: profile.profilePublic,
-                                image: profile.image || null,
-                              }),
-      })
-
-      if (!res.ok) {
-        const errorData = await res.json()
-        throw new Error(errorData.error || "Failed to save profile")
-      }
-
-      setSuccess("Profile updated successfully!")
-      setTimeout(() => setSuccess(null), 3000)
-      // Update session to reflect new avatar
-      await updateSession()
-    } catch (err) {
-      console.error("Error saving profile:", err)
-      setError(err && typeof err === "object" && "message" in err ? String(err.message) : "Failed to save profile")
-    } finally {
-      setSaving(false)
-    }
-  }
 
   const handleChangePassword = async () => {
     if (!passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
@@ -218,13 +130,6 @@ export default function RecipientSettingsPage() {
     }
   }
 
-  const profileUrl = profile.id 
-    ? (typeof window !== "undefined" 
-        ? `${window.location.origin}/profile/${profile.id}`
-        : `/profile/${profile.id}`)
-    : (typeof window !== "undefined" 
-        ? `${window.location.origin}/profile/${encodeURIComponent(profile.email)}`
-        : `/profile/${encodeURIComponent(profile.email)}`)
 
   if (status === "loading") {
     return <LoadingScreen message="Loading session..." />
@@ -278,12 +183,6 @@ export default function RecipientSettingsPage() {
                   <Card className="p-4 border border-border/50 bg-card/50 backdrop-blur space-y-2">
                     {[
                       {
-                        id: "profile",
-                        icon: <User className="h-5 w-5" />,
-                        title: "Profile",
-                        desc: "Personal details",
-                      },
-                      {
                         id: "notifications",
                         icon: <Bell className="h-5 w-5" />,
                         title: "Notifications",
@@ -313,224 +212,6 @@ export default function RecipientSettingsPage() {
 
                 {/* Settings Content */}
                 <div className="lg:col-span-3 space-y-4">
-                  {activeSection === "profile" && (
-                    <div className="space-y-4">
-                      <Card className="p-6 border border-border/50 bg-card/50 backdrop-blur">
-                        <h3 className="text-lg font-semibold text-foreground mb-4">Profile Settings</h3>
-                        {loading ? (
-                          <div className="text-muted-foreground text-sm">Loading...</div>
-                        ) : (
-                          <div className="space-y-4">
-                            {/* Avatar Upload */}
-                            <div className="space-y-2">
-                              <Label>Profile Avatar</Label>
-                              <div className="flex items-center gap-4">
-                                {profile.image ? (
-                                  <img
-                                    src={
-                                      profile.image.startsWith('http://') || profile.image.startsWith('https://') 
-                                        ? profile.image 
-                                        : profile.image.startsWith('data:') 
-                                        ? profile.image 
-                                        : `data:image/png;base64,${profile.image}`
-                                    }
-                                    alt="Avatar"
-                                    className="w-20 h-20 rounded-full object-cover border-2 border-primary/50"
-                                  />
-                                ) : (
-                                  <div className="w-20 h-20 rounded-full bg-primary/20 flex items-center justify-center border-2 border-primary/50">
-                                    <span className="text-2xl font-bold text-primary">
-                                      {profile.name.charAt(0).toUpperCase() || "U"}
-                                    </span>
-                                  </div>
-                                )}
-                                <div>
-                                  <input
-                                    type="file"
-                                    id="avatar-upload"
-                                    accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
-                                    className="hidden"
-                                    onChange={async (e) => {
-                                      const file = e.target.files?.[0]
-                                      if (!file) return
-
-                                      try {
-                                        const formData = new FormData()
-                                        formData.append("file", file)
-
-                                        formData.append("type", "avatar")
-                                        const res = await fetch("/api/v1/upload", {
-                                          method: "POST",
-                                          credentials: "include",
-                                          body: formData,
-                                        })
-
-                                        if (!res.ok) {
-                                          const error = await res.json()
-                                          alert(error.error || "Failed to upload avatar")
-                                          return
-                                        }
-
-                                        const data = await res.json()
-                                        
-                                        // Update user image in database immediately
-                                        const updateRes = await fetch("/api/v1/recipient/profile", {
-                                          method: "PUT",
-                                          headers: {
-                                            "Content-Type": "application/json",
-                                          },
-                                          credentials: "include",
-                                          body: JSON.stringify({
-                                            name: profile.name,
-                                            description: profile.description || null,
-                                            linkedin: profile.linkedin || null,
-                                            github: profile.github || null,
-                                            twitter: profile.twitter || null,
-                                            website: profile.website || null,
-                                            profilePublic: profile.profilePublic,
-                                            image: data.base64,
-                                          }),
-                                        })
-
-                                        if (!updateRes.ok) {
-                                          const errorData = await updateRes.json()
-                                          alert(errorData.error || "Failed to update profile with new avatar")
-                                          return
-                                        }
-
-                                        // Update local state
-                                        setProfile({ ...profile, image: data.base64 })
-                                        
-                                        // Update session to reflect new avatar (this will refresh the header)
-                                        // Call updateSession multiple times with delays to ensure it propagates
-                                        await updateSession()
-                                        setTimeout(async () => {
-                                          await updateSession()
-                                        }, 1000)
-                                        setTimeout(async () => {
-                                          await updateSession()
-                                        }, 2000)
-                                      } catch (error) {
-                                        console.error("Error uploading avatar:", error)
-                                        alert("Failed to upload avatar")
-                                      }
-                                    }}
-                                  />
-                                  <Button 
-                                    variant="outline" 
-                                    size="sm" 
-                                    type="button" 
-                                    className="gap-2"
-                                    onClick={() => {
-                                      const fileInput = document.getElementById("avatar-upload") as HTMLInputElement
-                                      fileInput?.click()
-                                    }}
-                                  >
-                                    <Upload className="h-4 w-4" />
-                                    Upload Avatar
-                                  </Button>
-                                </div>
-                              </div>
-                              <p className="text-xs text-muted-foreground">Upload a profile picture (max 5MB)</p>
-                            </div>
-
-                            <div className="space-y-2">
-                              <Label htmlFor="name">Full Name</Label>
-                              <Input
-                                id="name"
-                                value={profile.name}
-                                onChange={(e) => setProfile({ ...profile, name: e.target.value })}
-                                placeholder="Enter your full name"
-                              />
-                            </div>
-
-                            <div className="space-y-2">
-                              <Label htmlFor="email">Email</Label>
-                              <Input id="email" value={profile.email} disabled className="bg-background/30" />
-                              <p className="text-xs text-muted-foreground">Email cannot be changed</p>
-                            </div>
-
-                            <div className="space-y-2">
-                              <Label htmlFor="description">Description</Label>
-                              <Textarea
-                                id="description"
-                                value={profile.description}
-                                onChange={(e) => setProfile({ ...profile, description: e.target.value })}
-                                placeholder="Tell people about yourself..."
-                                className="min-h-[100px] bg-background/50"
-                              />
-                            </div>
-
-                            <div className="space-y-2">
-                              <Label htmlFor="linkedin">LinkedIn URL</Label>
-                              <Input
-                                id="linkedin"
-                                value={profile.linkedin}
-                                onChange={(e) => setProfile({ ...profile, linkedin: e.target.value })}
-                                placeholder="https://linkedin.com/in/yourprofile"
-                                type="url"
-                              />
-                            </div>
-
-                            <div className="space-y-2">
-                              <Label htmlFor="github">GitHub URL</Label>
-                              <Input
-                                id="github"
-                                value={profile.github}
-                                onChange={(e) => setProfile({ ...profile, github: e.target.value })}
-                                placeholder="https://github.com/yourusername"
-                                type="url"
-                              />
-                            </div>
-
-                            <div className="space-y-2">
-                              <Label htmlFor="twitter">Twitter/X URL</Label>
-                              <Input
-                                id="twitter"
-                                value={profile.twitter}
-                                onChange={(e) => setProfile({ ...profile, twitter: e.target.value })}
-                                placeholder="https://twitter.com/yourusername"
-                                type="url"
-                              />
-                            </div>
-
-                            <div className="space-y-2">
-                              <Label htmlFor="website">Website</Label>
-                              <Input
-                                id="website"
-                                value={profile.website}
-                                onChange={(e) => setProfile({ ...profile, website: e.target.value })}
-                                placeholder="https://yourwebsite.com"
-                                type="url"
-                              />
-                            </div>
-
-                            <div className="flex items-center justify-between p-4 bg-background/50 rounded-lg">
-                              <div>
-                                <p className="font-medium text-foreground">Public Profile</p>
-                                <p className="text-sm text-muted-foreground">
-                                  Allow others to view your profile at{" "}
-                                  <a href={profileUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                                    {profileUrl}
-                                  </a>
-                                </p>
-                              </div>
-                              <label className="relative inline-flex items-center cursor-pointer">
-                                <input
-                                  type="checkbox"
-                                  checked={profile.profilePublic}
-                                  onChange={(e) => setProfile({ ...profile, profilePublic: e.target.checked })}
-                                  className="sr-only peer"
-                                />
-                                <div className="w-11 h-6 bg-muted peer-checked:bg-primary rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
-                              </label>
-                            </div>
-                          </div>
-                        )}
-                      </Card>
-                    </div>
-                  )}
-
                   {activeSection === "notifications" && (
                     <div className="space-y-4">
                       <Card className="p-6 border border-border/50 bg-card/50 backdrop-blur">
@@ -666,13 +347,10 @@ export default function RecipientSettingsPage() {
                   )}
 
                   {/* Save Button */}
-                  {(activeSection === "profile" || activeSection === "notifications") && (
+                  {activeSection === "notifications" && (
                     <div className="flex justify-end gap-2">
-                      <Button variant="outline" onClick={() => loadProfile()}>
-                        Cancel
-                      </Button>
                       <PrimaryButton
-                        onClick={activeSection === "profile" ? handleSaveProfile : handleSaveSettings}
+                        onClick={handleSaveSettings}
                         disabled={saving}
                         className="gap-2"
                       >

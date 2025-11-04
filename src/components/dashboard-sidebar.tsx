@@ -5,7 +5,7 @@ import type React from "react"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { LayoutDashboard, Users, BarChart3, Settings, HelpCircle, ChevronDown, UploadCloud, Layers, PenTool, Award, Blocks, Clock, FolderOpen, Building2, CheckCircle, TrendingUp, Bell } from "lucide-react"
+import { LayoutDashboard, Users, BarChart3, Settings, HelpCircle, ChevronDown, UploadCloud, Layers, PenTool, Award, Blocks, Clock, FolderOpen, Building2, CheckCircle, TrendingUp, Bell, User } from "lucide-react"
 import { useState } from "react"
 import { motion } from "framer-motion"
 
@@ -134,6 +134,11 @@ export function DashboardSidebar({ userRole, badgeCounts }: DashboardSidebarProp
       href: "/dashboard/recipient/expiring",
       icon: <Clock className="h-5 w-5" />,
       badge: badgeCounts?.expiringCredentials,
+    },
+    {
+      label: "Profile",
+      href: "/dashboard/recipient/profile",
+      icon: <User className="h-5 w-5" />,
     },
     {
       label: "Notifications",

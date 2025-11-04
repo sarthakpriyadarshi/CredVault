@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Download, ExternalLink, Linkedin, Github, Twitter, Globe, Mail, ArrowLeft, CheckCircle, Shield, Calendar, Award } from "lucide-react"
 import Link from "next/link"
 import { LoadingScreen } from "@/components/loading-screen"
+import { useSession } from "next-auth/react"
 
 interface Credential {
   id: string
@@ -38,12 +39,14 @@ interface Profile {
 export default function PublicProfilePage() {
   const params = useParams()
   const idOrEmail = params?.id as string
+  const { data: session } = useSession()
 
   const [profile, setProfile] = useState<Profile | null>(null)
   const [credentials, setCredentials] = useState<Credential[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isScrolled, setIsScrolled] = useState(false)
+  const [backLink, setBackLink] = useState<{ href: string; label: string }>({ href: "/", label: "Back to Home" })
 
   useEffect(() => {
     const root = window.document.documentElement
@@ -59,6 +62,40 @@ export default function PublicProfilePage() {
     window.addEventListener("scroll", handleScroll)
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
+
+  // Determine back link based on query parameter, sessionStorage, referrer, and session
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      // Check URL query parameter first
+      const urlParams = new URLSearchParams(window.location.search)
+      const fromParam = urlParams.get("from")
+      
+      // Check sessionStorage as fallback (useful for new tabs)
+      const storedSource = sessionStorage.getItem("profileSource")
+      const storedRole = sessionStorage.getItem("profileSourceRole")
+      
+      // Check referrer as last resort
+      const referrer = document.referrer
+      const isFromDashboard = referrer.includes("/dashboard")
+      
+      // Determine if user came from dashboard
+      const cameFromDashboard = fromParam === "dashboard" || storedSource === "dashboard" || isFromDashboard
+      
+      if (cameFromDashboard && session?.user?.role) {
+        const role = session.user.role
+        const dashboardPath = `/dashboard/${role}`
+        setBackLink({ href: dashboardPath, label: "Back to Dashboard" })
+        
+        // Clean up sessionStorage after use
+        if (storedSource) {
+          sessionStorage.removeItem("profileSource")
+          sessionStorage.removeItem("profileSourceRole")
+        }
+      } else {
+        setBackLink({ href: "/", label: "Back to Home" })
+      }
+    }
+  }, [session])
 
   useEffect(() => {
     if (idOrEmail) {
@@ -138,11 +175,11 @@ export default function PublicProfilePage() {
           </Link>
           
           <Link 
-            href="/"
+            href={backLink.href}
             className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors px-4 py-2 rounded-full hover:bg-background/50"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span className="hidden md:inline">Back to Home</span>
+            <span className="hidden md:inline">{backLink.label}</span>
           </Link>
         </header>
 
@@ -199,13 +236,13 @@ export default function PublicProfilePage() {
           />
         </Link>
         
-        <Link 
-          href="/"
-          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors px-4 py-2 rounded-full hover:bg-background/50"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span className="hidden md:inline">Back to Home</span>
-        </Link>
+          <Link 
+            href={backLink.href}
+            className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors px-4 py-2 rounded-full hover:bg-background/50"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span className="hidden md:inline">{backLink.label}</span>
+          </Link>
       </header>
 
       <div className="relative z-10 overflow-x-hidden pt-4">
