@@ -479,11 +479,21 @@ export default function BulkIssuancePage() {
                         <>
                           <div className="p-3 bg-background/50 rounded-lg font-mono text-xs space-y-1">
                             <p className="text-foreground font-semibold mb-2">Required Fields:</p>
-                            {templateFields.map((field, idx) => (
-                              <p key={idx}>
-                                {field.name} {field.type === "email" && <span className="text-primary">(Required)</span>}
-                              </p>
-                            ))}
+                            {templateFields.map((field, idx) => {
+                              const isEmail = field.type === "email"
+                              const isName = field.name.toLowerCase().trim() === "name"
+                              const isIssueDate = field.name.toLowerCase().trim() === "issue date" && field.type === "date"
+                              const isExpiryDate = field.name.toLowerCase().trim() === "expiry date" && field.type === "date"
+                              const isRequired = isEmail || isName || isIssueDate
+                              
+                              return (
+                                <p key={idx}>
+                                  {field.name} {isRequired && <span className="text-primary">(Required)</span>}
+                                  {isIssueDate && <span className="text-muted-foreground text-[10px] ml-1">(Auto-filled)</span>}
+                                  {isExpiryDate && <span className="text-muted-foreground text-[10px] ml-1">(Optional)</span>}
+                                </p>
+                              )
+                            })}
                           </div>
                           <div className="p-3 bg-background/50 rounded-lg font-mono text-xs">
                             <p className="text-foreground font-semibold mb-2">Example:</p>
@@ -505,7 +515,11 @@ export default function BulkIssuancePage() {
                         </li>
                         <li className="flex gap-2">
                           <span className="text-primary">•</span>
-                          <span>Email is required</span>
+                          <span>Email, Name, and Issue Date are required</span>
+                        </li>
+                        <li className="flex gap-2">
+                          <span className="text-primary">•</span>
+                          <span>Issue Date will be auto-filled with today's date</span>
                         </li>
                         <li className="flex gap-2">
                           <span className="text-primary">•</span>

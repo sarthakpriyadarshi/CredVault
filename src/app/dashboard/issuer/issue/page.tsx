@@ -86,7 +86,32 @@ export default function IssuePage() {
 
   const currentTemplate = templates.find((t) => t.id === selectedTemplate)
 
+  // Auto-fill Issue Date when template is selected
+  useEffect(() => {
+    if (currentTemplate) {
+      const issueDateField = currentTemplate.fields.find(
+        (f) => f.name.toLowerCase().trim() === "issue date" && f.type === "date"
+      )
+      
+      if (issueDateField) {
+        // Auto-fill with current date in YYYY-MM-DD format
+        const today = new Date().toISOString().split('T')[0]
+        setFormData((prev) => ({
+          ...prev,
+          [issueDateField.name]: today,
+        }))
+      }
+    }
+  }, [currentTemplate])
+
   const handleFieldChange = (fieldName: string, value: string) => {
+    // Prevent modification of Issue Date field
+    const issueDateField = currentTemplate?.fields.find(
+      (f) => f.name.toLowerCase().trim() === "issue date" && f.type === "date"
+    )
+    if (issueDateField && fieldName === issueDateField.name) {
+      return // Don't allow changes to Issue Date
+    }
     setFormData({ ...formData, [fieldName]: value })
   }
 
@@ -102,6 +127,24 @@ export default function IssuePage() {
     const hasEmail = emailFields.some((f) => formData[f.name] && formData[f.name].trim())
     if (!hasEmail) {
       setDialogMessage("Please fill in at least one email field")
+      setShowErrorDialog(true)
+      return
+    }
+
+    // Validate Name field (case-insensitive)
+    const nameField = currentTemplate.fields.find((f) => f.name.toLowerCase().trim() === "name")
+    if (nameField && (!formData[nameField.name] || !formData[nameField.name].trim())) {
+      setDialogMessage("Please fill in the Name field")
+      setShowErrorDialog(true)
+      return
+    }
+
+    // Validate Issue Date field (case-insensitive, must be type "date")
+    const issueDateField = currentTemplate.fields.find(
+      (f) => f.name.toLowerCase().trim() === "issue date" && f.type === "date"
+    )
+    if (issueDateField && (!formData[issueDateField.name] || !formData[issueDateField.name].trim())) {
+      setDialogMessage("Issue Date is required")
       setShowErrorDialog(true)
       return
     }
@@ -131,7 +174,18 @@ export default function IssuePage() {
 
       setDialogMessage("Credential issued successfully!")
       setShowSuccessDialog(true)
-      setFormData({})
+      // Reset form but preserve auto-filled Issue Date if template is still selected
+      const resetFormData: Record<string, string> = {}
+      if (currentTemplate) {
+        const issueDateField = currentTemplate.fields.find(
+          (f) => f.name.toLowerCase().trim() === "issue date" && f.type === "date"
+        )
+        if (issueDateField) {
+          const today = new Date().toISOString().split('T')[0]
+          resetFormData[issueDateField.name] = today
+        }
+      }
+      setFormData(resetFormData)
       setSelectedTemplate("")
       setUseBlockchain(false)
     } catch (error) {
@@ -215,21 +269,34 @@ export default function IssuePage() {
                     {currentTemplate && (
                       <div className="space-y-4 pt-4 border-t border-border/50">
                         <h3 className="font-semibold text-foreground">Fill Credential Details</h3>
-                        {currentTemplate.fields.map((field) => (
-                          <div key={field.name} className="space-y-2">
-                            <Label htmlFor={field.name} className="text-sm">
-                              {field.name} {field.type === "email" && "*"}
-                            </Label>
-                            <Input
-                              id={field.name}
-                              type={field.type === "email" ? "email" : field.type === "date" ? "date" : "text"}
-                              placeholder={`Enter ${field.name.toLowerCase()}`}
-                              value={formData[field.name] || ""}
-                              onChange={(e) => handleFieldChange(field.name, e.target.value)}
-                              className="bg-background/50 border-border/50"
-                            />
-                          </div>
-                        ))}
+                        {currentTemplate.fields.map((field) => {
+                          const isIssueDate = field.name.toLowerCase().trim() === "issue date" && field.type === "date"
+                          const isExpiryDate = field.name.toLowerCase().trim() === "expiry date" && field.type === "date"
+                          const isName = field.name.toLowerCase().trim() === "name"
+                          const isEmail = field.type === "email"
+                          const isRequired = isEmail || isName || isIssueDate
+                          
+                          return (
+                            <div key={field.name} className="space-y-2">
+                              <Label htmlFor={field.name} className="text-sm">
+                                {field.name} {isRequired && "*"}
+                              </Label>
+                              <Input
+                                id={field.name}
+                                type={field.type === "email" ? "email" : field.type === "date" ? "date" : "text"}
+                                placeholder={isIssueDate ? "Auto-filled with today's date" : `Enter ${field.name.toLowerCase()}`}
+                                value={formData[field.name] || ""}
+                                onChange={(e) => handleFieldChange(field.name, e.target.value)}
+                                className="bg-background/50 border-border/50"
+                                readOnly={isIssueDate}
+                                disabled={isIssueDate}
+                              />
+                              {isIssueDate && (
+                                <p className="text-xs text-muted-foreground">Issue Date is automatically set to today's date and cannot be modified</p>
+                              )}
+                            </div>
+                          )
+                        })}
                       </div>
                     )}
 

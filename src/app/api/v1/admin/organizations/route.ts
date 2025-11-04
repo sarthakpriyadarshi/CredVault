@@ -3,6 +3,9 @@ import { withAdmin, handleApiError } from "@/lib/api/middleware"
 import { getPagination, createPaginatedResponse, getQueryParams, parseBody } from "@/lib/api/utils"
 import { Organization, User } from "@/models"
 import connectDB from "@/lib/db/mongodb"
+import crypto from "crypto"
+import { sendEmail } from "@/lib/email/nodemailer"
+import { generateVerificationEmail } from "@/lib/email/templates"
 
 async function getHandler(req: NextRequest) {
   try {
@@ -139,6 +142,10 @@ async function postHandler(req: NextRequest) {
       verifiedAt: new Date(),
     })
 
+    // Generate email verification token
+    const verificationToken = crypto.randomBytes(32).toString("hex")
+    const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
+
     // Create issuer user with the organization ID
     const user = await User.create({
       name: name.trim(), // Use organization name as user name
@@ -146,12 +153,34 @@ async function postHandler(req: NextRequest) {
       password, // Will be hashed by pre-save hook
       role: "issuer",
       organizationId: organization._id,
-      isVerified: true, // Auto-approve issuer
-      emailVerified: true,
+      isVerified: true, // Auto-approve issuer (organization is approved)
+      emailVerified: false, // Require email verification
+      emailVerificationToken: verificationToken,
+      emailVerificationExpires: verificationExpires,
     })
 
+    // Send verification email
+    try {
+      const baseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:4300"
+      const verificationLink = `${baseUrl}/verify-email/${verificationToken}`
+      
+      const emailHtml = generateVerificationEmail({
+        name: user.name,
+        verificationLink,
+      })
+
+      await sendEmail({
+        to: user.email,
+        subject: "Verify Your Email - CredVault",
+        html: emailHtml,
+      })
+    } catch (emailError) {
+      console.error("Failed to send verification email:", emailError)
+      // Don't fail organization creation if email fails - user can request new verification email
+    }
+
     return NextResponse.json({
-      message: "Organization and issuer account created successfully",
+      message: "Organization and issuer account created successfully. A verification email has been sent to the issuer.",
       organization: {
         id: organization._id.toString(),
         name: organization.name,
@@ -163,6 +192,7 @@ async function postHandler(req: NextRequest) {
         name: user.name,
         email: user.email,
         role: user.role,
+        emailVerified: user.emailVerified,
       },
     })
   } catch (error: unknown) {

@@ -160,14 +160,33 @@ const TemplateSchema = new Schema<ITemplate>(
             return false
           }
           
-          // For non-email fields, x and y are required
-          const nonEmailFields = placeholders.filter((p) => p && String(p.type || "").toLowerCase().trim() !== "email")
-          if (nonEmailFields.length > 0) {
-            const allNonEmailFieldsHaveCoords = nonEmailFields.every(
-              (p) => p.x !== undefined && p.x !== null && p.y !== undefined && p.y !== null
+          // For non-email and non-optional date fields, x and y are required
+          // Optional date fields are: Issue Date and Expiry Date
+          const fieldsRequiringCoords = placeholders.filter((p) => {
+            if (!p) return false
+            const isEmail = String(p.type || "").toLowerCase().trim() === "email"
+            const fieldName = String(p.fieldName || "").toLowerCase().trim()
+            const fieldType = String(p.type || "").toLowerCase().trim()
+            const isIssueDate = fieldType === "date" && fieldName === "issue date"
+            const isExpiryDate = fieldType === "date" && fieldName === "expiry date"
+            
+            console.error(`[TEMPLATE VALIDATOR] Field "${p.fieldName}": type="${fieldType}", isEmail=${isEmail}, isIssueDate=${isIssueDate}, isExpiryDate=${isExpiryDate}, requiresCoords=${!isEmail && !isIssueDate && !isExpiryDate}`)
+            
+            return !isEmail && !isIssueDate && !isExpiryDate
+          })
+          
+          console.error("[TEMPLATE VALIDATOR] Fields requiring coordinates:", fieldsRequiringCoords.map(f => f.fieldName))
+          
+          if (fieldsRequiringCoords.length > 0) {
+            const allRequiredFieldsHaveCoords = fieldsRequiringCoords.every(
+              (p) => {
+                const hasCoords = p.x !== undefined && p.x !== null && p.y !== undefined && p.y !== null
+                console.error(`[TEMPLATE VALIDATOR] Field "${p.fieldName}": x=${p.x}, y=${p.y}, hasCoords=${hasCoords}`)
+                return hasCoords
+              }
             )
-            if (!allNonEmailFieldsHaveCoords) {
-              console.error("[TEMPLATE VALIDATOR] Failed: non-email fields missing coordinates")
+            if (!allRequiredFieldsHaveCoords) {
+              console.error("[TEMPLATE VALIDATOR] Failed: required fields missing coordinates")
               return false
             }
           }
@@ -175,7 +194,7 @@ const TemplateSchema = new Schema<ITemplate>(
           console.error("[TEMPLATE VALIDATOR] Passed validation")
           return true
         },
-        message: "Template must have at least one email field, and all non-email fields must have coordinates",
+        message: "Template must have at least one email field, and all required fields (non-email, non-optional date) must have coordinates",
       },
     },
     isActive: {

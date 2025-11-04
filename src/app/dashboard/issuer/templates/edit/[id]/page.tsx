@@ -450,29 +450,99 @@ export default function EditTemplatePage() {
     }
   }
 
+  // Helper function to propagate Name field styling to optional fields
+  const propagateNameFieldStyling = (fields: TemplateField[], nameField: TemplateField | undefined): TemplateField[] => {
+    if (!nameField) return fields
+    
+    return fields.map((f) => {
+      const isEmailField = f.type === "email"
+      const isIssueDateField = f.type === "date" && f.name.toLowerCase().trim() === "issue date"
+      const isExpiryDateField = f.type === "date" && f.name.toLowerCase().trim() === "expiry date"
+      
+      // Update optional fields to match Name field styling
+      if (isEmailField || isIssueDateField || isExpiryDateField) {
+        return {
+          ...f,
+          fontFamily: nameField.fontFamily,
+          fontSize: nameField.fontSize,
+          fontColor: nameField.fontColor,
+          bold: nameField.bold,
+          italic: nameField.italic,
+        }
+      }
+      return f
+    })
+  }
+
   // Add new field from dialog
   const handleAddNewField = () => {
-    if (!newFieldName.trim() || !pendingField) {
+    if (!newFieldName.trim()) {
       setModalMessage("Please enter a field name")
       setShowErrorModal(true)
       return
     }
 
-    const newField: TemplateField = {
-      id: `field-${Date.now()}`,
-      name: newFieldName,
-      type: newFieldType,
-      x: newFieldType === "email" ? undefined : pendingField.x,
-      y: newFieldType === "email" ? undefined : pendingField.y,
-      width: pendingField.width,
-      height: pendingField.height,
-      fontFamily: selectedFontFamily,
-      fontSize: selectedFontSize,
-      fontColor: selectedFontColor,
+    // For email fields, coordinates are always optional
+    // For Issue Date and Expiry Date, coordinates are optional (can be displayed or not)
+    const isEmailField = newFieldType === "email"
+    const isExpiryDateField = newFieldType === "date" && newFieldName.toLowerCase().trim() === "expiry date"
+    const isIssueDateField = newFieldType === "date" && newFieldName.toLowerCase().trim() === "issue date"
+    
+    // Find Name field to copy styling from (mandatory field)
+    const nameField = fields.find((f) => f.name.toLowerCase().trim() === "name")
+    
+    // If user drew on canvas (pendingField exists), use coordinates (field will be displayed)
+    // If no pendingField, coordinates are undefined (field won't be displayed)
+    if (isEmailField || isExpiryDateField || isIssueDateField) {
+      const newField: TemplateField = {
+        id: `field-${Date.now()}`,
+        name: newFieldName,
+        type: newFieldType,
+        // Use coordinates if user drew on canvas, otherwise undefined
+        x: pendingField?.x,
+        y: pendingField?.y,
+        width: pendingField?.width || 0,
+        height: pendingField?.height || 0,
+        // Copy styling from Name field if it exists (for optional date fields), otherwise use selected styling
+        fontFamily: (isIssueDateField || isExpiryDateField) && nameField?.fontFamily ? nameField.fontFamily : selectedFontFamily,
+        fontSize: (isIssueDateField || isExpiryDateField) && nameField?.fontSize ? nameField.fontSize : selectedFontSize,
+        fontColor: (isIssueDateField || isExpiryDateField) && nameField?.fontColor ? nameField.fontColor : selectedFontColor,
+        bold: (isIssueDateField || isExpiryDateField) ? (nameField?.bold ?? false) : false,
+        italic: (isIssueDateField || isExpiryDateField) ? (nameField?.italic ?? false) : false,
+      }
+      setFields([...fields, newField])
+      setSelectedField(newField.id)
+    } else {
+      // For other fields, require coordinates from pendingField
+      if (!pendingField) {
+        setModalMessage("Please draw a field on the canvas")
+        setShowErrorModal(true)
+        return
+      }
+      const isNameField = newFieldName.toLowerCase().trim() === "name"
+      const newField: TemplateField = {
+        id: `field-${Date.now()}`,
+        name: newFieldName,
+        type: newFieldType,
+        x: pendingField.x,
+        y: pendingField.y,
+        width: pendingField.width,
+        height: pendingField.height,
+        fontFamily: selectedFontFamily,
+        fontSize: selectedFontSize,
+        fontColor: selectedFontColor,
+      }
+      const updatedFields = [...fields, newField]
+      // If Name field was added, propagate its styling to existing optional fields
+      if (isNameField) {
+        const propagatedFields = propagateNameFieldStyling(updatedFields, newField)
+        setFields(propagatedFields)
+      } else {
+        setFields(updatedFields)
+      }
+      setSelectedField(newField.id)
     }
 
-    setFields([...fields, newField])
-    setSelectedField(newField.id)
     setShowNewField(false)
     setPendingField(null)
     setNewFieldName("")
@@ -636,6 +706,24 @@ export default function EditTemplatePage() {
       return
     }
 
+    // Check if Name field exists (case-insensitive)
+    const hasNameField = fields.some((f) => f.name.toLowerCase().trim() === "name")
+    if (!hasNameField) {
+      setModalMessage("Please add a 'Name' field. Name is required for credential issuance.")
+      setShowErrorModal(true)
+      return
+    }
+
+    // Check if Issue Date field exists (case-insensitive, must be type "date")
+    const hasIssueDateField = fields.some((f) => 
+      f.name.toLowerCase().trim() === "issue date" && f.type === "date"
+    )
+    if (!hasIssueDateField) {
+      setModalMessage("Please add an 'Issue Date' field of type 'Date'. Issue Date is required for credential issuance.")
+      setShowErrorModal(true)
+      return
+    }
+
     if (!certificateImage || !imageRef.current) {
       setModalMessage("Please upload a certificate image first")
       setShowErrorModal(true)
@@ -663,7 +751,10 @@ export default function EditTemplatePage() {
         category: newCategory.trim() || category,
         type: templateType,
         fields: fields.map((f) => {
-          if (f.type === "email" && f.x === undefined && f.y === undefined) {
+          // For email fields and expiry date fields, coordinates are optional (they may not be displayed)
+          const isEmailField = f.type === "email"
+          const isExpiryDateField = f.type === "date" && f.name.toLowerCase().trim() === "expiry date"
+          if ((isEmailField || isExpiryDateField) && f.x === undefined && f.y === undefined) {
             const fieldData = {
               name: f.name,
               type: f.type,
@@ -674,7 +765,7 @@ export default function EditTemplatePage() {
               bold: f.bold === true, // Explicitly convert to boolean
               italic: f.italic === true, // Explicitly convert to boolean
             }
-            console.log(`[Edit Template] Email field "${f.name}": bold=${fieldData.bold}, italic=${fieldData.italic}`)
+            console.log(`[Edit Template] ${isEmailField ? 'Email' : 'Expiry Date'} field "${f.name}": bold=${fieldData.bold}, italic=${fieldData.italic}`)
             return fieldData
           }
 
@@ -969,6 +1060,80 @@ export default function EditTemplatePage() {
                         className="w-full justify-start text-xs h-7"
                       >
                         + Add Email Field
+                      </Button>
+                      <Button
+                        onClick={() => {
+                          // Check if Issue Date field already exists
+                          const hasIssueDateField = fields.some(
+                            (f) => f.type === "date" && f.name.toLowerCase().trim() === "issue date"
+                          )
+                          if (hasIssueDateField) {
+                            setModalMessage("Issue Date field already exists. Only one Issue Date field is allowed.")
+                            setShowErrorModal(true)
+                            return
+                          }
+                          // Find Name field to copy styling from (mandatory field)
+                          const nameField = fields.find((f) => f.name.toLowerCase().trim() === "name")
+                          // Add Issue Date field without coordinates (not displayed on certificate)
+                          // Copy styling from Name field if it exists, otherwise use selected styling
+                          const issueDateField: TemplateField = {
+                            id: `field-${Date.now()}`,
+                            name: "Issue Date",
+                            type: "date",
+                            x: undefined,
+                            y: undefined,
+                            width: 0,
+                            height: 0,
+                            fontFamily: nameField?.fontFamily || selectedFontFamily,
+                            fontSize: nameField?.fontSize || selectedFontSize,
+                            fontColor: nameField?.fontColor || selectedFontColor,
+                            bold: nameField?.bold ?? false,
+                            italic: nameField?.italic ?? false,
+                          }
+                          setFields([...fields, issueDateField])
+                          setSelectedField(issueDateField.id)
+                        }}
+                        variant="outline"
+                        className="w-full justify-start text-xs h-7"
+                      >
+                        + Add Issue Date Field
+                      </Button>
+                      <Button
+                        onClick={() => {
+                          // Check if Expiry Date field already exists
+                          const hasExpiryDateField = fields.some(
+                            (f) => f.type === "date" && f.name.toLowerCase().trim() === "expiry date"
+                          )
+                          if (hasExpiryDateField) {
+                            setModalMessage("Expiry Date field already exists. Only one Expiry Date field is allowed.")
+                            setShowErrorModal(true)
+                            return
+                          }
+                          // Find Name field to copy styling from (mandatory field)
+                          const nameField = fields.find((f) => f.name.toLowerCase().trim() === "name")
+                          // Add Expiry Date field without coordinates (not displayed on certificate)
+                          // Copy styling from Name field if it exists, otherwise use selected styling
+                          const expiryDateField: TemplateField = {
+                            id: `field-${Date.now()}`,
+                            name: "Expiry Date",
+                            type: "date",
+                            x: undefined,
+                            y: undefined,
+                            width: 0,
+                            height: 0,
+                            fontFamily: nameField?.fontFamily || selectedFontFamily,
+                            fontSize: nameField?.fontSize || selectedFontSize,
+                            fontColor: nameField?.fontColor || selectedFontColor,
+                            bold: nameField?.bold ?? false,
+                            italic: nameField?.italic ?? false,
+                          }
+                          setFields([...fields, expiryDateField])
+                          setSelectedField(expiryDateField.id)
+                        }}
+                        variant="outline"
+                        className="w-full justify-start text-xs h-7"
+                      >
+                        + Add Expiry Date Field
                       </Button>
                     </div>
                     <p className="text-xs text-muted-foreground italic">

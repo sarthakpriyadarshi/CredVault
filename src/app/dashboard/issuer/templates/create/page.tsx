@@ -29,8 +29,8 @@ interface TemplateField {
   id: string
   name: string
   type: "text" | "email" | "number" | "date" | "id"
-  x?: number // Optional - email fields may not have coordinates if not displayed
-  y?: number // Optional - email fields may not have coordinates if not displayed
+  x?: number // Optional - email and expiry date fields may not have coordinates if not displayed
+  y?: number // Optional - email and expiry date fields may not have coordinates if not displayed
   width: number
   height: number
   fontFamily?: string
@@ -297,7 +297,7 @@ export default function CreateTemplatePage() {
 
   const drawFields = (ctx: CanvasRenderingContext2D) => {
     fields.forEach((field) => {
-      // Skip fields without coordinates (like email fields that aren't displayed)
+      // Skip fields without coordinates (like email and expiry date fields that aren't displayed)
       if (field.x === undefined || field.y === undefined) {
         return
       }
@@ -416,6 +416,30 @@ export default function CreateTemplatePage() {
   }
 
   // Update field position (only for fields with coordinates)
+  // Helper function to propagate Name field styling to optional fields
+  const propagateNameFieldStyling = (fields: TemplateField[], nameField: TemplateField | undefined): TemplateField[] => {
+    if (!nameField) return fields
+    
+    return fields.map((f) => {
+      const isEmailField = f.type === "email"
+      const isIssueDateField = f.type === "date" && f.name.toLowerCase().trim() === "issue date"
+      const isExpiryDateField = f.type === "date" && f.name.toLowerCase().trim() === "expiry date"
+      
+      // Update optional fields to match Name field styling
+      if (isEmailField || isIssueDateField || isExpiryDateField) {
+        return {
+          ...f,
+          fontFamily: nameField.fontFamily,
+          fontSize: nameField.fontSize,
+          fontColor: nameField.fontColor,
+          bold: nameField.bold,
+          italic: nameField.italic,
+        }
+      }
+      return f
+    })
+  }
+
   const updateFieldPosition = (fieldId: string, dx: number, dy: number) => {
     setFields(fields.map((f) => {
       if (f.id === fieldId && f.x !== undefined && f.y !== undefined) {
@@ -521,6 +545,24 @@ export default function CreateTemplatePage() {
       return
     }
 
+    // Check if Name field exists (case-insensitive)
+    const hasNameField = fields.some((f) => f.name.toLowerCase().trim() === "name")
+    if (!hasNameField) {
+      setModalMessage("Please add a 'Name' field. Name is required for credential issuance.")
+      setShowErrorModal(true)
+      return
+    }
+
+    // Check if Issue Date field exists (case-insensitive, must be type "date")
+    const hasIssueDateField = fields.some((f) => 
+      f.name.toLowerCase().trim() === "issue date" && f.type === "date"
+    )
+    if (!hasIssueDateField) {
+      setModalMessage("Please add an 'Issue Date' field of type 'Date'. Issue Date is required for credential issuance.")
+      setShowErrorModal(true)
+      return
+    }
+
     if (!certificateImage || !imageRef.current) {
       setModalMessage("Please upload a certificate image first")
       setShowErrorModal(true)
@@ -548,8 +590,10 @@ export default function CreateTemplatePage() {
         category: newCategory.trim() || category,
         type: templateType,
         fields: fields.map((f) => {
-          // For email fields, coordinates are optional (they may not be displayed)
-          if (f.type === "email" && f.x === undefined && f.y === undefined) {
+          // For email fields and expiry date fields, coordinates are optional (they may not be displayed)
+          const isEmailField = f.type === "email"
+          const isExpiryDateField = f.type === "date" && f.name.toLowerCase().trim() === "expiry date"
+          if ((isEmailField || isExpiryDateField) && f.x === undefined && f.y === undefined) {
             const fieldData = {
               name: f.name,
               type: f.type,
@@ -560,7 +604,7 @@ export default function CreateTemplatePage() {
               bold: f.bold === true, // Explicitly convert to boolean
               italic: f.italic === true, // Explicitly convert to boolean
             }
-            console.log(`[Create Template] Email field "${f.name}": bold=${fieldData.bold}, italic=${fieldData.italic}`)
+            console.log(`[Create Template] ${isEmailField ? 'Email' : 'Expiry Date'} field "${f.name}": bold=${fieldData.bold}, italic=${fieldData.italic}`)
             return fieldData
           }
 
@@ -740,7 +784,7 @@ export default function CreateTemplatePage() {
                     {/* Template Name */}
                     <div className="space-y-2">
                       <Label htmlFor="template-name" className="text-sm font-semibold">
-                        Template Name
+                        Template Name *
                       </Label>
                       <Input
                         id="template-name"
@@ -748,6 +792,7 @@ export default function CreateTemplatePage() {
                         onChange={(e) => setTemplateName(e.target.value)}
                         placeholder="e.g., Professional Certificate"
                         className="bg-background/50"
+                        required
                       />
                     </div>
 
@@ -850,6 +895,8 @@ export default function CreateTemplatePage() {
                   <Card className="p-6 border border-border/50 bg-card/50 backdrop-blur space-y-4">
                     <div className="flex items-center justify-between">
                       <h3 className="font-semibold text-foreground">Fields ({fields.length})</h3>
+                    </div>
+                    <div className="flex flex-col gap-2">
                       <Button
                         variant="outline"
                         size="sm"
@@ -879,13 +926,89 @@ export default function CreateTemplatePage() {
                           setFields([...fields, emailField])
                           setSelectedField(emailField.id)
                         }}
-                        className="text-xs h-7"
+                        className="text-xs h-7 w-full"
                       >
                         + Add Email Field
                       </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          // Check if Issue Date field already exists
+                          const hasIssueDateField = fields.some(
+                            (f) => f.type === "date" && f.name.toLowerCase().trim() === "issue date"
+                          )
+                          if (hasIssueDateField) {
+                            setModalMessage("Issue Date field already exists. Only one Issue Date field is allowed.")
+                            setShowErrorModal(true)
+                            return
+                          }
+                          // Find Name field to copy styling from (mandatory field)
+                          const nameField = fields.find((f) => f.name.toLowerCase().trim() === "name")
+                          // Add Issue Date field without coordinates (not displayed on certificate)
+                          // Copy styling from Name field if it exists, otherwise use selected styling
+                          const issueDateField: TemplateField = {
+                            id: Date.now().toString(),
+                            name: "Issue Date",
+                            type: "date",
+                            x: undefined,
+                            y: undefined,
+                            width: 0,
+                            height: 0,
+                            fontFamily: nameField?.fontFamily || selectedFontFamily,
+                            fontSize: nameField?.fontSize || selectedFontSize,
+                            fontColor: nameField?.fontColor || selectedFontColor,
+                            bold: nameField?.bold ?? false,
+                            italic: nameField?.italic ?? false,
+                          }
+                          setFields([...fields, issueDateField])
+                          setSelectedField(issueDateField.id)
+                        }}
+                        className="text-xs h-7 w-full"
+                      >
+                        + Add Issue Date Field
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          // Check if Expiry Date field already exists
+                          const hasExpiryDateField = fields.some(
+                            (f) => f.type === "date" && f.name.toLowerCase().trim() === "expiry date"
+                          )
+                          if (hasExpiryDateField) {
+                            setModalMessage("Expiry Date field already exists. Only one Expiry Date field is allowed.")
+                            setShowErrorModal(true)
+                            return
+                          }
+                          // Find Name field to copy styling from (mandatory field)
+                          const nameField = fields.find((f) => f.name.toLowerCase().trim() === "name")
+                          // Add Expiry Date field without coordinates (not displayed on certificate)
+                          // Copy styling from Name field if it exists, otherwise use selected styling
+                          const expiryDateField: TemplateField = {
+                            id: Date.now().toString(),
+                            name: "Expiry Date",
+                            type: "date",
+                            x: undefined,
+                            y: undefined,
+                            width: 0,
+                            height: 0,
+                            fontFamily: nameField?.fontFamily || selectedFontFamily,
+                            fontSize: nameField?.fontSize || selectedFontSize,
+                            fontColor: nameField?.fontColor || selectedFontColor,
+                            bold: nameField?.bold ?? false,
+                            italic: nameField?.italic ?? false,
+                          }
+                          setFields([...fields, expiryDateField])
+                          setSelectedField(expiryDateField.id)
+                        }}
+                        className="text-xs h-7 w-full"
+                      >
+                        + Add Expiry Date Field
+                      </Button>
                     </div>
                     <p className="text-xs text-muted-foreground italic">
-                      💡 Note: Drag on canvas to add fields, or click the button above to add an email field (not displayed on certificate).
+                      💡 Note: Drag on canvas to add fields, or use the buttons above to add Email, Issue Date, or Expiry Date fields (not displayed on certificate).
                     </p>
 
                     <div className="space-y-2 max-h-64 overflow-y-auto">
@@ -968,7 +1091,9 @@ export default function CreateTemplatePage() {
                                 </p>
                               </div>
                             )}
-                            <p className="text-xs text-muted-foreground italic">* Email field is mandatory for credential issuance</p>
+                            <p className="text-xs text-muted-foreground italic">
+                              * Required fields: Email, Name (any type), Issue Date (date type). Expiry Date (date type) is optional.
+                            </p>
                             <div className="flex gap-2 justify-end">
                               <Button
                                 variant="outline"
@@ -982,33 +1107,79 @@ export default function CreateTemplatePage() {
                               </Button>
                               <PrimaryButton
                                 onClick={() => {
-                                  if (!newFieldName.trim() || !pendingField) {
+                                  if (!newFieldName.trim()) {
                                     setModalMessage("Please enter a field name")
                                     setShowErrorModal(true)
                                     return
                                   }
 
-                                  const newField: TemplateField = {
-                                    id: Date.now().toString(),
-                                    name: newFieldName.trim(),
-                                    type: newFieldType,
-                                    x: pendingField.x,
-                                    y: pendingField.y,
-                                    width: pendingField.width,
-                                    height: pendingField.height,
-                                    fontFamily: selectedFontFamily,
-                                    fontSize: selectedFontSize,
-                                    fontColor: selectedFontColor,
-                                    bold: false,
-                                    italic: false,
+                                  // For email fields, coordinates are always optional
+                                  // For Issue Date and Expiry Date, coordinates are optional (can be displayed or not)
+                                  const isEmailField = newFieldType === "email"
+                                  const isExpiryDateField = newFieldType === "date" && newFieldName.toLowerCase().trim() === "expiry date"
+                                  const isIssueDateField = newFieldType === "date" && newFieldName.toLowerCase().trim() === "issue date"
+                                  
+                                  // Find Name field to copy styling from (mandatory field)
+                                  const nameField = fields.find((f) => f.name.toLowerCase().trim() === "name")
+                                  
+                                  // If user drew on canvas (pendingField exists), use coordinates (field will be displayed)
+                                  // If no pendingField, coordinates are undefined (field won't be displayed)
+                                  if (isEmailField || isExpiryDateField || isIssueDateField) {
+                                    const field: TemplateField = {
+                                      id: Date.now().toString(),
+                                      name: newFieldName.trim(),
+                                      type: newFieldType,
+                                      // Use coordinates if user drew on canvas, otherwise undefined
+                                      x: pendingField?.x,
+                                      y: pendingField?.y,
+                                      width: pendingField?.width || 0,
+                                      height: pendingField?.height || 0,
+                                      // Copy styling from Name field if it exists (for optional date fields), otherwise use selected styling
+                                      fontFamily: (isIssueDateField || isExpiryDateField) && nameField?.fontFamily ? nameField.fontFamily : selectedFontFamily,
+                                      fontSize: (isIssueDateField || isExpiryDateField) && nameField?.fontSize ? nameField.fontSize : selectedFontSize,
+                                      fontColor: (isIssueDateField || isExpiryDateField) && nameField?.fontColor ? nameField.fontColor : selectedFontColor,
+                                      bold: (isIssueDateField || isExpiryDateField) ? (nameField?.bold ?? false) : false,
+                                      italic: (isIssueDateField || isExpiryDateField) ? (nameField?.italic ?? false) : false,
+                                    }
+                                    setFields([...fields, field])
+                                    setSelectedField(field.id)
+                                  } else {
+                                    // For other fields, require coordinates from pendingField
+                                    if (!pendingField) {
+                                      setModalMessage("Please draw a field on the canvas")
+                                      setShowErrorModal(true)
+                                      return
+                                    }
+                                    const isNameField = newFieldName.toLowerCase().trim() === "name"
+                                    const newField: TemplateField = {
+                                      id: Date.now().toString(),
+                                      name: newFieldName.trim(),
+                                      type: newFieldType,
+                                      x: pendingField.x,
+                                      y: pendingField.y,
+                                      width: pendingField.width,
+                                      height: pendingField.height,
+                                      fontFamily: selectedFontFamily,
+                                      fontSize: selectedFontSize,
+                                      fontColor: selectedFontColor,
+                                      bold: false,
+                                      italic: false,
+                                    }
+                                    const updatedFields = [...fields, newField]
+                                    // If Name field was added, propagate its styling to existing optional fields
+                                    if (isNameField) {
+                                      const propagatedFields = propagateNameFieldStyling(updatedFields, newField)
+                                      setFields(propagatedFields)
+                                    } else {
+                                      setFields(updatedFields)
+                                    }
+                                    setSelectedField(newField.id)
                                   }
 
-                                  setFields([...fields, newField])
-                                  setSelectedField(newField.id)
+                                  setShowNewField(false)
+                                  setPendingField(null)
                                   setNewFieldName("")
                                   setNewFieldType("text")
-                                  setPendingField(null)
-                                  setShowNewField(false)
                                 }}
                                 disabled={!newFieldName.trim()}
                               >
@@ -1054,9 +1225,15 @@ export default function CreateTemplatePage() {
                             value={fields.find((f) => f.id === selectedField)?.fontFamily || selectedFontFamily}
                             onValueChange={(value) => {
                               if (selectedField) {
-                                setFields(
-                                  fields.map((f) => (f.id === selectedField ? { ...f, fontFamily: value } : f))
-                                )
+                                const updatedFields = fields.map((f) => (f.id === selectedField ? { ...f, fontFamily: value } : f))
+                                const updatedField = updatedFields.find((f) => f.id === selectedField)
+                                // If Name field was updated, propagate styling to optional fields
+                                if (updatedField && updatedField.name.toLowerCase().trim() === "name") {
+                                  const propagatedFields = propagateNameFieldStyling(updatedFields, updatedField)
+                                  setFields(propagatedFields)
+                                } else {
+                                  setFields(updatedFields)
+                                }
                               } else {
                                 setSelectedFontFamily(value)
                               }
@@ -1086,9 +1263,15 @@ export default function CreateTemplatePage() {
                               onChange={(e) => {
                                 const size = parseInt(e.target.value) || 16
                                 if (selectedField) {
-                                  setFields(
-                                    fields.map((f) => (f.id === selectedField ? { ...f, fontSize: size } : f))
-                                  )
+                                  const updatedFields = fields.map((f) => (f.id === selectedField ? { ...f, fontSize: size } : f))
+                                  const updatedField = updatedFields.find((f) => f.id === selectedField)
+                                  // If Name field was updated, propagate styling to optional fields
+                                  if (updatedField && updatedField.name.toLowerCase().trim() === "name") {
+                                    const propagatedFields = propagateNameFieldStyling(updatedFields, updatedField)
+                                    setFields(propagatedFields)
+                                  } else {
+                                    setFields(updatedFields)
+                                  }
                                 } else {
                                   setSelectedFontSize(size)
                                 }
@@ -1105,9 +1288,15 @@ export default function CreateTemplatePage() {
                             value={fields.find((f) => f.id === selectedField)?.fontColor || selectedFontColor}
                             onChange={(color) => {
                               if (selectedField) {
-                                setFields(
-                                  fields.map((f) => (f.id === selectedField ? { ...f, fontColor: color } : f))
-                                )
+                                const updatedFields = fields.map((f) => (f.id === selectedField ? { ...f, fontColor: color } : f))
+                                const updatedField = updatedFields.find((f) => f.id === selectedField)
+                                // If Name field was updated, propagate styling to optional fields
+                                if (updatedField && updatedField.name.toLowerCase().trim() === "name") {
+                                  const propagatedFields = propagateNameFieldStyling(updatedFields, updatedField)
+                                  setFields(propagatedFields)
+                                } else {
+                                  setFields(updatedFields)
+                                }
                               } else {
                                 setSelectedFontColor(color)
                               }
@@ -1124,9 +1313,15 @@ export default function CreateTemplatePage() {
                             onClick={() => {
                               if (selectedField) {
                                 const currentField = fields.find((f) => f.id === selectedField)
-                                setFields(
-                                  fields.map((f) => (f.id === selectedField ? { ...f, bold: !(currentField?.bold || false) } : f))
-                                )
+                                const updatedFields = fields.map((f) => (f.id === selectedField ? { ...f, bold: !(currentField?.bold || false) } : f))
+                                const updatedField = updatedFields.find((f) => f.id === selectedField)
+                                // If Name field was updated, propagate styling to optional fields
+                                if (updatedField && updatedField.name.toLowerCase().trim() === "name") {
+                                  const propagatedFields = propagateNameFieldStyling(updatedFields, updatedField)
+                                  setFields(propagatedFields)
+                                } else {
+                                  setFields(updatedFields)
+                                }
                               }
                             }}
                             title="Bold"
@@ -1141,9 +1336,15 @@ export default function CreateTemplatePage() {
                             onClick={() => {
                               if (selectedField) {
                                 const currentField = fields.find((f) => f.id === selectedField)
-                                setFields(
-                                  fields.map((f) => (f.id === selectedField ? { ...f, italic: !(currentField?.italic || false) } : f))
-                                )
+                                const updatedFields = fields.map((f) => (f.id === selectedField ? { ...f, italic: !(currentField?.italic || false) } : f))
+                                const updatedField = updatedFields.find((f) => f.id === selectedField)
+                                // If Name field was updated, propagate styling to optional fields
+                                if (updatedField && updatedField.name.toLowerCase().trim() === "name") {
+                                  const propagatedFields = propagateNameFieldStyling(updatedFields, updatedField)
+                                  setFields(propagatedFields)
+                                } else {
+                                  setFields(updatedFields)
+                                }
                               }
                             }}
                             title="Italic"

@@ -143,8 +143,13 @@ async function postHandler(
         }> = []
 
         for (const field of fields) {
-          // Non-email fields must have coordinates
-          if (field.type !== "email") {
+          // Email fields and optional date fields (Issue Date, Expiry Date) may not have coordinates
+          const isEmailField = field.type === "email"
+          const isIssueDateField = field.type === "date" && field.name.toLowerCase().trim() === "issue date"
+          const isExpiryDateField = field.type === "date" && field.name.toLowerCase().trim() === "expiry date"
+          
+          // Only require coordinates for fields that are not email or optional date fields
+          if (!isEmailField && !isIssueDateField && !isExpiryDateField) {
             if (!field.coordinates || field.coordinates.x === undefined || field.coordinates.y === undefined) {
               return NextResponse.json({ 
                 error: `Field "${field.name}" (${field.type}) must have coordinates` 
@@ -152,11 +157,11 @@ async function postHandler(
             }
           }
 
-          // Build placeholder object - for email fields without coordinates, omit x/y entirely
-          if (field.type === "email") {
-            // Email field - coordinates are optional
+          // Build placeholder object - for email fields and optional date fields without coordinates, omit x/y entirely
+          if (isEmailField || isIssueDateField || isExpiryDateField) {
+            // Email or optional date field - coordinates are optional
             if (field.coordinates && field.coordinates.x !== undefined && field.coordinates.y !== undefined) {
-              // Email field with coordinates (displayed on certificate)
+              // Field with coordinates (displayed on certificate)
               placeholders.push({
                 fieldName: field.name,
                 type: field.type,
@@ -170,7 +175,7 @@ async function postHandler(
                 italic: field.italic || false,
               })
             } else {
-              // Email field without coordinates (not displayed on certificate) - omit x/y entirely
+              // Field without coordinates (not displayed on certificate) - omit x/y entirely
               placeholders.push({
                 fieldName: field.name,
                 type: field.type,
@@ -183,7 +188,7 @@ async function postHandler(
               })
             }
           } else {
-            // Non-email field - coordinates are required (already validated)
+            // Other fields - coordinates are required (already validated)
             placeholders.push({
               fieldName: field.name,
               type: field.type,

@@ -61,6 +61,12 @@ async function handler(
       return NextResponse.json({ error: "Template must have an email field" }, { status: 400 })
     }
 
+    // Find Name and Issue Date fields from template
+    const nameField = template.placeholders.find((p) => p.fieldName.toLowerCase().trim() === "name")
+    const issueDateField = template.placeholders.find(
+      (p) => p.fieldName.toLowerCase().trim() === "issue date" && p.type === "date"
+    )
+
     // Map CSV headers to template field names
     // Try to match CSV headers with template field names (case-insensitive, flexible matching)
     const fieldMapping: Record<string, string> = {}
@@ -145,6 +151,23 @@ async function handler(
         
         // Ensure email is set correctly
         credentialData[emailField.fieldName] = emailValue
+
+        // Validate Name field (required)
+        if (nameField && (!credentialData[nameField.fieldName] || !credentialData[nameField.fieldName].trim())) {
+          records.push({
+            recipientName: values[0] || "Unknown",
+            email: emailValue || "N/A",
+            status: "error",
+            message: "Name field is required",
+          })
+          continue
+        }
+
+        // Auto-fill Issue Date if field exists (required, auto-filled with current date)
+        if (issueDateField) {
+          const today = new Date().toISOString().split('T')[0] // YYYY-MM-DD format
+          credentialData[issueDateField.fieldName] = today
+        }
 
         // Generate certificate/badge images if template has them
         let certificateUrl: string | undefined = undefined
