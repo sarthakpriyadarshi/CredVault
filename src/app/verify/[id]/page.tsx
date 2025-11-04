@@ -4,7 +4,7 @@ import { useParams } from "next/navigation"
 import { useEffect, useState } from "react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { CheckCircle, XCircle, Shield, Download, ExternalLink, Share2 } from "lucide-react"
+import { CheckCircle, XCircle, Shield, Download, ExternalLink, Share2, Blocks, Loader2 } from "lucide-react"
 import { PrimaryButton } from "@/components/ui/primary-button"
 import {
   Dialog,
@@ -337,17 +337,17 @@ export default function PublicVerifyCredentialPage() {
                         >
                           {verifying ? (
                             <>
-                              <Shield className="h-4 w-4 mr-2 animate-spin" />
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                               Verifying on Blockchain...
                             </>
                           ) : verification.details?.blockchainVerified ? (
                             <>
-                              <CheckCircle className="h-4 w-4 mr-2" />
+                              <Blocks className="h-4 w-4 mr-2" />
                               Re-Verify on Blockchain
                             </>
                           ) : (
                             <>
-                              <Shield className="h-4 w-4 mr-2" />
+                              <Blocks className="h-4 w-4 mr-2" />
                               Verify Me on Blockchain
                             </>
                           )}
@@ -380,7 +380,9 @@ export default function PublicVerifyCredentialPage() {
                     <div className="p-3 bg-background/50 rounded-lg">
                       <div className="flex flex-col items-center text-center gap-2">
                         {verification.method === "blockchain" && verification.details?.blockchainVerified ? (
-                          <CheckCircle className="h-4 w-4 text-emerald-400" />
+                          <Blocks className="h-4 w-4 text-emerald-400" />
+                        ) : verification.method === "blockchain" ? (
+                          <Blocks className="h-4 w-4 text-muted-foreground" />
                         ) : (
                           <Shield className="h-4 w-4 text-muted-foreground" />
                         )}
@@ -514,7 +516,7 @@ export default function PublicVerifyCredentialPage() {
               {verification.method === "blockchain" && verification.details && (
                 <Card className="p-6 border border-border/50 bg-card/50 backdrop-blur">
                   <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-                    <Shield className="h-4 w-4" />
+                    <Blocks className="h-4 w-4" />
                     Blockchain Verification
                   </h3>
                   <div className="space-y-3">

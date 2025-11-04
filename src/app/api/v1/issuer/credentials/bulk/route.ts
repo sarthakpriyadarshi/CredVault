@@ -5,6 +5,8 @@ import { Credential, Template, User } from "@/models"
 import connectDB from "@/lib/db/mongodb"
 import mongoose from "mongoose"
 import { generateCertificate, generateBadge } from "@/lib/certificate"
+import { vaultProtocol, VaultProtocolService } from "@/lib/services/vault-protocol.service"
+import { checkVaultHealth, getHealthErrorMessage } from "@/lib/services/vault-health.service"
 import { sendEmail } from "@/lib/email/nodemailer"
 import { generateCredentialIssuedEmail } from "@/lib/email/templates"
 
@@ -44,6 +46,22 @@ async function handler(
 
     if (!template) {
       return NextResponse.json({ error: "Template not found" }, { status: 404 })
+    }
+
+    // Check VAULT Protocol health if blockchain is requested
+    if (useBlockchain) {
+      const healthStatus = await checkVaultHealth()
+      if (!healthStatus.isHealthy) {
+        const errorMessage = getHealthErrorMessage(healthStatus)
+        return NextResponse.json(
+          { 
+            error: "VAULT Protocol services are not available",
+            details: errorMessage,
+            vaultHealthStatus: healthStatus
+          },
+          { status: 503 } // Service Unavailable
+        )
+      }
     }
 
     // Parse CSV
@@ -181,6 +199,11 @@ async function handler(
         let certificateUrl: string | undefined = undefined
         let badgeUrl: string | undefined = undefined
         let tempCredentialId: mongoose.Types.ObjectId | undefined = undefined
+        let vaultFid: string | undefined = undefined
+        let vaultCid: string | undefined = undefined
+        let vaultUrl: string | undefined = undefined
+        let vaultGatewayUrl: string | undefined = undefined
+        let blockchainTxId: string | undefined = undefined
 
         // If QR code is present, we need to create credential first, then generate QR code, then update credential
         if (hasQRCodePlaceholder) {
@@ -221,6 +244,28 @@ async function handler(
                   data: credentialData,
                   qrCodeData,
                 })
+
+                // If blockchain is enabled, upload certificate to VAULT Protocol
+                if (useBlockchain && certificateUrl) {
+                  try {
+                    const buffer = VaultProtocolService.base64ToBuffer(certificateUrl)
+                    const extension = VaultProtocolService.getFileExtension(certificateUrl)
+                    const fileName = `certificate_${emailValue}_${Date.now()}${extension}`
+
+                    const vaultResponse = await vaultProtocol.issueCertificate(buffer, fileName, emailValue)
+                    
+                    if (vaultResponse.success) {
+                      vaultFid = vaultResponse.data.fid
+                      vaultCid = vaultResponse.data.cid
+                      vaultUrl = vaultResponse.data.vaultUrl
+                      vaultGatewayUrl = vaultResponse.data.gatewayUrl
+                      blockchainTxId = vaultResponse.data.transactionHash
+                    }
+                  } catch (vaultError) {
+                    console.error("VAULT Protocol error:", vaultError)
+                    // Continue without VAULT Protocol if it fails
+                  }
+                }
               }
             }
             
@@ -237,13 +282,41 @@ async function handler(
                   data: credentialData,
                   qrCodeData,
                 })
+
+                // If blockchain is enabled and no certificate was uploaded, upload badge to VAULT Protocol
+                if (useBlockchain && badgeUrl && !vaultFid) {
+                  try {
+                    const buffer = VaultProtocolService.base64ToBuffer(badgeUrl)
+                    const extension = VaultProtocolService.getFileExtension(badgeUrl)
+                    const fileName = `badge_${emailValue}_${Date.now()}${extension}`
+
+                    const vaultResponse = await vaultProtocol.issueCertificate(buffer, fileName, emailValue)
+                    
+                    if (vaultResponse.success) {
+                      vaultFid = vaultResponse.data.fid
+                      vaultCid = vaultResponse.data.cid
+                      vaultUrl = vaultResponse.data.vaultUrl
+                      vaultGatewayUrl = vaultResponse.data.gatewayUrl
+                      blockchainTxId = vaultResponse.data.transactionHash
+                    }
+                  } catch (vaultError) {
+                    console.error("VAULT Protocol error:", vaultError)
+                    // Continue without VAULT Protocol if it fails
+                  }
+                }
               }
             }
             
-            // Step 6: Update the credential with certificate/badge URLs
+            // Step 6: Update the credential with certificate/badge URLs and blockchain data
             await Credential.findByIdAndUpdate(tempCredentialId, {
               certificateUrl,
               badgeUrl,
+              vaultFid,
+              vaultCid,
+              vaultUrl,
+              vaultGatewayUrl,
+              blockchainTxId,
+              blockchainNetwork: useBlockchain ? "VAULT Protocol / Quorum" : undefined,
             })
           } catch (error) {
             console.error(`Error generating certificate/badge with QR code for ${emailValue}:`, error)
@@ -270,6 +343,28 @@ async function handler(
                   placeholders: displayedPlaceholders,
                   data: credentialData,
                 })
+
+                // If blockchain is enabled, upload certificate to VAULT Protocol
+                if (useBlockchain && certificateUrl) {
+                  try {
+                    const buffer = VaultProtocolService.base64ToBuffer(certificateUrl)
+                    const extension = VaultProtocolService.getFileExtension(certificateUrl)
+                    const fileName = `certificate_${emailValue}_${Date.now()}${extension}`
+
+                    const vaultResponse = await vaultProtocol.issueCertificate(buffer, fileName, emailValue)
+                    
+                    if (vaultResponse.success) {
+                      vaultFid = vaultResponse.data.fid
+                      vaultCid = vaultResponse.data.cid
+                      vaultUrl = vaultResponse.data.vaultUrl
+                      vaultGatewayUrl = vaultResponse.data.gatewayUrl
+                      blockchainTxId = vaultResponse.data.transactionHash
+                    }
+                  } catch (vaultError) {
+                    console.error("VAULT Protocol error:", vaultError)
+                    // Continue without VAULT Protocol if it fails
+                  }
+                }
               }
             }
 
@@ -285,6 +380,28 @@ async function handler(
                   placeholders: displayedPlaceholders,
                   data: credentialData,
                 })
+
+                // If blockchain is enabled and no certificate was uploaded, upload badge to VAULT Protocol
+                if (useBlockchain && badgeUrl && !vaultFid) {
+                  try {
+                    const buffer = VaultProtocolService.base64ToBuffer(badgeUrl)
+                    const extension = VaultProtocolService.getFileExtension(badgeUrl)
+                    const fileName = `badge_${emailValue}_${Date.now()}${extension}`
+
+                    const vaultResponse = await vaultProtocol.issueCertificate(buffer, fileName, emailValue)
+                    
+                    if (vaultResponse.success) {
+                      vaultFid = vaultResponse.data.fid
+                      vaultCid = vaultResponse.data.cid
+                      vaultUrl = vaultResponse.data.vaultUrl
+                      vaultGatewayUrl = vaultResponse.data.gatewayUrl
+                      blockchainTxId = vaultResponse.data.transactionHash
+                    }
+                  } catch (vaultError) {
+                    console.error("VAULT Protocol error:", vaultError)
+                    // Continue without VAULT Protocol if it fails
+                  }
+                }
               }
             }
           } catch (error) {
@@ -302,7 +419,13 @@ async function handler(
             type: template.type,
             certificateUrl,
             badgeUrl,
-            isOnBlockchain: useBlockchain,
+            vaultFid,
+            vaultCid,
+            vaultUrl,
+            vaultGatewayUrl,
+            blockchainTxId,
+            isOnBlockchain: useBlockchain || false,
+            blockchainNetwork: useBlockchain ? "VAULT Protocol / Quorum" : undefined,
             status: "active",
             issuedAt: new Date(),
           })
