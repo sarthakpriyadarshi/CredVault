@@ -61,11 +61,12 @@ async function handler(
       return NextResponse.json({ error: "Template must have an email field" }, { status: 400 })
     }
 
-    // Find Name and Issue Date fields from template
+    // Find Name, Issue Date, and QR Code fields from template
     const nameField = template.placeholders.find((p) => p.fieldName.toLowerCase().trim() === "name")
     const issueDateField = template.placeholders.find(
       (p) => p.fieldName.toLowerCase().trim() === "issue date" && p.type === "date"
     )
+    const qrCodeField = template.placeholders.find((p) => p.type === "qr")
 
     // Map CSV headers to template field names
     // Try to match CSV headers with template field names (case-insensitive, flexible matching)
@@ -165,84 +166,180 @@ async function handler(
 
         // Auto-fill Issue Date if field exists (required, auto-filled with current date)
         if (issueDateField) {
-          const today = new Date().toISOString().split('T')[0] // YYYY-MM-DD format
-          credentialData[issueDateField.fieldName] = today
+          const today = new Date()
+          const day = String(today.getDate()).padStart(2, '0')
+          const month = String(today.getMonth() + 1).padStart(2, '0')
+          const year = today.getFullYear()
+          const todayFormatted = `${day}-${month}-${year}` // DD-MM-YYYY format
+          credentialData[issueDateField.fieldName] = todayFormatted
         }
+
+        // Check if template has QR code placeholder
+        const hasQRCodePlaceholder = qrCodeField && qrCodeField.x !== undefined && qrCodeField.y !== undefined
 
         // Generate certificate/badge images if template has them
         let certificateUrl: string | undefined = undefined
         let badgeUrl: string | undefined = undefined
+        let tempCredentialId: mongoose.Types.ObjectId | undefined = undefined
 
-        try {
-          // Generate certificate if template type is "certificate" or "both"
-          if ((template.type === "certificate" || template.type === "both") && template.certificateImage) {
-            const displayedPlaceholders = template.placeholders.filter(
-              (p) => p.x !== undefined && p.y !== undefined
-            )
+        // If QR code is present, we need to create credential first, then generate QR code, then update credential
+        if (hasQRCodePlaceholder) {
+          try {
+            // Step 1: Create credential document first (without certificate image)
+            const tempCredential = await Credential.create({
+              templateId: template._id,
+              organizationId,
+              recipientEmail: emailValue,
+              recipientId,
+              credentialData,
+              type: template.type,
+              isOnBlockchain: useBlockchain || false,
+              status: "active",
+              issuedAt: new Date(),
+            })
+            
+            tempCredentialId = new mongoose.Types.ObjectId(tempCredential._id.toString())
+            
+            // Step 2: Generate verification URL
+            const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:4300"
+            const verificationUrl = `${baseUrl}/verify/${tempCredentialId.toString()}`
+            
+            // Step 3: Prepare QR code data for certificate generation
+            const qrCodeData: Record<string, string> = {}
+            qrCodeData[qrCodeField.fieldName] = verificationUrl
+            
+            // Step 4: Generate certificate with QR code
+            if ((template.type === "certificate" || template.type === "both") && template.certificateImage) {
+              const displayedPlaceholders = template.placeholders.filter(
+                (p) => p.x !== undefined && p.y !== undefined
+              )
 
-            if (displayedPlaceholders.length > 0) {
-              certificateUrl = await generateCertificate({
-                templateImageBase64: template.certificateImage,
-                placeholders: displayedPlaceholders,
-                data: credentialData,
+              if (displayedPlaceholders.length > 0) {
+                certificateUrl = await generateCertificate({
+                  templateImageBase64: template.certificateImage,
+                  placeholders: displayedPlaceholders,
+                  data: credentialData,
+                  qrCodeData,
+                })
+              }
+            }
+            
+            // Step 5: Generate badge with QR code if needed
+            if ((template.type === "badge" || template.type === "both") && template.badgeImage) {
+              const displayedPlaceholders = template.placeholders.filter(
+                (p) => p.x !== undefined && p.y !== undefined
+              )
+
+              if (displayedPlaceholders.length > 0) {
+                badgeUrl = await generateBadge({
+                  templateImageBase64: template.badgeImage,
+                  placeholders: displayedPlaceholders,
+                  data: credentialData,
+                  qrCodeData,
+                })
+              }
+            }
+            
+            // Step 6: Update the credential with certificate/badge URLs
+            await Credential.findByIdAndUpdate(tempCredentialId, {
+              certificateUrl,
+              badgeUrl,
+            })
+          } catch (error) {
+            console.error(`Error generating certificate/badge with QR code for ${emailValue}:`, error)
+            // If QR code generation fails, delete the temporary credential
+            if (tempCredentialId) {
+              await Credential.findByIdAndDelete(tempCredentialId).catch(() => {
+                // Ignore deletion errors
               })
             }
+            throw error
           }
+        } else {
+          // No QR code - normal flow
+          try {
+            // Generate certificate if template type is "certificate" or "both"
+            if ((template.type === "certificate" || template.type === "both") && template.certificateImage) {
+              const displayedPlaceholders = template.placeholders.filter(
+                (p) => p.x !== undefined && p.y !== undefined
+              )
 
-          // Generate badge if template type is "badge" or "both"
-          if ((template.type === "badge" || template.type === "both") && template.badgeImage) {
-            const displayedPlaceholders = template.placeholders.filter(
-              (p) => p.x !== undefined && p.y !== undefined
-            )
-
-            if (displayedPlaceholders.length > 0) {
-              badgeUrl = await generateBadge({
-                templateImageBase64: template.badgeImage,
-                placeholders: displayedPlaceholders,
-                data: credentialData,
-              })
+              if (displayedPlaceholders.length > 0) {
+                certificateUrl = await generateCertificate({
+                  templateImageBase64: template.certificateImage,
+                  placeholders: displayedPlaceholders,
+                  data: credentialData,
+                })
+              }
             }
+
+            // Generate badge if template type is "badge" or "both"
+            if ((template.type === "badge" || template.type === "both") && template.badgeImage) {
+              const displayedPlaceholders = template.placeholders.filter(
+                (p) => p.x !== undefined && p.y !== undefined
+              )
+
+              if (displayedPlaceholders.length > 0) {
+                badgeUrl = await generateBadge({
+                  templateImageBase64: template.badgeImage,
+                  placeholders: displayedPlaceholders,
+                  data: credentialData,
+                })
+              }
+            }
+          } catch (error) {
+            console.error(`Error generating certificate/badge for ${emailValue}:`, error)
+            // Continue with credential creation even if image generation fails
           }
-        } catch (error) {
-          console.error(`Error generating certificate/badge for ${emailValue}:`, error)
-          // Continue with credential creation even if image generation fails
+
+          // Create credential normally (no QR code)
+          await Credential.create({
+            templateId: template._id,
+            organizationId,
+            recipientEmail: emailValue,
+            recipientId,
+            credentialData,
+            type: template.type,
+            certificateUrl,
+            badgeUrl,
+            isOnBlockchain: useBlockchain,
+            status: "active",
+            issuedAt: new Date(),
+          })
         }
 
-        const credential = await Credential.create({
-          templateId: template._id,
-          organizationId,
-          recipientEmail: emailValue,
-          recipientId,
-          credentialData,
-          type: template.type,
-          certificateUrl,
-          badgeUrl,
-          isOnBlockchain: useBlockchain,
-          status: "active",
-          issuedAt: new Date(),
-        })
+        // Get the credential for email notification (either tempCredential or newly created)
+        const credential = tempCredentialId 
+          ? await Credential.findById(tempCredentialId)
+          : await Credential.findOne({
+              templateId: template._id,
+              organizationId,
+              recipientEmail: emailValue,
+            }).sort({ issuedAt: -1 })
 
         // Send notification email to recipient
-        try {
-          const emailHtml = generateCredentialIssuedEmail({
-            recipientName,
-            credentialName: template.name || (template.type === "certificate" ? "Certificate" : template.type === "badge" ? "Badge" : "Credential"),
-            issuerName: user?.name as string || "Unknown Issuer",
-            issuerOrganization: organizationName,
-            issuedDate: new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }),
-            credentialId: credential._id.toString(),
-            viewCredentialLink: `${process.env.NEXTAUTH_URL}/verify/${credential._id.toString()}`,
-            blockchainVerified: useBlockchain || false,
-          })
+        if (credential) {
+          try {
+            const emailHtml = generateCredentialIssuedEmail({
+              recipientName,
+              credentialName: template.name || (template.type === "certificate" ? "Certificate" : template.type === "badge" ? "Badge" : "Credential"),
+              issuerName: user?.name as string || "Unknown Issuer",
+              issuerOrganization: organizationName,
+              issuedDate: new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }),
+              credentialId: credential._id.toString(),
+              viewCredentialLink: `${process.env.NEXTAUTH_URL}/verify/${credential._id.toString()}`,
+              blockchainVerified: useBlockchain || false,
+            })
 
-          await sendEmail({
-            to: emailValue,
-            subject: `New ${template.type === "certificate" ? "Certificate" : template.type === "badge" ? "Badge" : "Credential"} Issued - CredVault`,
-            html: emailHtml,
-          })
-        } catch (emailError) {
-          console.error(`Failed to send notification email to ${emailValue}:`, emailError)
-          // Don't fail credential issuance if email fails
+            await sendEmail({
+              to: emailValue,
+              subject: `New ${template.type === "certificate" ? "Certificate" : template.type === "badge" ? "Badge" : "Credential"} Issued - CredVault`,
+              html: emailHtml,
+            })
+          } catch (emailError) {
+            console.error(`Failed to send notification email to ${emailValue}:`, emailError)
+            // Don't fail credential issuance if email fails
+          }
         }
 
         records.push({

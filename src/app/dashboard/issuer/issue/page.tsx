@@ -136,11 +136,15 @@ export default function IssuePage() {
       )
       
       if (issueDateField) {
-        // Auto-fill with current date in YYYY-MM-DD format
-        const today = new Date().toISOString().split('T')[0]
+        // Auto-fill with current date in DD-MM-YYYY format
+        const today = new Date()
+        const day = String(today.getDate()).padStart(2, '0')
+        const month = String(today.getMonth() + 1).padStart(2, '0')
+        const year = today.getFullYear()
+        const todayFormatted = `${day}-${month}-${year}`
         setFormData((prev) => ({
           ...prev,
-          [issueDateField.name]: today,
+          [issueDateField.name]: todayFormatted,
         }))
       }
     }
@@ -223,8 +227,12 @@ export default function IssuePage() {
           (f) => f.name.toLowerCase().trim() === "issue date" && f.type === "date"
         )
         if (issueDateField) {
-          const today = new Date().toISOString().split('T')[0]
-          resetFormData[issueDateField.name] = today
+          const today = new Date()
+          const day = String(today.getDate()).padStart(2, '0')
+          const month = String(today.getMonth() + 1).padStart(2, '0')
+          const year = today.getFullYear()
+          const todayFormatted = `${day}-${month}-${year}`
+          resetFormData[issueDateField.name] = todayFormatted
         }
       }
       setFormData(resetFormData)
@@ -327,7 +335,7 @@ export default function IssuePage() {
                               </Label>
                               <Input
                                 id={field.name}
-                                type={field.type === "email" ? "email" : field.type === "date" ? "date" : "text"}
+                                type={field.type === "email" ? "email" : isIssueDate ? "text" : field.type === "date" ? "date" : "text"}
                                 placeholder={isIssueDate ? "Auto-filled with today's date" : `Enter ${field.name.toLowerCase()}`}
                                 value={formData[field.name] || ""}
                                 onChange={(e) => handleFieldChange(field.name, e.target.value)}

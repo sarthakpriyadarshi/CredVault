@@ -213,8 +213,12 @@ export default function BulkIssuancePage() {
       }
 
       const data = await res.json()
-      setIssuanceRecords(data.records || [])
-      setDialogMessage(`Bulk issuance completed! Successfully issued ${successCount} credentials`)
+      const records = data.records || []
+      setIssuanceRecords(records)
+      
+      // Calculate success count from the received data
+      const actualSuccessCount = records.filter((r: IssuanceRecord) => r.status === "success").length
+      setDialogMessage(`Bulk issuance completed! Successfully issued ${actualSuccessCount} credentials`)
       setShowSuccessDialog(true)
     } catch (error) {
       console.error("Error processing bulk issuance:", error)
@@ -233,8 +237,16 @@ export default function BulkIssuancePage() {
     }
 
     try {
-      // Get field names from selected template
-      const headers = templateFields.map((f) => f.name)
+      // Get field names from selected template, excluding QR Code and Issue Date
+      const headers = templateFields
+        .filter((f) => {
+          // Exclude QR Code fields
+          if (f.type === "qr") return false
+          // Exclude Issue Date fields (auto-filled)
+          if (f.type === "date" && f.name.toLowerCase().trim() === "issue date") return false
+          return true
+        })
+        .map((f) => f.name)
       
       if (headers.length === 0) {
         setDialogMessage("Template has no fields defined")
@@ -493,18 +505,22 @@ export default function BulkIssuancePage() {
                           <div className="p-3 bg-background/50 rounded-lg font-mono text-xs space-y-1">
                             <p className="text-foreground font-semibold mb-2">Required Fields:</p>
                             {templateFields
-                              .filter((field) => field.type !== "qr") // Exclude QR code fields from CSV
+                              .filter((field) => {
+                                // Exclude QR code fields (auto-filled)
+                                if (field.type === "qr") return false
+                                // Exclude Issue Date fields (auto-filled)
+                                if (field.type === "date" && field.name.toLowerCase().trim() === "issue date") return false
+                                return true
+                              })
                               .map((field, idx) => {
                                 const isEmail = field.type === "email"
                                 const isName = field.name.toLowerCase().trim() === "name"
-                                const isIssueDate = field.name.toLowerCase().trim() === "issue date" && field.type === "date"
                                 const isExpiryDate = field.name.toLowerCase().trim() === "expiry date" && field.type === "date"
-                                const isRequired = isEmail || isName || isIssueDate
+                                const isRequired = isEmail || isName
                                 
                                 return (
                                   <p key={idx}>
                                     {field.name} {isRequired && <span className="text-primary">(Required)</span>}
-                                    {isIssueDate && <span className="text-muted-foreground text-[10px] ml-1">(Auto-filled)</span>}
                                     {isExpiryDate && <span className="text-muted-foreground text-[10px] ml-1">(Optional)</span>}
                                   </p>
                                 )
@@ -512,8 +528,20 @@ export default function BulkIssuancePage() {
                           </div>
                           <div className="p-3 bg-background/50 rounded-lg font-mono text-xs">
                             <p className="text-foreground font-semibold mb-2">Example:</p>
-                            <p>{templateFields.filter((f) => f.type !== "qr").map((f) => f.name).join(",")}</p>
-                            <p>{templateFields.filter((f) => f.type !== "qr").map(() => "Sample Value").join(",")}</p>
+                            <p>{templateFields
+                              .filter((f) => {
+                                if (f.type === "qr") return false
+                                if (f.type === "date" && f.name.toLowerCase().trim() === "issue date") return false
+                                return true
+                              })
+                              .map((f) => f.name).join(",")}</p>
+                            <p>{templateFields
+                              .filter((f) => {
+                                if (f.type === "qr") return false
+                                if (f.type === "date" && f.name.toLowerCase().trim() === "issue date") return false
+                                return true
+                              })
+                              .map(() => "Sample Value").join(",")}</p>
                           </div>
                         </>
                       ) : (
@@ -530,11 +558,11 @@ export default function BulkIssuancePage() {
                         </li>
                         <li className="flex gap-2">
                           <span className="text-primary">•</span>
-                          <span>Email, Name, and Issue Date are required</span>
+                          <span>Email and Name are required</span>
                         </li>
                         <li className="flex gap-2">
                           <span className="text-primary">•</span>
-                          <span>Issue Date will be auto-filled with today's date</span>
+                          <span>Issue Date and QR Code are auto-filled automatically</span>
                         </li>
                         <li className="flex gap-2">
                           <span className="text-primary">•</span>
