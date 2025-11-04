@@ -23,32 +23,66 @@
 ## Features
 
 ### **Multi-Role Authentication System**
-- **Recipients**: View, download, and share earned credentials
-- **Issuers**: Create templates, issue credentials, manage organizations
-- **Admins**: Verify organizations, manage system settings, analytics
+- **Recipients**: View, download, and share earned credentials with public profile pages
+- **Issuers**: Create templates, issue credentials (single and bulk), manage organizations
+- **Admins**: Verify organizations, manage system settings, analytics, create issuer accounts
 
 ### **Organization Management**
 - Organization verification workflow with admin approval
 - Secure organization registration with proof documentation
+- Email verification for admin-created organizations
 - Role-based access control with organization isolation
 
 ### **Template & Credential Management**
-- **Custom Templates**: Drag-and-drop certificate/badge designer
-- **Bulk Issuance**: CSV upload for batch credential generation
-- **Dynamic Fields**: Recipient name, date, custom fields
-- **Font Library**: 50+ Google Fonts for professional designs
+- **Custom Templates**: Drag-and-drop certificate/badge designer with coordinate-based placement
+- **Interactive Design Tools**: Resizable placeholders with visual feedback
+- **Field Types**: Text, email, number, date, ID, and QR code fields
+- **Bulk Issuance**: CSV upload for batch credential generation with auto-fill support
+- **Dynamic Fields**: Recipient name, issue date, expiry date, custom fields
+- **Font Library**: 50+ Google Fonts with customizable size, color, bold, and italic options
+- **QR Code Generation**: Custom QR codes embedded in certificates with verification links
+- **Transactional Issuance**: Atomic credential creation with rollback on failure
 
 ### **Blockchain Integration**
 - **VAULT Protocol**: Encrypted, tamper-proof credential storage
 - **IPFS Integration**: Decentralized file storage
 - **AES-256-GCM Encryption**: Enterprise-grade security
-- **Blockchain Verification**: Immutable credential authenticity
+- **Blockchain Verification**: Immutable credential authenticity with real-time verification
+- **VAULT File IDs**: Unique file identifiers for blockchain-stored credentials
+- **Transaction Tracking**: Full transaction history with BlockScout integration
+- **Verification Status**: Visual indicators for blockchain verification state
 
 ### **Analytics & Insights**
 - Real-time dashboard analytics for all user roles
 - Credential issuance tracking and verification metrics
 - Organization performance insights
 - System-wide statistics for administrators
+
+### **Advanced Template Features**
+- **Resizable Placeholders**: Interactive resize handles for all template fields
+- **QR Code Integration**: Custom QR codes with CredVault logo for verification links
+- **Dynamic Field Styling**: Automatic font style propagation for optional fields
+- **Smart Font Sizing**: Maximum font size validation to prevent text overflow
+- **Field Requirements**: Mandatory Name and Issue Date fields with optional Expiry Date
+- **Auto-fill Fields**: Issue Date automatically populated with current date during issuance
+
+### **Profile Management**
+- **Public Profile Pages**: Shareable public profiles with credential showcase
+- **Profile Editing**: Dedicated profile editing page accessible from sidebar
+- **Dynamic Navigation**: Smart back navigation based on user's previous route
+- **Profile Statistics**: Total credentials, blockchain verification rate, and member since date
+
+### **Blockchain Verification**
+- **VAULT Protocol Integration**: Full blockchain integration for credential storage and verification
+- **Transactional Issuance**: Atomic credential creation with QR code generation and blockchain upload
+- **Enhanced UI**: Improved blockchain verification icons and loading states
+- **Verification Status**: Real-time blockchain verification status with transaction details
+
+### **Bulk Operations**
+- **CSV Template Generation**: Automatic CSV template download with required fields
+- **Auto-filled Fields**: QR Code and Issue Date automatically handled in bulk issuance
+- **Success Tracking**: Accurate success count reporting for bulk operations
+- **Error Handling**: Comprehensive error handling with detailed feedback
 
 ---
 
@@ -505,14 +539,21 @@ See `.env.local.example` for all required environment variables:
 
 ### Template
 - Supports categories for organization
-- Placeholder system with x/y coordinates
+- Placeholder system with x/y coordinates and optional display
 - Certificate, badge, or both types
-- Requires email field in placeholders
+- Required fields: Name (any type), Issue Date (date type)
+- Optional fields: Email, Expiry Date (can exist without coordinates)
+- QR Code field support with square aspect ratio and custom logo
+- Font styling: family, size, color, bold, italic with smart propagation
+- Resizable placeholders with minimum size constraints
 
 ### Credential
 - Links to template and organization
-- Blockchain integration support
+- Blockchain integration support with VAULT Protocol
+- VAULT File ID (vaultFid), Content ID (vaultCid), Transaction ID tracking
+- QR code embedded certificates with verification links
 - Expiration and revocation tracking
+- Transactional creation with rollback on failure
 
 ## API Architecture
 
