@@ -1,13 +1,113 @@
 /**
- * Browser-compatible QR code generator for preview using qr-code-styling
- * Uses qr-code-styling library for styled QR codes
+ * Browser-compatible QR code generator for preview
+ * Custom implementation that replicates server-side generator behavior
+ * Uses qrcode library for matrix generation and browser canvas for styled rendering
  */
 
-import QRCodeStyling from "qr-code-styling"
+import QRCode from "qrcode"
 import { IQRCodeStyling } from "@/models/Template"
 
 /**
- * Generate a styled QR code using qr-code-styling
+ * Draw a rounded rectangle manually
+ */
+function drawRoundedRect(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  radius: number
+) {
+  if (radius <= 0) {
+    ctx.rect(x, y, width, height)
+    return
+  }
+
+  const clampedRadius = Math.min(radius, width / 2, height / 2)
+  ctx.moveTo(x + clampedRadius, y)
+  ctx.lineTo(x + width - clampedRadius, y)
+  ctx.quadraticCurveTo(x + width, y, x + width, y + clampedRadius)
+  ctx.lineTo(x + width, y + height - clampedRadius)
+  ctx.quadraticCurveTo(x + width, y + height, x + width - clampedRadius, y + height)
+  ctx.lineTo(x + clampedRadius, y + height)
+  ctx.quadraticCurveTo(x, y + height, x, y + height - clampedRadius)
+  ctx.lineTo(x, y + clampedRadius)
+  ctx.quadraticCurveTo(x, y, x + clampedRadius, y)
+}
+
+/**
+ * Draw a styled dot on the canvas
+ */
+function drawDot(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  moduleSize: number,
+  type: "square" | "rounded" | "dots" | "classy" | "classy-rounded" | "extra-rounded",
+  color: string | CanvasGradient
+) {
+  const halfSize = moduleSize / 2
+  const radius = {
+    square: moduleSize * 0.25,
+    rounded: moduleSize * 0.45,
+    dots: moduleSize * 0.5,
+    classy: moduleSize * 0.25,
+    "classy-rounded": moduleSize * 0.45,
+    "extra-rounded": moduleSize * 0.5,
+  }[type] || moduleSize * 0.45
+
+  ctx.fillStyle = color
+  ctx.beginPath()
+
+  if (type === "dots") {
+    ctx.arc(x, y, radius, 0, Math.PI * 2)
+  } else {
+    // square, rounded, classy, classy-rounded, extra-rounded
+    drawRoundedRect(ctx, x - halfSize, y - halfSize, moduleSize, moduleSize, radius)
+  }
+  ctx.fill()
+}
+
+/**
+ * Create gradient from options
+ */
+function createGradient(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  gradient: {
+    type: "linear" | "radial"
+    rotation?: number
+    colorStops: Array<{ offset: number; color: string }>
+  }
+): CanvasGradient {
+  let grad: CanvasGradient
+
+  if (gradient.type === "linear") {
+    const rotation = (gradient.rotation || 0) * (Math.PI / 180)
+    const cx = width / 2
+    const cy = height / 2
+    const length = Math.sqrt(width * width + height * height)
+    grad = ctx.createLinearGradient(
+      cx - (length / 2) * Math.cos(rotation),
+      cy - (length / 2) * Math.sin(rotation),
+      cx + (length / 2) * Math.cos(rotation),
+      cy + (length / 2) * Math.sin(rotation)
+    )
+  } else {
+    // radial
+    grad = ctx.createRadialGradient(width / 2, height / 2, 0, width / 2, height / 2, Math.max(width, height) / 2)
+  }
+
+  for (const stop of gradient.colorStops) {
+    grad.addColorStop(stop.offset, stop.color)
+  }
+
+  return grad
+}
+
+/**
+ * Generate a styled QR code using browser canvas
  * @param url - The URL to encode
  * @param size - The size of the QR code
  * @param styling - Optional QR code styling options
@@ -18,116 +118,189 @@ export async function generateDummyQRCodeBrowser(
   size: number,
   styling?: IQRCodeStyling
 ): Promise<string> {
-  // Build dots options
-  const dotsOptions: any = {
-    color: styling?.dotsColor || "#000000",
-    type: styling?.dotsType || "rounded",
-  }
+  try {
+    // Generate QR code matrix using qrcode library
+    const errorCorrectionLevel = styling?.qrOptions?.errorCorrectionLevel || "H"
+    const qrMatrix = await QRCode.create(url, {
+      errorCorrectionLevel: errorCorrectionLevel as "L" | "M" | "Q" | "H",
+    })
 
-  // Handle gradient for dots
-  if (styling?.dotsColorType === "gradient" && styling?.gradient) {
-    const gradient = styling.gradient
-    if (gradient.type === "linear") {
-      dotsOptions.gradient = {
-        type: "linear",
-        rotation: gradient.rotation || 0,
-        colorStops: gradient.colorStops,
-      }
-    } else {
-      dotsOptions.gradient = {
-        type: "radial",
-        colorStops: gradient.colorStops,
-      }
+    const modules = qrMatrix.modules
+    const moduleCount = modules.size
+    const moduleSize = size / moduleCount
+
+    // Create canvas
+    const canvas = document.createElement("canvas")
+    canvas.width = size
+    canvas.height = size
+    const ctx = canvas.getContext("2d")
+    if (!ctx) {
+      throw new Error("Failed to get canvas context")
     }
-  }
 
-  // Build background options
-  // Default to white background
-  const backgroundOptions: any = {
-    color: styling?.backgroundOptions?.color || "#FFFFFF", // Default to white
-  }
-
-  // Use gradient if explicitly provided
-  if (styling?.backgroundOptions?.gradient) {
-    const bgGradient = styling.backgroundOptions.gradient
-    if (bgGradient.type === "linear") {
-      backgroundOptions.gradient = {
-        type: "linear",
-        rotation: bgGradient.rotation || 0,
-        colorStops: bgGradient.colorStops,
-      }
+    // Draw background
+    const bgColor = styling?.backgroundOptions?.color || "#FFFFFF"
+    if (styling?.backgroundOptions?.gradient) {
+      const bgGradient = createGradient(ctx, size, size, styling.backgroundOptions.gradient)
+      ctx.fillStyle = bgGradient
     } else {
-      backgroundOptions.gradient = {
-        type: "radial",
-        colorStops: bgGradient.colorStops,
-      }
+      ctx.fillStyle = bgColor
     }
-  } else if (styling?.backgroundOptions?.colorType === "single") {
-    // Explicitly single color, use the provided color or default to white
-    backgroundOptions.color = styling?.backgroundOptions?.color || "#FFFFFF"
-  }
-  // If no explicit styling, default to white (already set above)
+    ctx.fillRect(0, 0, size, size)
 
-  // Build corners options - use dotsColor if corners color not explicitly set
-  const cornersSquareOptions = {
-    type: styling?.cornersSquareOptions?.type || "extra-rounded",
-    color: styling?.cornersSquareOptions?.color || styling?.dotsColor || "#000000",
-  }
+    // Prepare dots color/gradient
+    const dotsColor = styling?.dotsColor || "#000000"
+    let dotsFill: string | CanvasGradient = dotsColor
+    if (styling?.dotsColorType === "gradient" && styling?.gradient) {
+      dotsFill = createGradient(ctx, size, size, styling.gradient)
+    }
 
-  const cornersDotOptions = {
-    type: styling?.cornersDotOptions?.type || "dot",
-    color: styling?.cornersDotOptions?.color || styling?.dotsColor || "#000000",
-  }
+    // Prepare corner colors
+    const cornersSquareColor = styling?.cornersSquareOptions?.color || styling?.dotsColor || "#000000"
+    const cornersDotColor = styling?.cornersDotOptions?.color || styling?.dotsColor || "#000000"
 
-  // Build QR options
-  const qrOptions = {
-    errorCorrectionLevel: styling?.qrOptions?.errorCorrectionLevel || "H",
-  }
+    const dotsType = styling?.dotsType || "rounded"
+    const cornersSquareType = styling?.cornersSquareOptions?.type || "extra-rounded"
+    const cornersDotType = styling?.cornersDotOptions?.type || "dot"
 
-  // Create QR code styling instance
-  const qrCode = new QRCodeStyling({
-    width: size,
-    height: size,
-    type: "canvas",
-    data: url,
-    image: "/qrcode-logo.svg", // Use qrcode-logo.svg
-    dotsOptions,
-    backgroundOptions,
-    cornersSquareOptions,
-    cornersDotOptions,
-    qrOptions,
-    imageOptions: {
-      crossOrigin: "anonymous",
-      margin: 0, // No margin for logo
-      imageSize: 0.3, // Logo takes 30% of QR code size
-    },
-  })
+    // Draw QR code modules
+    const finderPatternSize = 7 // Standard QR code finder pattern size
 
-  // Get canvas data URL
-  return new Promise<string>((resolve, reject) => {
-    try {
-      // Create a temporary container
-      const container = document.createElement("div")
-      container.style.display = "none"
-      document.body.appendChild(container)
+    // Helper to check if a module is part of a finder pattern
+    const isInFinderPattern = (row: number, col: number): boolean => {
+      return (
+        (row < finderPatternSize && col < finderPatternSize) ||
+        (row < finderPatternSize && col >= moduleCount - finderPatternSize) ||
+        (row >= moduleCount - finderPatternSize && col < finderPatternSize)
+      )
+    }
 
-      // Append QR code to container
-      qrCode.append(container)
+    // Helper to draw a rounded rectangle frame (hollow, with border)
+    const drawRoundedRectFrame = (
+      ctx: CanvasRenderingContext2D,
+      x: number,
+      y: number,
+      width: number,
+      height: number,
+      radius: number,
+      borderWidth: number
+    ) => {
+      // Draw outer rounded rect
+      ctx.beginPath()
+      drawRoundedRect(ctx, x, y, width, height, radius)
+      ctx.fill()
+      
+      // Cut out inner area to create frame
+      const innerX = x + borderWidth
+      const innerY = y + borderWidth
+      const innerWidth = width - 2 * borderWidth
+      const innerHeight = height - 2 * borderWidth
+      const innerRadius = Math.max(0, radius - borderWidth)
+      
+      ctx.globalCompositeOperation = "destination-out"
+      ctx.beginPath()
+      drawRoundedRect(ctx, innerX, innerY, innerWidth, innerHeight, innerRadius)
+      ctx.fill()
+      ctx.globalCompositeOperation = "source-over"
+    }
 
-      // Wait a bit for rendering
-      setTimeout(() => {
-        const canvas = container.querySelector("canvas") as HTMLCanvasElement
-        if (canvas) {
-          const dataUrl = canvas.toDataURL("image/png")
-          document.body.removeChild(container)
-          resolve(dataUrl)
-        } else {
-          document.body.removeChild(container)
-          reject(new Error("Failed to generate QR code canvas"))
+    // Helper to draw finder pattern with rounded corner squares as unified shapes
+    // Outer square leaves space for inner square, inner square leaves space for center dot
+    const drawFinderPattern = (startRow: number, startCol: number) => {
+      const x = startCol * moduleSize
+      const y = startRow * moduleSize
+      const patternSize = finderPatternSize * moduleSize
+
+      // Calculate radii based on corner square type
+      const outerRadius = cornersSquareType === "extra-rounded" ? patternSize * 0.6 : 
+                            cornersSquareType === "square" ? patternSize * 0.05 : 
+                            patternSize * 0.3
+
+      const innerX = (startCol + 2) * moduleSize
+      const innerY = (startRow + 2) * moduleSize
+      const innerSize = 3 * moduleSize
+      const innerRadius = cornersSquareType === "extra-rounded" ? innerSize * 0.6 : 
+                         cornersSquareType === "square" ? innerSize * 0.05 : 
+                         innerSize * 0.3
+
+      // Draw outer square as a frame (border only, leaving space for inner square)
+      // The border is 1 module wide on each side
+      ctx.fillStyle = cornersSquareColor as string | CanvasGradient
+      drawRoundedRectFrame(ctx, x, y, patternSize, patternSize, outerRadius, moduleSize)
+
+      // Draw inner square (3x3 modules) as a frame, leaving space for center dot
+      // The border is approximately 1 module wide
+      drawRoundedRectFrame(ctx, innerX, innerY, innerSize, innerSize, innerRadius, moduleSize * 0.8)
+
+      // Draw center dot (1x1 module)
+      const centerX = (startCol + 3) * moduleSize + moduleSize / 2
+      const centerY = (startRow + 3) * moduleSize + moduleSize / 2
+      const dotRadius = cornersDotType === "dot" ? moduleSize * 0.5 : moduleSize * 0.3
+      
+      ctx.fillStyle = cornersDotColor as string | CanvasGradient
+      ctx.beginPath()
+      if (cornersDotType === "dot") {
+        ctx.arc(centerX, centerY, dotRadius, 0, Math.PI * 2)
+      } else {
+        drawRoundedRect(ctx, centerX - moduleSize / 2, centerY - moduleSize / 2, moduleSize, moduleSize, dotRadius)
+      }
+      ctx.fill()
+    }
+
+    // Draw all modules
+    for (let row = 0; row < moduleCount; row++) {
+      for (let col = 0; col < moduleCount; col++) {
+        if (modules.get(row, col)) {
+          const x = col * moduleSize + moduleSize / 2
+          const y = row * moduleSize + moduleSize / 2
+
+          if (isInFinderPattern(row, col)) {
+            // Skip finder patterns - will draw them separately
+            continue
+          } else {
+            // Regular data module
+            drawDot(ctx, x, y, moduleSize, dotsType, dotsFill)
+          }
         }
-      }, 100)
-    } catch (error) {
-      reject(error)
+      }
     }
-  })
+
+    // Draw three finder patterns at the corners with rounded corner squares
+    drawFinderPattern(0, 0)
+    drawFinderPattern(0, moduleCount - finderPatternSize)
+    drawFinderPattern(moduleCount - finderPatternSize, 0)
+
+    // Draw logo in center if provided
+    try {
+      const logoImage = new Image()
+      logoImage.crossOrigin = "anonymous"
+      
+      await new Promise<void>((resolve, reject) => {
+        logoImage.onload = () => resolve()
+        logoImage.onerror = () => reject(new Error("Failed to load logo"))
+        logoImage.src = "/qrcode-logo.svg"
+      })
+
+      const logoSize = size * 0.3 // 30% of QR code size
+      const logoX = (size - logoSize) / 2
+      const logoY = (size - logoSize) / 2
+
+      // Draw logo background (white circle)
+      ctx.fillStyle = "#FFFFFF"
+      ctx.beginPath()
+      ctx.arc(size / 2, size / 2, logoSize / 2 + 5, 0, Math.PI * 2)
+      ctx.fill()
+
+      // Draw logo
+      ctx.drawImage(logoImage, logoX, logoY, logoSize, logoSize)
+    } catch (logoError) {
+      console.warn("[QR Browser Generator] Failed to load logo:", logoError)
+    }
+
+    // Convert to base64 data URL
+    return canvas.toDataURL("image/png")
+  } catch (error) {
+    console.error("[QR Browser Generator] Error generating QR code:", error)
+    throw error
+  }
 }

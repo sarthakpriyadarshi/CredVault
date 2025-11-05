@@ -4,11 +4,9 @@ const nextConfig: NextConfig = {
   // Enable Cache Components for improved caching with use cache directive
   cacheComponents: true,
   
-  // Configure server packages to externalize jsdom and related packages
-  // This prevents Next.js from trying to bundle them and avoids ESM/CommonJS conflicts
+  // Configure server packages to externalize native Node.js modules
+  // This prevents Next.js from trying to bundle them
   serverExternalPackages: [
-    'jsdom',
-    'parse5',
     'canvas',
     'sharp',
   ],
