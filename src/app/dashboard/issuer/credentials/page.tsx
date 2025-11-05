@@ -452,30 +452,30 @@ export default function ManageCredentialsPage() {
         <div className="flex mt-4">
           <DashboardSidebar userRole="issuer" />
 
-          <main className="flex-1 md:ml-80 p-4 md:p-8">
-            <div className="space-y-8">
+          <main className="flex-1 md:ml-80 p-4 md:p-8 max-w-full overflow-x-hidden">
+            <div className="space-y-8 max-w-full">
               {/* Header */}
               <div className="flex items-center justify-between">
-                <div className="space-y-2">
+                <div className="space-y-2 min-w-0">
                   <h1 className="text-3xl font-bold text-foreground">Manage Credentials</h1>
                   <p className="text-muted-foreground">View, manage, and revoke issued credentials</p>
                 </div>
               </div>
 
               {/* Search and Filters */}
-              <div className="flex gap-4 flex-col md:flex-row">
-                <div className="flex-1">
+              <div className="flex gap-4 flex-col md:flex-row w-full">
+                <div className="flex-1 min-w-0">
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       placeholder="Search by recipient email or template name..."
                       value={searchTerm}
                       onChange={handleSearch}
-                      className="bg-card/50 border-border/50 pl-10"
+                      className="bg-card/50 border-border/50 pl-10 w-full"
                     />
                   </div>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
                   <Button
                     variant={filter === "all" ? "default" : "outline"}
                     onClick={() => setFilter("all")}
@@ -508,9 +508,8 @@ export default function ManageCredentialsPage() {
               </div>
 
               {/* Credentials Table */}
-              <Card className="p-6 border border-border/50 bg-card/50 backdrop-blur overflow-hidden">
-                <div className="overflow-x-auto">
-                  <Table>
+              <Card className="p-6 border border-border/50 bg-card/50 backdrop-blur w-full">
+                <Table className="min-w-[800px]">
                     <TableHeader>
                       <TableRow>
                         <TableHead>Template</TableHead>
@@ -644,7 +643,6 @@ export default function ManageCredentialsPage() {
                       )}
                     </TableBody>
                   </Table>
-                </div>
                 
                 {/* Load More Button */}
                 {hasMore && !loading && (

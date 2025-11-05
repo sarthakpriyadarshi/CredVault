@@ -237,8 +237,8 @@ export default function OrganizationsPage() {
             }}
           />
 
-          <main className="flex-1 md:ml-80 p-4 md:p-8">
-            <div className="space-y-8">
+        <main className="flex-1 md:ml-80 p-4 md:p-8 max-w-full overflow-x-hidden">
+          <div className="space-y-8 max-w-full">
               {/* Header */}
               <div className="flex items-center justify-between">
                 <div className="space-y-2">
@@ -320,15 +320,14 @@ export default function OrganizationsPage() {
                     placeholder="Search organizations by name..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="flex-1 bg-transparent text-foreground placeholder:text-muted-foreground focus:outline-none"
+                    className="flex-1 bg-transparent text-foreground placeholder:text-muted-foreground focus:outline-none min-w-0"
                   />
                 </div>
               </Card>
 
               {/* Organizations Table */}
-              <Card className="p-6 border border-border/50 bg-card/50 backdrop-blur overflow-hidden">
-                <div className="overflow-x-auto">
-                  <Table>
+              <Card className="p-6 border border-border/50 bg-card/50 backdrop-blur w-full">
+                <Table className="min-w-[700px]">
                     <TableHeader>
                       <TableRow>
                         <TableHead>Name</TableHead>
@@ -476,7 +475,6 @@ export default function OrganizationsPage() {
                       )}
                     </TableBody>
                   </Table>
-                </div>
               </Card>
 
               {/* Edit Dialog */}

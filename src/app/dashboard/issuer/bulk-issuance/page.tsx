@@ -375,9 +375,9 @@ export default function BulkIssuancePage() {
                         <div className="flex items-center justify-between">
                           <h3 className="font-semibold text-foreground">CSV Preview ({csvPreview.length} rows)</h3>
                         </div>
-                        <div className="border border-border/50 rounded-lg overflow-hidden">
-                          <div className="max-h-96 overflow-auto">
-                            <Table>
+                        <div className="border border-border/50 rounded-lg">
+                          <div className="max-h-96 overflow-y-auto">
+                            <Table className="min-w-[600px]">
                               <TableHeader>
                                 <TableRow className="bg-background/50">
                                   {csvHeaders.map((header) => (

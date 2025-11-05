@@ -301,8 +301,8 @@ export default function VerificationPage() {
             }}
           />
 
-          <main className="flex-1 md:ml-80 p-4 md:p-8">
-            <div className="space-y-8">
+          <main className="flex-1 md:ml-80 p-4 md:p-8 max-w-full overflow-x-hidden">
+            <div className="space-y-8 max-w-full">
               {/* Header */}
               <div className="space-y-2">
                 <h1 className="text-3xl font-bold text-foreground">Verification Requests</h1>
@@ -312,7 +312,7 @@ export default function VerificationPage() {
               </div>
 
               {/* Filter Tabs */}
-              <div className="flex gap-2 overflow-x-auto pb-2">
+              <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1">
                 {[
                   { label: "All", value: "all", count: requests.length },
                   { label: "Pending", value: "pending", count: pendingCount },
@@ -334,9 +334,8 @@ export default function VerificationPage() {
               </div>
 
               {/* Verification Requests Table */}
-              <Card className="p-6 border border-border/50 bg-card/50 backdrop-blur overflow-hidden">
-                <div className="overflow-x-auto">
-                  <Table>
+              <Card className="p-6 border border-border/50 bg-card/50 backdrop-blur w-full">
+                <Table className="min-w-[700px]">
                     <TableHeader>
                       <TableRow>
                         <TableHead>Organization</TableHead>
@@ -541,7 +540,6 @@ export default function VerificationPage() {
                       )}
                     </TableBody>
                   </Table>
-                </div>
               </Card>
 
               {/* Edit Dialog */}
