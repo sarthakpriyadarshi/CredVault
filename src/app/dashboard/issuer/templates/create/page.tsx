@@ -25,6 +25,7 @@ import { PrimaryButton } from "@/components/ui/primary-button"
 import { GOOGLE_FONTS } from "@/lib/fonts"
 import { ColorPickerComponent } from "@/components/ui/color-picker"
 import { generateDummyQRCodeBrowser } from "@/lib/qrcode/browser-generator"
+import { IQRCodeStyling } from "@/models/Template"
 
 interface TemplateField {
   id: string
@@ -39,6 +40,7 @@ interface TemplateField {
   fontColor?: string
   bold?: boolean
   italic?: boolean
+  qrCodeStyling?: IQRCodeStyling // QR code styling options (only for QR type fields)
 }
 
 
@@ -580,8 +582,8 @@ export default function CreateTemplatePage() {
           ctx.textBaseline = "middle"
           ctx.fillText("QR Code", field.x + field.width / 2, field.y + field.height / 2)
           
-          // Generate and load QR code asynchronously (browser-compatible)
-          generateDummyQRCodeBrowser("https://credvault.app", Math.max(field.width, field.height))
+          // Generate and load QR code asynchronously (browser-compatible) with styling
+          generateDummyQRCodeBrowser("https://credvault.app", Math.max(field.width, field.height), field.qrCodeStyling)
             .then((dataUrl: string) => {
               const img = new Image()
               img.onload = () => {
@@ -963,7 +965,7 @@ export default function CreateTemplatePage() {
               // For QR codes, use the larger dimension to maintain square
               const qrSize = Math.max(imageWidth, imageHeight)
               
-              const fieldData = {
+              const fieldData: any = {
                 name: f.name,
                 type: f.type,
                 coordinates: {
@@ -972,6 +974,10 @@ export default function CreateTemplatePage() {
                   width: qrSize,
                   height: qrSize,
                 },
+              }
+              // Only include qrCodeStyling if it exists and has content
+              if (f.qrCodeStyling && Object.keys(f.qrCodeStyling).length > 0) {
+                fieldData.qrCodeStyling = f.qrCodeStyling
               }
               return fieldData
             }
@@ -1403,6 +1409,27 @@ export default function CreateTemplatePage() {
                             y,
                             width: qrSize,
                             height: qrSize,
+                            // Initialize with default QR code styling - white background, primary color dots
+                            qrCodeStyling: {
+                              dotsType: "rounded",
+                              dotsColor: "#f55971", // Primary color
+                              dotsColorType: "single",
+                              backgroundOptions: {
+                                color: "#FFFFFF", // White background by default
+                                colorType: "single",
+                              },
+                              cornersSquareOptions: {
+                                type: "extra-rounded",
+                                color: "#f55971", // Primary color
+                              },
+                              cornersDotOptions: {
+                                type: "dot",
+                                color: "#f55971", // Primary color
+                              },
+                              qrOptions: {
+                                errorCorrectionLevel: "H",
+                              },
+                            },
                           }
                           setFields([...fields, qrCodeField])
                           setSelectedField(qrCodeField.id)
@@ -1620,6 +1647,27 @@ export default function CreateTemplatePage() {
                                       fontColor: selectedFontColor,
                                       bold: false,
                                       italic: false,
+                                      // Initialize with default QR code styling - white background, primary color dots
+                                      qrCodeStyling: {
+                                        dotsType: "rounded",
+                                        dotsColor: "#f55971", // Primary color
+                                        dotsColorType: "single",
+                                        backgroundOptions: {
+                                          color: "#FFFFFF", // White background by default
+                                          colorType: "single",
+                                        },
+                                        cornersSquareOptions: {
+                                          type: "extra-rounded",
+                                          color: "#f55971", // Primary color
+                                        },
+                                        cornersDotOptions: {
+                                          type: "dot",
+                                          color: "#f55971", // Primary color
+                                        },
+                                        qrOptions: {
+                                          errorCorrectionLevel: "H",
+                                        },
+                                      },
                                     }
                                     setFields([...fields, qrCodeField])
                                     setSelectedField(qrCodeField.id)
@@ -1699,78 +1747,135 @@ export default function CreateTemplatePage() {
                     {/* Formatting Toolbar - Header Style */}
                     {selectedField && !previewMode && certificateImage && fields.find((f) => f.id === selectedField)?.x !== undefined && fields.find((f) => f.id === selectedField)?.y !== undefined && (
                       <div className="flex items-center gap-3 rounded-full bg-background/80 backdrop-blur-sm border border-border/50 shadow-lg px-4 py-2">
-                        <div className="flex items-center gap-2 flex-1">
-                          <Label className="text-xs text-muted-foreground whitespace-nowrap">Font:</Label>
-                          <Select
-                            value={fields.find((f) => f.id === selectedField)?.fontFamily || selectedFontFamily}
-                            onValueChange={(value) => {
-                              if (selectedField) {
-                                const updatedFields = fields.map((f) => (f.id === selectedField ? { ...f, fontFamily: value } : f))
-                                const updatedField = updatedFields.find((f) => f.id === selectedField)
-                                // If Name field was updated, propagate styling to optional fields
-                                if (updatedField && updatedField.name.toLowerCase().trim() === "name") {
-                                  const propagatedFields = propagateNameFieldStyling(updatedFields, updatedField)
-                                  setFields(propagatedFields)
-                                } else {
-                                  setFields(updatedFields)
-                                }
-                              } else {
-                                setSelectedFontFamily(value)
-                              }
-                            }}
-                          >
-                            <SelectTrigger className="h-8 w-[140px] text-xs bg-transparent border-border/50">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent className="max-h-[200px]">
-                              {googleFonts.map((font) => (
-                                <SelectItem key={font} value={font} style={{ fontFamily: font }}>
-                                  {font}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                          <Label className="text-xs text-muted-foreground whitespace-nowrap">Size:</Label>
-                          <div className="flex items-center gap-1.5">
-                            <Input
-                              type="number"
-                              min="1"
-                              max="72"
-                              value={fields.find((f) => f.id === selectedField)?.fontSize || selectedFontSize}
-                              onChange={(e) => {
-                                const inputValue = e.target.value
-                                // Allow empty input for user to type freely
-                                if (inputValue === "") {
+                        {/* Show font controls only for non-QR fields */}
+                        {fields.find((f) => f.id === selectedField)?.type !== "qr" && (
+                          <>
+                            <div className="flex items-center gap-2 flex-1">
+                              <Label className="text-xs text-muted-foreground whitespace-nowrap">Font:</Label>
+                              <Select
+                                value={fields.find((f) => f.id === selectedField)?.fontFamily || selectedFontFamily}
+                                onValueChange={(value) => {
                                   if (selectedField) {
-                                    const updatedFields = fields.map((f) => (f.id === selectedField ? { ...f, fontSize: undefined } : f))
-                                    setFields(updatedFields)
+                                    const updatedFields = fields.map((f) => (f.id === selectedField ? { ...f, fontFamily: value } : f))
+                                    const updatedField = updatedFields.find((f) => f.id === selectedField)
+                                    // If Name field was updated, propagate styling to optional fields
+                                    if (updatedField && updatedField.name.toLowerCase().trim() === "name") {
+                                      const propagatedFields = propagateNameFieldStyling(updatedFields, updatedField)
+                                      setFields(propagatedFields)
+                                    } else {
+                                      setFields(updatedFields)
+                                    }
                                   } else {
-                                    setSelectedFontSize(16)
+                                    setSelectedFontFamily(value)
                                   }
-                                  return
-                                }
-                                
-                                let size = parseInt(inputValue)
-                                if (isNaN(size)) return
-                                
-                                if (selectedField) {
-                                  const field = fields.find((f) => f.id === selectedField)
-                                  if (field && field.x !== undefined && field.y !== undefined) {
-                                    // Calculate maximum allowed font size based on field dimensions
-                                    const fontFamily = field.fontFamily || selectedFontFamily
-                                    const isBold = field.bold || false
-                                    const isItalic = field.italic || false
-                                    const maxSize = calculateMaxFontSize(field, field.name, fontFamily, isBold, isItalic)
+                                }}
+                              >
+                                <SelectTrigger className="h-8 w-[140px] text-xs bg-transparent border-border/50">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent className="max-h-[200px]">
+                                  {googleFonts.map((font) => (
+                                    <SelectItem key={font} value={font} style={{ fontFamily: font }}>
+                                      {font}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              <Label className="text-xs text-muted-foreground whitespace-nowrap">Size:</Label>
+                              <div className="flex items-center gap-1.5">
+                                <Input
+                                  type="number"
+                                  min="1"
+                                  max="72"
+                                  value={fields.find((f) => f.id === selectedField)?.fontSize || selectedFontSize}
+                                  onChange={(e) => {
+                                    const inputValue = e.target.value
+                                    // Allow empty input for user to type freely
+                                    if (inputValue === "") {
+                                      if (selectedField) {
+                                        const updatedFields = fields.map((f) => (f.id === selectedField ? { ...f, fontSize: undefined } : f))
+                                        setFields(updatedFields)
+                                      } else {
+                                        setSelectedFontSize(16)
+                                      }
+                                      return
+                                    }
                                     
-                                    // Only cap to maximum allowed - save exactly as user typed (no minimum enforcement)
-                                    size = Math.min(size, maxSize)
+                                    let size = parseInt(inputValue)
+                                    if (isNaN(size)) return
+                                    
+                                    if (selectedField) {
+                                      const field = fields.find((f) => f.id === selectedField)
+                                      if (field && field.x !== undefined && field.y !== undefined) {
+                                        // Calculate maximum allowed font size based on field dimensions
+                                        const fontFamily = field.fontFamily || selectedFontFamily
+                                        const isBold = field.bold || false
+                                        const isItalic = field.italic || false
+                                        const maxSize = calculateMaxFontSize(field, field.name, fontFamily, isBold, isItalic)
+                                        
+                                        // Only cap to maximum allowed - save exactly as user typed (no minimum enforcement)
+                                        size = Math.min(size, maxSize)
+                                      }
+                                      
+                                      // Save exactly as user typed (no automatic changes)
+                                      const updatedFields = fields.map((f) => (f.id === selectedField ? { ...f, fontSize: size } : f))
+                                      const updatedField = updatedFields.find((f) => f.id === selectedField)
+                                      // If Name field was updated, propagate styling to optional fields
+                                      if (updatedField && updatedField.name.toLowerCase().trim() === "name") {
+                                        const propagatedFields = propagateNameFieldStyling(updatedFields, updatedField)
+                                        setFields(propagatedFields)
+                                      } else {
+                                        setFields(updatedFields)
+                                      }
+                                    } else {
+                                      setSelectedFontSize(size)
+                                    }
+                                  }}
+                                  className="h-8 w-16 text-xs bg-background border-2 border-border rounded [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                />
+                                <span className="text-xs text-muted-foreground">px</span>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              <ColorPickerComponent
+                                label="Color:"
+                                value={fields.find((f) => f.id === selectedField)?.fontColor || selectedFontColor}
+                                onChange={(color) => {
+                                  if (selectedField) {
+                                    const updatedFields = fields.map((f) => (f.id === selectedField ? { ...f, fontColor: color } : f))
+                                    const updatedField = updatedFields.find((f) => f.id === selectedField)
+                                    // If Name field was updated, propagate styling to optional fields
+                                    if (updatedField && updatedField.name.toLowerCase().trim() === "name") {
+                                      const propagatedFields = propagateNameFieldStyling(updatedFields, updatedField)
+                                      setFields(propagatedFields)
+                                    } else {
+                                      setFields(updatedFields)
+                                    }
+                                  } else {
+                                    setSelectedFontColor(color)
                                   }
-                                  
-                                  // Save exactly as user typed (no automatic changes)
-                                  const updatedFields = fields.map((f) => (f.id === selectedField ? { ...f, fontSize: size } : f))
+                                }}
+                              />
+                            </div>
+                          </>
+                        )}
+
+                        {/* Show text formatting only for non-QR fields */}
+                        {fields.find((f) => f.id === selectedField)?.type !== "qr" && (
+                          <div className="flex items-center gap-1 border-l border-border/50 pl-3">
+                            <Button
+                              type="button"
+                              variant={fields.find((f) => f.id === selectedField)?.bold ? "secondary" : "ghost"}
+                              size="sm"
+                              className={`h-8 w-8 p-0 ${fields.find((f) => f.id === selectedField)?.bold ? "bg-primary/20 text-primary" : ""}`}
+                              onClick={() => {
+                                if (selectedField) {
+                                  const currentField = fields.find((f) => f.id === selectedField)
+                                  const updatedFields = fields.map((f) => (f.id === selectedField ? { ...f, bold: !(currentField?.bold || false) } : f))
                                   const updatedField = updatedFields.find((f) => f.id === selectedField)
                                   // If Name field was updated, propagate styling to optional fields
                                   if (updatedField && updatedField.name.toLowerCase().trim() === "name") {
@@ -1779,86 +1884,182 @@ export default function CreateTemplatePage() {
                                   } else {
                                     setFields(updatedFields)
                                   }
-                                } else {
-                                  setSelectedFontSize(size)
                                 }
                               }}
-                              className="h-8 w-16 text-xs bg-background border-2 border-border rounded [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                            />
-                            <span className="text-xs text-muted-foreground">px</span>
+                              title="Bold"
+                            >
+                              <Bold className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              type="button"
+                              variant={fields.find((f) => f.id === selectedField)?.italic ? "secondary" : "ghost"}
+                              size="sm"
+                              className={`h-8 w-8 p-0 ${fields.find((f) => f.id === selectedField)?.italic ? "bg-primary/20 text-primary" : ""}`}
+                              onClick={() => {
+                                if (selectedField) {
+                                  const currentField = fields.find((f) => f.id === selectedField)
+                                  const updatedFields = fields.map((f) => (f.id === selectedField ? { ...f, italic: !(currentField?.italic || false) } : f))
+                                  const updatedField = updatedFields.find((f) => f.id === selectedField)
+                                  // If Name field was updated, propagate styling to optional fields
+                                  if (updatedField && updatedField.name.toLowerCase().trim() === "name") {
+                                    const propagatedFields = propagateNameFieldStyling(updatedFields, updatedField)
+                                    setFields(propagatedFields)
+                                  } else {
+                                    setFields(updatedFields)
+                                  }
+                                }
+                              }}
+                              title="Italic"
+                            >
+                              <Italic className="h-4 w-4" />
+                            </Button>
                           </div>
-                        </div>
+                        )}
 
-                        <div className="flex items-center gap-2">
-                          <ColorPickerComponent
-                            label="Color:"
-                            value={fields.find((f) => f.id === selectedField)?.fontColor || selectedFontColor}
-                            onChange={(color) => {
-                              if (selectedField) {
-                                const updatedFields = fields.map((f) => (f.id === selectedField ? { ...f, fontColor: color } : f))
-                                const updatedField = updatedFields.find((f) => f.id === selectedField)
-                                // If Name field was updated, propagate styling to optional fields
-                                if (updatedField && updatedField.name.toLowerCase().trim() === "name") {
-                                  const propagatedFields = propagateNameFieldStyling(updatedFields, updatedField)
-                                  setFields(propagatedFields)
-                                } else {
-                                  setFields(updatedFields)
-                                }
-                              } else {
-                                setSelectedFontColor(color)
-                              }
-                            }}
-                          />
-                        </div>
+                        {/* QR Code Customization in Toolbar */}
+                        {fields.find((f) => f.id === selectedField)?.type === "qr" && (
+                          <>
+                            <div className="flex items-center gap-2 border-l border-border/50 pl-3">
+                              <Label className="text-xs text-muted-foreground whitespace-nowrap">Dot Type:</Label>
+                              <Select
+                                value={fields.find((f) => f.id === selectedField)?.qrCodeStyling?.dotsType || "rounded"}
+                                onValueChange={(value: "square" | "rounded" | "dots" | "classy" | "classy-rounded" | "extra-rounded") => {
+                                  const currentField = fields.find((f) => f.id === selectedField)
+                                  if (currentField) {
+                                    const updatedFields = fields.map((f) =>
+                                      f.id === selectedField
+                                        ? {
+                                            ...f,
+                                            qrCodeStyling: {
+                                              ...f.qrCodeStyling,
+                                              dotsType: value,
+                                            },
+                                          }
+                                        : f
+                                    )
+                                    setFields(updatedFields)
+                                    qrCodeImagesRef.current.delete(selectedField)
+                                    drawCanvas()
+                                  }
+                                }}
+                              >
+                                <SelectTrigger className="h-8 w-[120px] text-xs bg-transparent border-border/50">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="square">Square</SelectItem>
+                                  <SelectItem value="rounded">Rounded</SelectItem>
+                                  <SelectItem value="dots">Dots</SelectItem>
+                                  <SelectItem value="classy">Classy</SelectItem>
+                                  <SelectItem value="classy-rounded">Classy Rounded</SelectItem>
+                                  <SelectItem value="extra-rounded">Extra Rounded</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
 
-                        <div className="flex items-center gap-1 border-l border-border/50 pl-3">
-                          <Button
-                            type="button"
-                            variant={fields.find((f) => f.id === selectedField)?.bold ? "secondary" : "ghost"}
-                            size="sm"
-                            className={`h-8 w-8 p-0 ${fields.find((f) => f.id === selectedField)?.bold ? "bg-primary/20 text-primary" : ""}`}
-                            onClick={() => {
-                              if (selectedField) {
-                                const currentField = fields.find((f) => f.id === selectedField)
-                                const updatedFields = fields.map((f) => (f.id === selectedField ? { ...f, bold: !(currentField?.bold || false) } : f))
-                                const updatedField = updatedFields.find((f) => f.id === selectedField)
-                                // If Name field was updated, propagate styling to optional fields
-                                if (updatedField && updatedField.name.toLowerCase().trim() === "name") {
-                                  const propagatedFields = propagateNameFieldStyling(updatedFields, updatedField)
-                                  setFields(propagatedFields)
-                                } else {
-                                  setFields(updatedFields)
-                                }
-                              }
-                            }}
-                            title="Bold"
-                          >
-                            <Bold className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            type="button"
-                            variant={fields.find((f) => f.id === selectedField)?.italic ? "secondary" : "ghost"}
-                            size="sm"
-                            className={`h-8 w-8 p-0 ${fields.find((f) => f.id === selectedField)?.italic ? "bg-primary/20 text-primary" : ""}`}
-                            onClick={() => {
-                              if (selectedField) {
-                                const currentField = fields.find((f) => f.id === selectedField)
-                                const updatedFields = fields.map((f) => (f.id === selectedField ? { ...f, italic: !(currentField?.italic || false) } : f))
-                                const updatedField = updatedFields.find((f) => f.id === selectedField)
-                                // If Name field was updated, propagate styling to optional fields
-                                if (updatedField && updatedField.name.toLowerCase().trim() === "name") {
-                                  const propagatedFields = propagateNameFieldStyling(updatedFields, updatedField)
-                                  setFields(propagatedFields)
-                                } else {
-                                  setFields(updatedFields)
-                                }
-                              }
-                            }}
-                            title="Italic"
-                          >
-                            <Italic className="h-4 w-4" />
-                          </Button>
-                        </div>
+                            <div className="flex items-center gap-2 border-l border-border/50 pl-3">
+                              <Label className="text-xs text-muted-foreground whitespace-nowrap">Dots:</Label>
+                              <ColorPickerComponent
+                                value={(() => {
+                                  const field = fields.find((f) => f.id === selectedField)
+                                  return field?.qrCodeStyling?.dotsColor || field?.qrCodeStyling?.cornersSquareOptions?.color || "#f55971"
+                                })()}
+                                onChange={(color) => {
+                                  const currentField = fields.find((f) => f.id === selectedField)
+                                  if (currentField) {
+                                    const updatedFields = fields.map((f) =>
+                                      f.id === selectedField
+                                        ? {
+                                            ...f,
+                                            qrCodeStyling: {
+                                              ...(f.qrCodeStyling || {}),
+                                              dotsType: f.qrCodeStyling?.dotsType || "rounded",
+                                              dotsColor: color,
+                                              dotsColorType: "single" as const,
+                                              // Also update corners to match dots color
+                                              cornersSquareOptions: {
+                                                ...f.qrCodeStyling?.cornersSquareOptions,
+                                                type: f.qrCodeStyling?.cornersSquareOptions?.type || "extra-rounded",
+                                                color: color,
+                                              },
+                                              cornersDotOptions: {
+                                                ...f.qrCodeStyling?.cornersDotOptions,
+                                                type: f.qrCodeStyling?.cornersDotOptions?.type || "dot",
+                                                color: color,
+                                              },
+                                              backgroundOptions: f.qrCodeStyling?.backgroundOptions || {
+                                                color: "#FFFFFF",
+                                                colorType: "single" as const,
+                                              },
+                                              qrOptions: f.qrCodeStyling?.qrOptions || {
+                                                errorCorrectionLevel: "H" as const,
+                                              },
+                                            },
+                                          }
+                                        : f
+                                    )
+                                    setFields(updatedFields)
+                                    qrCodeImagesRef.current.delete(selectedField)
+                                    drawCanvas()
+                                  }
+                                }}
+                              />
+                            </div>
+
+                            <div className="flex items-center gap-2 border-l border-border/50 pl-3">
+                              <Label className="text-xs text-muted-foreground whitespace-nowrap">BG:</Label>
+                              <ColorPickerComponent
+                                value={(() => {
+                                  const field = fields.find((f) => f.id === selectedField)
+                                  // If gradient, show the base color, otherwise show the color
+                                  if (field?.qrCodeStyling?.backgroundOptions?.colorType === "gradient") {
+                                    return field.qrCodeStyling.backgroundOptions.color || "#FFFFFF"
+                                  }
+                                  return field?.qrCodeStyling?.backgroundOptions?.color || "#FFFFFF"
+                                })()}
+                                onChange={(color) => {
+                                  const currentField = fields.find((f) => f.id === selectedField)
+                                  if (currentField) {
+                                    const updatedFields = fields.map((f) =>
+                                      f.id === selectedField
+                                        ? {
+                                            ...f,
+                                            qrCodeStyling: {
+                                              ...(f.qrCodeStyling || {}),
+                                              dotsType: f.qrCodeStyling?.dotsType || "rounded",
+                                              dotsColor: f.qrCodeStyling?.dotsColor || "#000000",
+                                              dotsColorType: (f.qrCodeStyling?.dotsColorType || "single") as "single" | "gradient",
+                                              cornersSquareOptions: f.qrCodeStyling?.cornersSquareOptions || {
+                                                type: "extra-rounded" as const,
+                                                color: f.qrCodeStyling?.dotsColor || "#000000",
+                                              },
+                                              cornersDotOptions: f.qrCodeStyling?.cornersDotOptions || {
+                                                type: "dot" as const,
+                                                color: f.qrCodeStyling?.dotsColor || "#000000",
+                                              },
+                                              backgroundOptions: {
+                                                ...f.qrCodeStyling?.backgroundOptions,
+                                                color,
+                                                colorType: "single" as const,
+                                                // Remove gradient when setting solid color
+                                                gradient: undefined,
+                                              },
+                                              qrOptions: f.qrCodeStyling?.qrOptions || {
+                                                errorCorrectionLevel: "H" as const,
+                                              },
+                                            },
+                                          }
+                                        : f
+                                    )
+                                    setFields(updatedFields)
+                                    qrCodeImagesRef.current.delete(selectedField)
+                                    drawCanvas()
+                                  }
+                                }}
+                              />
+                            </div>
+                          </>
+                        )}
                       </div>
                     )}
 
@@ -1954,43 +2155,46 @@ export default function CreateTemplatePage() {
 
                     {/* Field Controls */}
                     {selectedField && !previewMode && certificateImage && fields.find((f) => f.id === selectedField)?.x !== undefined && fields.find((f) => f.id === selectedField)?.y !== undefined && (
-                      <Card className="p-4 bg-background/50 border border-primary/20 space-y-3">
-                        <h3 className="font-semibold text-sm text-foreground">Field Controls</h3>
-                        <div className="grid grid-cols-4 gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => updateFieldPosition(selectedField, -10, 0)}
-                            className="gap-1"
-                          >
-                            ← Move
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => updateFieldPosition(selectedField, 10, 0)}
-                            className="gap-1"
-                          >
-                            Move →
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => updateFieldPosition(selectedField, 0, -10)}
-                            className="gap-1"
-                          >
-                            ↑ Move
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => updateFieldPosition(selectedField, 0, 10)}
-                            className="gap-1"
-                          >
-                            Move ↓
-                          </Button>
-                        </div>
-                      </Card>
+                      <>
+                        <Card className="p-4 bg-background/50 border border-primary/20 space-y-3">
+                          <h3 className="font-semibold text-sm text-foreground">Field Controls</h3>
+                          <div className="grid grid-cols-4 gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => updateFieldPosition(selectedField, -10, 0)}
+                              className="gap-1"
+                            >
+                              ← Move
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => updateFieldPosition(selectedField, 10, 0)}
+                              className="gap-1"
+                            >
+                              Move →
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => updateFieldPosition(selectedField, 0, -10)}
+                              className="gap-1"
+                            >
+                              ↑ Move
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => updateFieldPosition(selectedField, 0, 10)}
+                              className="gap-1"
+                            >
+                              Move ↓
+                            </Button>
+                          </div>
+                        </Card>
+
+                      </>
                     )}
 
                     {/* Action Buttons */}

@@ -1,5 +1,36 @@
 import mongoose, { Schema, Document, Model } from "mongoose"
 
+export interface IQRCodeStyling {
+  dotsType?: "square" | "rounded" | "dots" | "classy" | "classy-rounded" | "extra-rounded"
+  dotsColor?: string // Single color or gradient
+  dotsColorType?: "single" | "gradient"
+  gradient?: {
+    type: "linear" | "radial"
+    rotation?: number // For linear gradients
+    colorStops: Array<{ offset: number; color: string }>
+  }
+  backgroundOptions?: {
+    color?: string
+    colorType?: "single" | "gradient"
+    gradient?: {
+      type: "linear" | "radial"
+      rotation?: number
+      colorStops: Array<{ offset: number; color: string }>
+    }
+  }
+  cornersSquareOptions?: {
+    type?: "square" | "extra-rounded" | "dot"
+    color?: string
+  }
+  cornersDotOptions?: {
+    type?: "square" | "dot"
+    color?: string
+  }
+  qrOptions?: {
+    errorCorrectionLevel?: "L" | "M" | "Q" | "H"
+  }
+}
+
 export interface IPlaceholder {
   fieldName: string
   type: "text" | "number" | "date" | "email" | "id" | "custom" | "qr"
@@ -13,6 +44,7 @@ export interface IPlaceholder {
   align?: "left" | "center" | "right"
   bold?: boolean
   italic?: boolean
+  qrCodeStyling?: IQRCodeStyling // QR code styling options (only for QR type fields)
 }
 
 export interface ITemplate extends Document {
@@ -82,6 +114,10 @@ const PlaceholderSchema = new Schema<IPlaceholder>(
     italic: {
       type: Boolean,
       default: false,
+    },
+    qrCodeStyling: {
+      type: Schema.Types.Mixed,
+      required: false,
     },
   },
   { _id: false }

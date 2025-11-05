@@ -1,6 +1,6 @@
 /**
- * QR Code generator with logo support
- * Uses qrcode library to generate QR codes with custom logo in center
+ * QR Code generator with logo support using qr-code-styling
+ * Uses qr-code-styling to generate styled QR codes with custom logo in center
  * 
  * SERVER-ONLY: This file uses Node.js modules and cannot run in the browser
  */
@@ -10,125 +10,183 @@ if (typeof window !== "undefined") {
   throw new Error("This module can only be used on the server side")
 }
 
-import QRCode from "qrcode"
+import QRCodeStyling from "qr-code-styling"
 import { createCanvas, loadImage } from "canvas"
 import sharp from "sharp"
 import path from "path"
 import fs from "fs"
+import { JSDOM } from "jsdom"
+import { IQRCodeStyling } from "@/models/Template"
 
 /**
- * Generate a QR code image with logo in the center
+ * Generate a QR code image with logo and styling
  * @param url - The URL to encode in the QR code
  * @param size - The size of the QR code (width and height, in pixels)
- * @param logoPath - Optional path to logo file (defaults to public/logo.svg)
+ * @param styling - Optional QR code styling options
+ * @param logoPath - Optional path to logo file (defaults to public/qrcode-logo.svg)
  * @returns Base64 data URL of the QR code image
  */
 export async function generateQRCodeWithLogo(
   url: string,
   size: number,
+  styling?: IQRCodeStyling,
   logoPath?: string
 ): Promise<string> {
   try {
-    // Generate QR code without logo first
-    const qrCodeDataURL = await QRCode.toDataURL(url, {
-      width: size,
-      margin: 2,
-      color: {
-        dark: "#000000",
-        light: "#FFFFFF",
-      },
-    })
-
-    // Extract base64 data from data URL
-    const matches = qrCodeDataURL.match(/^data:([^;]+);base64,(.+)$/)
-    if (!matches || matches.length < 3) {
-      throw new Error("Invalid QR code data URL format")
-    }
-
-    const base64Data = matches[2]
-    const qrCodeBuffer = Buffer.from(base64Data, "base64")
-
-    // Load QR code image
-    const qrCodeImage = await loadImage(qrCodeBuffer)
-
-    // Create canvas
-    const canvas = createCanvas(size, size)
-    const ctx = canvas.getContext("2d")
-
-    // Draw QR code
-    ctx.drawImage(qrCodeImage, 0, 0, size, size)
-
-    // Load and draw logo in center if provided
-    const defaultLogoPath = path.join(process.cwd(), "public", "logo.svg")
+    // Use qrcode-logo.svg as the default logo
+    const defaultLogoPath = path.join(process.cwd(), "public", "qrcode-logo.svg")
     const finalLogoPath = logoPath || defaultLogoPath
     
-    if (finalLogoPath) {
-      try {
-        const logoPathResolved = path.resolve(finalLogoPath)
-        if (fs.existsSync(logoPathResolved)) {
-          // Check if it's SVG or image
-          const isSVG = logoPathResolved.endsWith(".svg")
-          
-          let logoBuffer: Buffer
-          if (isSVG) {
-            // Convert SVG to PNG using sharp
-            logoBuffer = await sharp(logoPathResolved)
-              .resize(Math.floor(size * 0.2), Math.floor(size * 0.2), {
-                fit: "inside",
-                withoutEnlargement: true,
-              })
-              .png()
-              .toBuffer()
-          } else {
-            // Load and resize image
-            logoBuffer = await sharp(logoPathResolved)
-              .resize(Math.floor(size * 0.2), Math.floor(size * 0.2), {
-                fit: "inside",
-                withoutEnlargement: true,
-              })
-              .png()
-              .toBuffer()
-          }
+    // Prepare logo - for SVG generation with jsdom, we need to read the file and convert to data URL
+    let logoImagePath: string | undefined
+    if (fs.existsSync(finalLogoPath)) {
+      // Read the SVG file and convert to data URL for jsdom compatibility
+      const logoContent = fs.readFileSync(finalLogoPath, "utf-8")
+      // Convert SVG to data URL
+      const base64Logo = Buffer.from(logoContent).toString("base64")
+      logoImagePath = `data:image/svg+xml;base64,${base64Logo}`
+    }
 
-          const logoImage = await loadImage(logoBuffer)
-          const logoSize = Math.floor(size * 0.2)
-          const logoX = (size - logoSize) / 2
-          const logoY = (size - logoSize) / 2
+    // Build dots options - use the styling from template
+    const dotsOptions: any = {
+      color: styling?.dotsColor || "#000000",
+      type: styling?.dotsType || "rounded",
+    }
 
-          // Draw white background for logo
-          ctx.fillStyle = "#FFFFFF"
-          ctx.fillRect(
-            logoX - 4,
-            logoY - 4,
-            logoSize + 8,
-            logoSize + 8
-          )
-
-          // Draw logo
-          ctx.drawImage(logoImage, logoX, logoY, logoSize, logoSize)
+    // Handle gradient for dots
+    if (styling?.dotsColorType === "gradient" && styling?.gradient) {
+      const gradient = styling.gradient
+      if (gradient.type === "linear") {
+        dotsOptions.gradient = {
+          type: "linear",
+          rotation: gradient.rotation || 0,
+          colorStops: gradient.colorStops,
         }
-      } catch (logoError) {
-        console.warn("Failed to load logo for QR code:", logoError)
-        // Continue without logo if it fails
+      } else {
+        dotsOptions.gradient = {
+          type: "radial",
+          colorStops: gradient.colorStops,
+        }
       }
     }
 
-    // Convert canvas to base64
-    const buffer = canvas.toBuffer("image/png")
-    const base64 = buffer.toString("base64")
+    // Build background options
+    // Use the styling from template if provided, otherwise default to white
+    const backgroundOptions: any = {
+      color: "#FFFFFF", // Default to white
+    }
+
+    // Check if styling has background options
+    if (styling?.backgroundOptions) {
+      // Use gradient if explicitly provided
+      if (styling.backgroundOptions.gradient) {
+        const bgGradient = styling.backgroundOptions.gradient
+        if (bgGradient.type === "linear") {
+          backgroundOptions.gradient = {
+            type: "linear",
+            rotation: bgGradient.rotation || 0,
+            colorStops: bgGradient.colorStops,
+          }
+        } else {
+          backgroundOptions.gradient = {
+            type: "radial",
+            colorStops: bgGradient.colorStops,
+          }
+        }
+        // Also set the base color for gradient
+        if (styling.backgroundOptions.color) {
+          backgroundOptions.color = styling.backgroundOptions.color
+        }
+      } else if (styling.backgroundOptions.color) {
+        // Use the color if provided (regardless of colorType)
+        backgroundOptions.color = styling.backgroundOptions.color
+      }
+    }
+
+    // Build corners options - use dotsColor if corners color not explicitly set
+    const cornersSquareOptions = {
+      type: styling?.cornersSquareOptions?.type || "extra-rounded",
+      color: styling?.cornersSquareOptions?.color || styling?.dotsColor || "#000000",
+    }
+
+    const cornersDotOptions = {
+      type: styling?.cornersDotOptions?.type || "dot",
+      color: styling?.cornersDotOptions?.color || styling?.dotsColor || "#000000",
+    }
+
+    // Build QR options
+    const qrOptions = {
+      errorCorrectionLevel: styling?.qrOptions?.errorCorrectionLevel || "H",
+    }
+
+    // Create QR code styling instance
+    // qr-code-styling needs jsdom to work in Node.js environment
+    // Use SVG type and convert to PNG with sharp for better Node.js compatibility
+    const qrCodeOptions: any = {
+      width: size,
+      height: size,
+      type: "svg", // Use SVG type - more reliable with jsdom
+      data: url,
+      image: logoImagePath,
+      dotsOptions,
+      backgroundOptions,
+      cornersSquareOptions,
+      cornersDotOptions,
+      qrOptions,
+      imageOptions: {
+        crossOrigin: "anonymous",
+        margin: 0, // No margin for logo
+        imageSize: 0.3, // Logo takes 30% of QR code size
+      },
+      jsdom: JSDOM, // Provide jsdom for DOM environment
+    }
+    
+    const qrCode = new QRCodeStyling(qrCodeOptions)
+
+    // Get SVG string from qr-code-styling
+    const svgString = await qrCode.getRawData("svg")
+    
+    if (!svgString) {
+      throw new Error("Failed to generate QR code SVG")
+    }
+
+    // Convert SVG string to PNG buffer using sharp
+    const svgBuffer = Buffer.from(typeof svgString === "string" ? svgString : svgString.toString())
+    const pngBuffer = await sharp(svgBuffer)
+      .resize(size, size)
+      .png()
+      .toBuffer()
+
+    // Convert to base64 data URL
+    const base64 = pngBuffer.toString("base64")
     return `data:image/png;base64,${base64}`
   } catch (error) {
     console.error("Error generating QR code:", error)
-    throw error
+    // Fallback to simple QR code if styling fails
+    try {
+      const QRCode = await import("qrcode")
+      const qrCodeDataURL = await QRCode.toDataURL(url, {
+        width: size,
+        margin: 2,
+        color: {
+          dark: styling?.dotsColor || "#000000",
+          light: styling?.backgroundOptions?.color || "#FFFFFF",
+        },
+      })
+      return qrCodeDataURL
+    } catch (fallbackError) {
+      console.error("Fallback QR code generation also failed:", fallbackError)
+      throw error
+    }
   }
 }
 
 /**
  * Generate a dummy QR code for preview (uses credvault.app)
  * @param size - The size of the QR code
+ * @param styling - Optional QR code styling options
  * @returns Base64 data URL
  */
-export async function generateDummyQRCode(size: number): Promise<string> {
-  return generateQRCodeWithLogo("https://credvault.app", size)
+export async function generateDummyQRCode(size: number, styling?: IQRCodeStyling): Promise<string> {
+  return generateQRCodeWithLogo("https://credvault.app", size, styling)
 }
-

@@ -94,13 +94,14 @@ async function postHandler(
       useBlockchain?: boolean
       fields: Array<{
         name: string
-        type: "text" | "email" | "number" | "date" | "id" | "qr"
+        type: "text" | "email" | "number" | "date" | "id" | "qr" | "custom"
         coordinates?: { x: number; y: number; width: number; height: number } // Optional for email fields
         fontFamily?: string
         fontSize?: number
         fontColor?: string
         bold?: boolean
         italic?: boolean
+        qrCodeStyling?: any // QR code styling options
       }>
       certificateImage?: string
       badgeImage?: string
@@ -142,6 +143,7 @@ async function postHandler(
           height?: number // For QR code fields
           bold?: boolean
           italic?: boolean
+          qrCodeStyling?: any // QR code styling options
         }> = []
 
         for (const field of fields) {
@@ -173,7 +175,7 @@ async function postHandler(
 
           // Build placeholder object - for email fields and optional date fields without coordinates, omit x/y entirely
           if (isQRCodeField) {
-            // QR code field - store coordinates and size
+            // QR code field - store coordinates, size, and styling
             placeholders.push({
               fieldName: field.name,
               type: field.type,
@@ -181,6 +183,7 @@ async function postHandler(
               y: field.coordinates!.y,
               width: field.coordinates!.width,
               height: field.coordinates!.height,
+              qrCodeStyling: field.qrCodeStyling || undefined, // Include QR code styling
             })
           } else if (isEmailField || isIssueDateField || isExpiryDateField) {
             // Email or optional date field - coordinates are optional

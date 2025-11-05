@@ -86,13 +86,14 @@ async function handler(
         type: "certificate" | "badge" | "both"
         fields: Array<{
           name: string
-          type: "text" | "email" | "number" | "date" | "id"
+          type: "text" | "email" | "number" | "date" | "id" | "qr" | "custom"
           coordinates?: { x: number; y: number; width: number; height: number }
           fontFamily?: string
           fontSize?: number
           fontColor?: string
           bold?: boolean
           italic?: boolean
+          qrCodeStyling?: any // QR code styling options
         }>
         certificateImage?: string
         badgeImage?: string
@@ -124,26 +125,35 @@ async function handler(
         height?: number // For QR code fields
         bold?: boolean
         italic?: boolean
+        qrCodeStyling?: any // QR code styling options
       }> = []
 
       for (const field of fields) {
         // Email fields and optional date fields (Issue Date, Expiry Date) may not have coordinates
         const isEmailField = field.type === "email"
+        const isQRCodeField = field.type === "qr"
         const isIssueDateField = field.type === "date" && field.name.toLowerCase().trim() === "issue date"
         const isExpiryDateField = field.type === "date" && field.name.toLowerCase().trim() === "expiry date"
         
-        // Only require coordinates for fields that are not email or optional date fields
-        if (!isEmailField && !isIssueDateField && !isExpiryDateField) {
-          if (!field.coordinates || field.coordinates.x === undefined || field.coordinates.y === undefined) {
+        // QR code fields must have coordinates and size
+        if (isQRCodeField) {
+          if (!field.coordinates || field.coordinates.x === undefined || field.coordinates.y === undefined || !field.coordinates.width || !field.coordinates.height) {
             return NextResponse.json(
-              { error: `Field "${field.name}" (${field.type}) must have coordinates` },
+              { error: `QR Code field "${field.name}" must have coordinates and size` },
               { status: 400 }
             )
           }
-        }
-
-        // Build placeholder object - for email fields and optional date fields without coordinates, omit x/y entirely
-        if (isEmailField || isIssueDateField || isExpiryDateField) {
+          // QR code field - store coordinates, size, and styling
+          placeholders.push({
+            fieldName: field.name,
+            type: field.type,
+            x: field.coordinates.x,
+            y: field.coordinates.y,
+            width: field.coordinates.width,
+            height: field.coordinates.height,
+            qrCodeStyling: field.qrCodeStyling || undefined, // Include QR code styling
+          })
+        } else if (isEmailField || isIssueDateField || isExpiryDateField) {
           // Email or optional date field - coordinates are optional
           if (field.coordinates && field.coordinates.x !== undefined && field.coordinates.y !== undefined) {
             // Field with coordinates (displayed on certificate)
@@ -173,6 +183,13 @@ async function handler(
             })
           }
         } else {
+          // Only require coordinates for fields that are not email, QR, or optional date fields
+          if (!field.coordinates || field.coordinates.x === undefined || field.coordinates.y === undefined) {
+            return NextResponse.json(
+              { error: `Field "${field.name}" (${field.type}) must have coordinates` },
+              { status: 400 }
+            )
+          }
           // Other fields - coordinates are required (already validated)
           placeholders.push({
             fieldName: field.name,
@@ -181,8 +198,8 @@ async function handler(
             fontFamily: field.fontFamily || "Arial",
             color: field.fontColor || "#000000",
             align: "center" as const,
-            x: field.coordinates!.x,
-            y: field.coordinates!.y,
+            x: field.coordinates.x,
+            y: field.coordinates.y,
             bold: field.bold || false,
             italic: field.italic || false,
           })

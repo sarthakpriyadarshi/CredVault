@@ -251,9 +251,13 @@ export async function generateCertificate(options: GenerateCertificateOptions): 
       for (const qrPlaceholder of qrPlaceholders) {
         const qrUrl = options.qrCodeData[qrPlaceholder.fieldName]
         if (qrUrl && qrPlaceholder.width && qrPlaceholder.height) {
-          // Generate QR code with logo (uses default logo from public/logo.svg)
+          // Generate QR code with logo and styling (uses default logo from public/qrcode-logo.svg)
           const qrSize = Math.max(qrPlaceholder.width, qrPlaceholder.height)
-          const qrCodeDataUrl = await generateQRCodeWithLogo(qrUrl, qrSize)
+          const qrCodeDataUrl = await generateQRCodeWithLogo(
+            qrUrl, 
+            qrSize,
+            qrPlaceholder.qrCodeStyling // Pass styling options from template
+          )
           
           // Load QR code image
           const qrImage = await loadImage(qrCodeDataUrl)

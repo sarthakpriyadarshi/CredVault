@@ -1,6 +1,6 @@
 {
   "name": "credvault",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "scripts": {
     "dev": "next dev -p 4300",
@@ -29,6 +29,7 @@
     "date-fns": "^4.1.0",
     "framer-motion": "^12.23.24",
     "geist": "^1.5.1",
+    "jsdom": "^27.1.0",
     "lucide-react": "^0.552.0",
     "mongoose": "^8.19.2",
     "motion": "^12.23.24",
@@ -37,8 +38,8 @@
     "next-themes": "^0.4.6",
     "node-fetch": "^2.7.0",
     "nodemailer": "^7.0.10",
+    "qr-code-styling": "^1.9.2",
     "qrcode": "^1.5.4",
-    "qrcode.react": "^4.2.0",
     "radix-ui": "^1.4.3",
     "react": "19.2.0",
     "react-dom": "19.2.0",
@@ -50,6 +51,7 @@
     "@tailwindcss/postcss": "^4",
     "@types/bcryptjs": "^2.4.6",
     "@types/color": "^4.2.0",
+    "@types/jsdom": "^27.0.0",
     "@types/node": "^20.19.24",
     "@types/react": "^19",
     "@types/react-dom": "^19",

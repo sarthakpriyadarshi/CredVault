@@ -26,6 +26,7 @@ import { GOOGLE_FONTS } from "@/lib/fonts"
 import { LoadingScreen } from "@/components/loading-screen"
 import { ColorPickerComponent } from "@/components/ui/color-picker"
 import { generateDummyQRCodeBrowser } from "@/lib/qrcode/browser-generator"
+import { IQRCodeStyling } from "@/models/Template"
 
 interface TemplateField {
   id: string
@@ -40,6 +41,7 @@ interface TemplateField {
   fontColor?: string
   bold?: boolean
   italic?: boolean
+  qrCodeStyling?: IQRCodeStyling // QR code styling options (only for QR type fields)
 }
 
 export default function EditTemplatePage() {
@@ -167,7 +169,7 @@ export default function EditTemplatePage() {
           const actualImageWidth = img.naturalWidth
           const actualImageHeight = img.naturalHeight
           
-          const loadedFields = template.placeholders.map((p: { fieldName?: string; name?: string; type?: string; x?: number; y?: number; width?: number; height?: number; fontFamily?: string; fontSize?: number; color?: string; fontColor?: string; bold?: boolean; italic?: boolean }, index: number) => {
+          const loadedFields = template.placeholders.map((p: { fieldName?: string; name?: string; type?: string; x?: number; y?: number; width?: number; height?: number; fontFamily?: string; fontSize?: number; color?: string; fontColor?: string; bold?: boolean; italic?: boolean; qrCodeStyling?: IQRCodeStyling }, index: number) => {
             // Convert from image coordinates to canvas coordinates if coordinates exist
             if (p.x !== undefined && p.y !== undefined) {
               const { scaleX, scaleY } = calculateImageScale(
@@ -200,6 +202,26 @@ export default function EditTemplatePage() {
                   fontColor: p.fontColor || p.color || "#000000",
                   bold: false,
                   italic: false,
+                  qrCodeStyling: p.qrCodeStyling || {
+                    dotsType: "rounded",
+                    dotsColor: "#f55971", // Primary color
+                    dotsColorType: "single",
+                    backgroundOptions: {
+                      color: "#FFFFFF", // White background by default
+                      colorType: "single",
+                    },
+                    cornersSquareOptions: {
+                      type: "extra-rounded",
+                      color: "#f55971", // Primary color
+                    },
+                    cornersDotOptions: {
+                      type: "dot",
+                      color: "#f55971", // Primary color
+                    },
+                    qrOptions: {
+                      errorCorrectionLevel: "H",
+                    },
+                  },
                 }
               } else {
                 // Other fields: x and y are center coordinates (for text fields)
@@ -253,7 +275,7 @@ export default function EditTemplatePage() {
           setFields(loadedFields)
         } else if (template.placeholders && Array.isArray(template.placeholders)) {
           // Fallback: Load placeholders without coordinate conversion
-          const loadedFields = template.placeholders.map((p: { fieldName?: string; name?: string; type?: string; x?: number; y?: number; width?: number; height?: number; fontFamily?: string; fontSize?: number; color?: string; fontColor?: string; bold?: boolean; italic?: boolean }, index: number) => {
+          const loadedFields = template.placeholders.map((p: { fieldName?: string; name?: string; type?: string; x?: number; y?: number; width?: number; height?: number; fontFamily?: string; fontSize?: number; color?: string; fontColor?: string; bold?: boolean; italic?: boolean; qrCodeStyling?: IQRCodeStyling }, index: number) => {
             const isQRCode = p.type === "qr"
             // QR codes are stored with top-left coordinates
             if (isQRCode && p.x !== undefined && p.y !== undefined) {
@@ -471,8 +493,8 @@ export default function EditTemplatePage() {
           ctx.textBaseline = "middle"
           ctx.fillText("QR Code", field.x + field.width / 2, field.y + field.height / 2)
           
-          // Generate and load QR code asynchronously (browser-compatible)
-          generateDummyQRCodeBrowser("https://credvault.app", Math.max(field.width, field.height))
+          // Generate and load QR code asynchronously (browser-compatible) with styling
+          generateDummyQRCodeBrowser("https://credvault.app", Math.max(field.width, field.height), field.qrCodeStyling)
             .then((dataUrl: string) => {
               const img = new Image()
               img.onload = () => {
@@ -968,6 +990,54 @@ export default function EditTemplatePage() {
           }
 
           if (f.x !== undefined && f.y !== undefined) {
+            // Handle QR code fields differently - store top-left corner and size
+            if (f.type === "qr") {
+              const { scaleX, scaleY } = calculateImageScale(
+                canvasWidth,
+                canvasHeight,
+                actualImageWidth,
+                actualImageHeight
+              )
+              
+              const topLeft = convertCanvasToImageCoords(
+                f.x,
+                f.y,
+                canvasWidth,
+                canvasHeight,
+                actualImageWidth,
+                actualImageHeight
+              )
+              const bottomRight = convertCanvasToImageCoords(
+                f.x + f.width,
+                f.y + f.height,
+                canvasWidth,
+                canvasHeight,
+                actualImageWidth,
+                actualImageHeight
+              )
+              const imageWidth = Math.round(Math.abs(bottomRight.x - topLeft.x))
+              const imageHeight = Math.round(Math.abs(bottomRight.y - topLeft.y))
+              
+              // For QR codes, use the larger dimension to maintain square
+              const qrSize = Math.max(imageWidth, imageHeight)
+              
+              const fieldData: any = {
+                name: f.name,
+                type: f.type,
+                coordinates: {
+                  x: Math.round(topLeft.x),
+                  y: Math.round(topLeft.y),
+                  width: qrSize,
+                  height: qrSize,
+                },
+              }
+              // Only include qrCodeStyling if it exists and has content
+              if (f.qrCodeStyling && Object.keys(f.qrCodeStyling).length > 0) {
+                fieldData.qrCodeStyling = f.qrCodeStyling
+              }
+              return fieldData
+            }
+            
             const { scaleX, scaleY } = calculateImageScale(
               canvasWidth,
               canvasHeight,
@@ -1366,6 +1436,27 @@ export default function EditTemplatePage() {
                             fontColor: selectedFontColor,
                             bold: false,
                             italic: false,
+                            // Initialize with default QR code styling - white background, primary color dots
+                            qrCodeStyling: {
+                              dotsType: "rounded",
+                              dotsColor: "#f55971", // Primary color
+                              dotsColorType: "single",
+                              backgroundOptions: {
+                                color: "#FFFFFF", // White background by default
+                                colorType: "single",
+                              },
+                              cornersSquareOptions: {
+                                type: "extra-rounded",
+                                color: "#f55971", // Primary color
+                              },
+                              cornersDotOptions: {
+                                type: "dot",
+                                color: "#f55971", // Primary color
+                              },
+                              qrOptions: {
+                                errorCorrectionLevel: "H",
+                              },
+                            },
                           }
                           setFields([...fields, qrCodeField])
                           setSelectedField(qrCodeField.id)
@@ -1460,103 +1551,254 @@ export default function EditTemplatePage() {
                     {/* Formatting Toolbar - Header Style */}
                     {selectedField && certificateImage && fields.find((f) => f.id === selectedField)?.x !== undefined && fields.find((f) => f.id === selectedField)?.y !== undefined && (
                       <div className="flex items-center gap-3 rounded-full bg-background/80 backdrop-blur-sm border border-border/50 shadow-lg px-4 py-2">
-                        <div className="flex items-center gap-2 flex-1">
-                          <Label className="text-xs text-muted-foreground whitespace-nowrap">Font:</Label>
-                          <Select
-                            value={fields.find((f) => f.id === selectedField)?.fontFamily || selectedFontFamily}
-                            onValueChange={(value) => {
-                              if (selectedField) {
-                                setFields(
-                                  fields.map((f) => (f.id === selectedField ? { ...f, fontFamily: value } : f))
-                                )
-                              }
-                            }}
-                          >
-                            <SelectTrigger className="h-8 w-[140px] text-xs bg-transparent border-border/50">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent className="max-h-[200px]">
-                              {GOOGLE_FONTS.map((font) => (
-                                <SelectItem key={font} value={font} style={{ fontFamily: font }}>
-                                  {font}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
+                        {/* Show font controls only for non-QR fields */}
+                        {fields.find((f) => f.id === selectedField)?.type !== "qr" && (
+                          <>
+                            <div className="flex items-center gap-2 flex-1">
+                              <Label className="text-xs text-muted-foreground whitespace-nowrap">Font:</Label>
+                              <Select
+                                value={fields.find((f) => f.id === selectedField)?.fontFamily || selectedFontFamily}
+                                onValueChange={(value) => {
+                                  if (selectedField) {
+                                    setFields(
+                                      fields.map((f) => (f.id === selectedField ? { ...f, fontFamily: value } : f))
+                                    )
+                                  }
+                                }}
+                              >
+                                <SelectTrigger className="h-8 w-[140px] text-xs bg-transparent border-border/50">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent className="max-h-[200px]">
+                                  {GOOGLE_FONTS.map((font) => (
+                                    <SelectItem key={font} value={font} style={{ fontFamily: font }}>
+                                      {font}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
 
-                        <div className="flex items-center gap-2">
-                          <Label className="text-xs text-muted-foreground whitespace-nowrap">Size:</Label>
-                          <div className="flex items-center gap-1.5">
-                            <Input
-                              type="number"
-                              min="8"
-                              max="72"
-                              value={fields.find((f) => f.id === selectedField)?.fontSize || selectedFontSize}
-                              onChange={(e) => {
-                                const size = parseInt(e.target.value) || 16
+                            <div className="flex items-center gap-2">
+                              <Label className="text-xs text-muted-foreground whitespace-nowrap">Size:</Label>
+                              <div className="flex items-center gap-1.5">
+                                <Input
+                                  type="number"
+                                  min="8"
+                                  max="72"
+                                  value={fields.find((f) => f.id === selectedField)?.fontSize || selectedFontSize}
+                                  onChange={(e) => {
+                                    const size = parseInt(e.target.value) || 16
+                                    if (selectedField) {
+                                      setFields(
+                                        fields.map((f) => (f.id === selectedField ? { ...f, fontSize: size } : f))
+                                      )
+                                    }
+                                  }}
+                                  className="h-8 w-16 text-xs bg-background border-2 border-border rounded [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                />
+                                <span className="text-xs text-muted-foreground">px</span>
+                              </div>
+                            </div>
+
+                            <ColorPickerComponent
+                              label="Color:"
+                              value={fields.find((f) => f.id === selectedField)?.fontColor || selectedFontColor}
+                              onChange={(color) => {
                                 if (selectedField) {
                                   setFields(
-                                    fields.map((f) => (f.id === selectedField ? { ...f, fontSize: size } : f))
+                                    fields.map((f) => (f.id === selectedField ? { ...f, fontColor: color } : f))
                                   )
                                 }
                               }}
-                              className="h-8 w-16 text-xs bg-background border-2 border-border rounded [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                             />
-                            <span className="text-xs text-muted-foreground">px</span>
-                          </div>
-                        </div>
 
-                        <ColorPickerComponent
-                          label="Color:"
-                          value={fields.find((f) => f.id === selectedField)?.fontColor || selectedFontColor}
-                          onChange={(color) => {
-                            if (selectedField) {
-                              setFields(
-                                fields.map((f) => (f.id === selectedField ? { ...f, fontColor: color } : f))
-                              )
-                            }
-                          }}
-                        />
+                            <div className="flex items-center gap-1 border-l border-border/50 pl-3">
+                              <Button
+                                type="button"
+                                variant={fields.find((f) => f.id === selectedField)?.bold ? "secondary" : "ghost"}
+                                size="sm"
+                                className={`h-8 w-8 p-0 ${fields.find((f) => f.id === selectedField)?.bold ? "bg-primary/20 text-primary" : ""}`}
+                                onClick={() => {
+                                  if (selectedField) {
+                                    const currentField = fields.find((f) => f.id === selectedField)
+                                    setFields(
+                                      fields.map((f) => (f.id === selectedField ? { ...f, bold: !(currentField?.bold || false) } : f))
+                                    )
+                                  }
+                                }}
+                                title="Bold"
+                              >
+                                <Bold className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                type="button"
+                                variant={fields.find((f) => f.id === selectedField)?.italic ? "secondary" : "ghost"}
+                                size="sm"
+                                className={`h-8 w-8 p-0 ${fields.find((f) => f.id === selectedField)?.italic ? "bg-primary/20 text-primary" : ""}`}
+                                onClick={() => {
+                                  if (selectedField) {
+                                    const currentField = fields.find((f) => f.id === selectedField)
+                                    setFields(
+                                      fields.map((f) => (f.id === selectedField ? { ...f, italic: !(currentField?.italic || false) } : f))
+                                    )
+                                  }
+                                }}
+                                title="Italic"
+                              >
+                                <Italic className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </>
+                        )}
 
-                        <div className="flex items-center gap-1 border-l border-border/50 pl-3">
-                          <Button
-                            type="button"
-                            variant={fields.find((f) => f.id === selectedField)?.bold ? "secondary" : "ghost"}
-                            size="sm"
-                            className={`h-8 w-8 p-0 ${fields.find((f) => f.id === selectedField)?.bold ? "bg-primary/20 text-primary" : ""}`}
-                            onClick={() => {
-                              if (selectedField) {
-                                const currentField = fields.find((f) => f.id === selectedField)
-                                setFields(
-                                  fields.map((f) => (f.id === selectedField ? { ...f, bold: !(currentField?.bold || false) } : f))
-                                )
-                              }
-                            }}
-                            title="Bold"
-                          >
-                            <Bold className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            type="button"
-                            variant={fields.find((f) => f.id === selectedField)?.italic ? "secondary" : "ghost"}
-                            size="sm"
-                            className={`h-8 w-8 p-0 ${fields.find((f) => f.id === selectedField)?.italic ? "bg-primary/20 text-primary" : ""}`}
-                            onClick={() => {
-                              if (selectedField) {
-                                const currentField = fields.find((f) => f.id === selectedField)
-                                setFields(
-                                  fields.map((f) => (f.id === selectedField ? { ...f, italic: !(currentField?.italic || false) } : f))
-                                )
-                              }
-                            }}
-                            title="Italic"
-                          >
-                            <Italic className="h-4 w-4" />
-                          </Button>
-                        </div>
+                        {/* QR Code Customization in Toolbar */}
+                        {fields.find((f) => f.id === selectedField)?.type === "qr" && (
+                          <>
+                            <div className="flex items-center gap-2 border-l border-border/50 pl-3">
+                              <Label className="text-xs text-muted-foreground whitespace-nowrap">Dot Type:</Label>
+                              <Select
+                                value={fields.find((f) => f.id === selectedField)?.qrCodeStyling?.dotsType || "rounded"}
+                                onValueChange={(value: "square" | "rounded" | "dots" | "classy" | "classy-rounded" | "extra-rounded") => {
+                                  const currentField = fields.find((f) => f.id === selectedField)
+                                  if (currentField) {
+                                    const updatedFields = fields.map((f) =>
+                                      f.id === selectedField
+                                        ? {
+                                            ...f,
+                                            qrCodeStyling: {
+                                              ...f.qrCodeStyling,
+                                              dotsType: value,
+                                            },
+                                          }
+                                        : f
+                                    )
+                                    setFields(updatedFields)
+                                    qrCodeImagesRef.current.delete(selectedField)
+                                    drawCanvas()
+                                  }
+                                }}
+                              >
+                                <SelectTrigger className="h-8 w-[120px] text-xs bg-transparent border-border/50">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="square">Square</SelectItem>
+                                  <SelectItem value="rounded">Rounded</SelectItem>
+                                  <SelectItem value="dots">Dots</SelectItem>
+                                  <SelectItem value="classy">Classy</SelectItem>
+                                  <SelectItem value="classy-rounded">Classy Rounded</SelectItem>
+                                  <SelectItem value="extra-rounded">Extra Rounded</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+
+                            <div className="flex items-center gap-2 border-l border-border/50 pl-3">
+                              <Label className="text-xs text-muted-foreground whitespace-nowrap">Dots:</Label>
+                              <ColorPickerComponent
+                                value={(() => {
+                                  const field = fields.find((f) => f.id === selectedField)
+                                  return field?.qrCodeStyling?.dotsColor || field?.qrCodeStyling?.cornersSquareOptions?.color || "#f55971"
+                                })()}
+                                onChange={(color) => {
+                                  const currentField = fields.find((f) => f.id === selectedField)
+                                  if (currentField) {
+                                    const updatedFields = fields.map((f) =>
+                                      f.id === selectedField
+                                        ? {
+                                            ...f,
+                                            qrCodeStyling: {
+                                              ...(f.qrCodeStyling || {}),
+                                              dotsType: f.qrCodeStyling?.dotsType || "rounded",
+                                              dotsColor: color,
+                                              dotsColorType: "single" as const,
+                                              // Also update corners to match dots color
+                                              cornersSquareOptions: {
+                                                ...f.qrCodeStyling?.cornersSquareOptions,
+                                                type: f.qrCodeStyling?.cornersSquareOptions?.type || "extra-rounded",
+                                                color: color,
+                                              },
+                                              cornersDotOptions: {
+                                                ...f.qrCodeStyling?.cornersDotOptions,
+                                                type: f.qrCodeStyling?.cornersDotOptions?.type || "dot",
+                                                color: color,
+                                              },
+                                              backgroundOptions: f.qrCodeStyling?.backgroundOptions || {
+                                                color: "#FFFFFF",
+                                                colorType: "single" as const,
+                                              },
+                                              qrOptions: f.qrCodeStyling?.qrOptions || {
+                                                errorCorrectionLevel: "H" as const,
+                                              },
+                                            },
+                                          }
+                                        : f
+                                    )
+                                    setFields(updatedFields)
+                                    qrCodeImagesRef.current.delete(selectedField)
+                                    drawCanvas()
+                                  }
+                                }}
+                              />
+                            </div>
+
+                            <div className="flex items-center gap-2 border-l border-border/50 pl-3">
+                              <Label className="text-xs text-muted-foreground whitespace-nowrap">BG:</Label>
+                              <ColorPickerComponent
+                                value={(() => {
+                                  const field = fields.find((f) => f.id === selectedField)
+                                  // If gradient, show the base color, otherwise show the color
+                                  if (field?.qrCodeStyling?.backgroundOptions?.colorType === "gradient") {
+                                    return field.qrCodeStyling.backgroundOptions.color || "#FFFFFF"
+                                  }
+                                  return field?.qrCodeStyling?.backgroundOptions?.color || "#FFFFFF"
+                                })()}
+                                onChange={(color) => {
+                                  const currentField = fields.find((f) => f.id === selectedField)
+                                  if (currentField) {
+                                    const updatedFields = fields.map((f) =>
+                                      f.id === selectedField
+                                        ? {
+                                            ...f,
+                                            qrCodeStyling: {
+                                              ...(f.qrCodeStyling || {}),
+                                              dotsType: f.qrCodeStyling?.dotsType || "rounded",
+                                              dotsColor: f.qrCodeStyling?.dotsColor || "#000000",
+                                              dotsColorType: (f.qrCodeStyling?.dotsColorType || "single") as "single" | "gradient",
+                                              cornersSquareOptions: f.qrCodeStyling?.cornersSquareOptions || {
+                                                type: "extra-rounded" as const,
+                                                color: f.qrCodeStyling?.dotsColor || "#000000",
+                                              },
+                                              cornersDotOptions: f.qrCodeStyling?.cornersDotOptions || {
+                                                type: "dot" as const,
+                                                color: f.qrCodeStyling?.dotsColor || "#000000",
+                                              },
+                                              backgroundOptions: {
+                                                ...f.qrCodeStyling?.backgroundOptions,
+                                                color,
+                                                colorType: "single" as const,
+                                                // Remove gradient when setting solid color
+                                                gradient: undefined,
+                                              },
+                                              qrOptions: f.qrCodeStyling?.qrOptions || {
+                                                errorCorrectionLevel: "H" as const,
+                                              },
+                                            },
+                                          }
+                                        : f
+                                    )
+                                    setFields(updatedFields)
+                                    qrCodeImagesRef.current.delete(selectedField)
+                                    drawCanvas()
+                                  }
+                                }}
+                              />
+                            </div>
+                          </>
+                        )}
                       </div>
                     )}
+
 
                     {/* Canvas */}
                     <div
