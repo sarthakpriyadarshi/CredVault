@@ -11,11 +11,9 @@ if (typeof window !== "undefined") {
 }
 
 import QRCodeStyling from "qr-code-styling"
-import { createCanvas, loadImage } from "canvas"
 import sharp from "sharp"
 import path from "path"
 import fs from "fs"
-import { JSDOM } from "jsdom"
 import { IQRCodeStyling } from "@/models/Template"
 
 /**
@@ -120,8 +118,28 @@ export async function generateQRCodeWithLogo(
     }
 
     // Create QR code styling instance
-    // qr-code-styling needs jsdom to work in Node.js environment
+    // qr-code-styling requires jsdom to work in Node.js environment
+    // Dynamically import jsdom to avoid ESM compatibility issues at build time
+    // This is necessary because jsdom v27 uses parse5 v8 which is ESM-only
+    let JSDOMClass: any
+    try {
+      // Use dynamic import to load jsdom at runtime
+      // This avoids bundling issues and ESM/CommonJS conflicts
+      const jsdomModule = await import("jsdom")
+      JSDOMClass = jsdomModule.JSDOM
+      
+      // Verify JSDOM is available and is a constructor
+      if (!JSDOMClass || typeof JSDOMClass !== "function") {
+        throw new Error("JSDOM is not available or not a constructor")
+      }
+    } catch (jsdomError) {
+      // If jsdom fails to load, fall back to basic QR code
+      console.error("Failed to load jsdom, using fallback:", jsdomError)
+      throw new Error("jsdom is required for QR code generation")
+    }
+    
     // Use SVG type and convert to PNG with sharp for better Node.js compatibility
+    // Pass jsdom class (not instance) - qr-code-styling will instantiate it
     const qrCodeOptions: any = {
       width: size,
       height: size,
@@ -138,7 +156,7 @@ export async function generateQRCodeWithLogo(
         margin: 0, // No margin for logo
         imageSize: 0.3, // Logo takes 30% of QR code size
       },
-      jsdom: JSDOM, // Provide jsdom for DOM environment
+      jsdom: JSDOMClass, // Pass the JSDOM class - qr-code-styling will use: new JSDOM("", { resources: "usable" })
     }
     
     const qrCode = new QRCodeStyling(qrCodeOptions)
