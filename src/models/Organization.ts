@@ -11,6 +11,7 @@ export interface IOrganization extends Document {
   verifiedBy?: mongoose.Types.ObjectId // Admin user who verified
   verifiedAt?: Date
   rejectionReason?: string
+  blockchainEnabled?: boolean // Whether blockchain is enabled for this organization
   createdAt: Date
   updatedAt: Date
 }
@@ -68,6 +69,10 @@ const OrganizationSchema = new Schema<IOrganization>(
     rejectionReason: {
       type: String,
       default: null,
+    },
+    blockchainEnabled: {
+      type: Boolean,
+      default: false,
     },
   },
   {

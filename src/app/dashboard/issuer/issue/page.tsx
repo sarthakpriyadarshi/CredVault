@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Checkbox } from "@/components/ui/checkbox"
 import { Send, CheckCircle, AlertCircle } from "lucide-react"
 import { PrimaryButton } from "@/components/ui/primary-button"
 import {
@@ -33,7 +32,7 @@ export default function IssuePage() {
   const [selectedTemplate, setSelectedTemplate] = useState("")
   const [templates, setTemplates] = useState<Template[]>([])
   const [formData, setFormData] = useState<Record<string, string>>({})
-  const [useBlockchain, setUseBlockchain] = useState(false)
+  const [blockchainEnabled, setBlockchainEnabled] = useState(false)
   const [loading, setLoading] = useState(true)
   const [issuing, setIssuing] = useState(false)
   const [showErrorDialog, setShowErrorDialog] = useState(false)
@@ -49,10 +48,27 @@ export default function IssuePage() {
     } else if (status === "authenticated" && session?.user?.role === "issuer" && !session.user?.isVerified) {
       router.push("/auth/issuer/login?pending=true")
     } else if (status === "authenticated" && session?.user?.role === "issuer" && session.user?.isVerified) {
+      loadOrganization()
       loadTemplates()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, status, router])
+
+  const loadOrganization = async () => {
+    try {
+      const res = await fetch("/api/v1/issuer/organization", {
+        credentials: "include",
+      })
+
+      if (res.ok) {
+        const data = await res.json()
+        const enabled = data.blockchainEnabled || false
+        setBlockchainEnabled(enabled)
+      }
+    } catch (error) {
+      console.error("Error loading organization:", error)
+    }
+  }
 
   const loadTemplates = async () => {
     setLoading(true)
@@ -207,7 +223,7 @@ export default function IssuePage() {
         body: JSON.stringify({
           templateId: selectedTemplate,
           data: formData,
-          useBlockchain,
+          useBlockchain: blockchainEnabled, // Always use organization setting
         }),
       })
 
@@ -237,7 +253,6 @@ export default function IssuePage() {
       }
       setFormData(resetFormData)
       setSelectedTemplate("")
-      setUseBlockchain(false)
     } catch (error) {
       console.error("Error issuing credential:", error)
       setDialogMessage("An error occurred while issuing the credential")
@@ -344,7 +359,7 @@ export default function IssuePage() {
                                 disabled={isIssueDate}
                               />
                               {isIssueDate && (
-                                <p className="text-xs text-muted-foreground">Issue Date is automatically set to today's date and cannot be modified</p>
+                                <p className="text-xs text-muted-foreground">Issue Date is automatically set to today&apos;s date and cannot be modified</p>
                               )}
                             </div>
                           )
@@ -352,18 +367,22 @@ export default function IssuePage() {
                       </div>
                     )}
 
-                    {/* Options */}
+                    {/* Blockchain Status (Read-only) */}
                     {activeTemplate && (
                       <div className="space-y-4 pt-4 border-t border-border/50">
-                        <label 
-                          htmlFor="blockchain" 
-                          className="flex items-center gap-3 cursor-pointer"
-                        >
-                          <Checkbox checked={useBlockchain} onCheckedChange={setUseBlockchain} id="blockchain" />
-                          <span className="font-normal flex-1">
-                            Register on Blockchain
-                          </span>
-                        </label>
+                        <div className="flex items-center gap-3 p-3 bg-background/50 rounded-lg">
+                          <div className="flex-1">
+                            <p className="font-medium text-foreground">Blockchain Status</p>
+                            <p className={`text-sm ${blockchainEnabled ? 'text-emerald-400' : 'text-muted-foreground'}`}>
+                              {blockchainEnabled ? "Enabled - Credentials will be stored on blockchain" : "Disabled"}
+                            </p>
+                            {!blockchainEnabled && (
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Contact your admin to enable blockchain for your organization
+                              </p>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     )}
 

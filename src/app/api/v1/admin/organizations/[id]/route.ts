@@ -29,6 +29,7 @@ async function handler(
       description?: string
       website?: string
       verificationStatus?: "pending" | "approved" | "rejected"
+      blockchainEnabled?: boolean
     }>(req)
 
     const organization = await Organization.findById(organizationId)
@@ -66,6 +67,10 @@ async function handler(
       organization.verificationStatus = body.verificationStatus
     }
 
+    if (body.blockchainEnabled !== undefined) {
+      organization.blockchainEnabled = body.blockchainEnabled
+    }
+
     await organization.save()
 
     return NextResponse.json({
@@ -79,6 +84,7 @@ async function handler(
         logo: organization.logo,
         verificationProof: organization.verificationProof,
         verifiedAt: organization.verifiedAt,
+        blockchainEnabled: organization.blockchainEnabled || false,
         createdAt: organization.createdAt,
       },
     })

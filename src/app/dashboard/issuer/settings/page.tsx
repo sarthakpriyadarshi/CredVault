@@ -37,6 +37,7 @@ export default function IssuerSettingsPage() {
     verificationStatus?: string
     description?: string
     logo?: string
+    blockchainEnabled?: boolean
   } | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -542,6 +543,19 @@ export default function IssuerSettingsPage() {
                               <div>
                                 <p className="font-medium text-foreground">Verification Status</p>
                                 <p className="text-sm text-muted-foreground">{organization?.verificationStatus || "N/A"}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center justify-between p-4 bg-background/50 rounded-lg">
+                              <div>
+                                <p className="font-medium text-foreground">Blockchain Status</p>
+                                <p className={`text-sm ${organization?.blockchainEnabled ? 'text-emerald-400' : 'text-muted-foreground'}`}>
+                                  {organization?.blockchainEnabled ? "Enabled" : "Disabled"}
+                                </p>
+                                {!organization?.blockchainEnabled && (
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                    Contact your admin to enable blockchain for your organization
+                                  </p>
+                                )}
                               </div>
                             </div>
                           </div>
