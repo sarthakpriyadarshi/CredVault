@@ -238,6 +238,18 @@ export default function Home() {
               </button>
               <div className="border-t border-border/50 pt-4 mt-4 flex flex-col space-y-3">
                 <a
+                  href="/privacy"
+                  className="px-4 py-3 text-lg font-medium text-muted-foreground hover:text-foreground transition-colors rounded-lg hover:bg-background/50 cursor-pointer"
+                >
+                  Privacy Policy
+                </a>
+                <a
+                  href="/terms"
+                  className="px-4 py-3 text-lg font-medium text-muted-foreground hover:text-foreground transition-colors rounded-lg hover:bg-background/50 cursor-pointer"
+                >
+                  Terms & Conditions
+                </a>
+                <a
                   href="/auth/login"
                   className="px-4 py-3 text-lg font-medium text-muted-foreground hover:text-foreground transition-colors rounded-lg hover:bg-background/50 cursor-pointer"
                 >
@@ -279,7 +291,6 @@ export default function Home() {
       <div id="faq">
         <FAQSection />
       </div>
-
       {/* Sticky Footer */}
       <StickyFooter />
     </div>
