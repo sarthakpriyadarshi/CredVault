@@ -4,7 +4,30 @@ import { motion } from "framer-motion"
 import { Check, Sparkles } from "lucide-react"
 import { useState } from "react"
 
-const pricingPlans = [
+type PricingPlan = 
+  | {
+      name: string
+      price: string
+      description: string
+      features: string[]
+      popular: boolean
+      cta: string
+      link: string
+      external?: boolean
+    }
+  | {
+      name: string
+      monthlyPrice: number
+      annualPrice: number
+      description: string
+      features: string[]
+      popular: boolean
+      cta: string
+      link: string
+      external?: boolean
+    }
+
+const pricingPlans: PricingPlan[] = [
   {
     name: "Free",
     price: "Free",
@@ -152,9 +175,9 @@ export function PricingSection() {
               <div className="text-center mb-8">
                 <h3 className="text-xl font-bold text-white mb-2">{plan.name}</h3>
                 <div className="flex items-baseline justify-center gap-1 mb-2">
-                  {plan.price ? (
+                  {"price" in plan ? (
                     <span className="text-4xl font-bold text-white">{plan.price}</span>
-                  ) : plan.monthlyPrice ? (
+                  ) : "monthlyPrice" in plan ? (
                     <>
                       <span className="text-4xl font-bold text-white">
                         ${isAnnual ? plan.annualPrice : plan.monthlyPrice}
@@ -177,8 +200,8 @@ export function PricingSection() {
 
               <motion.a
                 href={plan.link || "/signup"}
-                target={plan.external ? "_blank" : undefined}
-                rel={plan.external ? "noopener noreferrer" : undefined}
+                target={"external" in plan && plan.external ? "_blank" : undefined}
+                rel={"external" in plan && plan.external ? "noopener noreferrer" : undefined}
                 whileHover={plan.link !== "#" ? { scale: 1.02 } : {}}
                 whileTap={plan.link !== "#" ? { scale: 0.98 } : {}}
                 className={`w-full py-3 px-6 rounded-lg font-medium transition-all duration-200 text-center block ${
