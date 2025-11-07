@@ -77,6 +77,7 @@ export default function Home() {
             alt="Logo"
             className="rounded-full size-8 w-8 h-8 object-contain"
           />
+          <span className="text-white font-semibold text-lg">CredVault</span>
         </a>
 
         <div className="absolute inset-0 hidden flex-1 flex-row items-center justify-center space-x-2 text-sm font-medium text-muted-foreground transition duration-200 hover:text-foreground md:flex md:space-x-2">
@@ -186,6 +187,7 @@ export default function Home() {
             alt="Logo"
             className="rounded-full size-7 w-7 h-7 object-contain"
           />
+          <span className="text-white font-semibold text-base">CredVault</span>
         </a>
 
         <button
