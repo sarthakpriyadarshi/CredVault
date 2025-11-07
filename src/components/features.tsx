@@ -6,11 +6,11 @@ import { useTheme } from "next-themes";
 import Image from "next/image";
 import {
   GraduationCap,
-  Award,
+  BadgeCheck,
   FileText,
-  Shield,
+  Lock,
   FolderOpen,
-  CheckCircle,
+  CheckCircle2,
 } from "lucide-react";
 import Earth from "@/components/globe";
 import ScrambleHover from "@/components/scramble";
@@ -267,13 +267,28 @@ export default function Features() {
                               >
                                 <div className="w-4 h-4 flex items-center justify-center">
                                   {index === 0 && (
-                                    <GraduationCap className="w-4 h-4 text-primary" />
+                                    <GraduationCap
+                                      className="w-4 h-4"
+                                      fill="none"
+                                      stroke="rgb(220, 48, 77)"
+                                      strokeWidth={2}
+                                    />
                                   )}
                                   {index === 1 && (
-                                    <Award className="w-4 h-4 text-primary" />
+                                    <BadgeCheck
+                                      className="w-4 h-4"
+                                      fill="none"
+                                      stroke="rgb(220, 48, 77)"
+                                      strokeWidth={2}
+                                    />
                                   )}
                                   {index === 2 && (
-                                    <FileText className="w-4 h-4 text-primary" />
+                                    <FileText
+                                      className="w-4 h-4"
+                                      fill="none"
+                                      stroke="rgb(220, 48, 77)"
+                                      strokeWidth={2}
+                                    />
                                   )}
                                 </div>
                                 {item}
@@ -323,13 +338,28 @@ export default function Features() {
                               >
                                 <div className="w-4 h-4 flex items-center justify-center">
                                   {index === 0 && (
-                                    <Shield className="w-4 h-4 text-primary" />
+                                    <Lock
+                                      className="w-4 h-4"
+                                      fill="none"
+                                      stroke="rgb(220, 48, 77)"
+                                      strokeWidth={2}
+                                    />
                                   )}
                                   {index === 1 && (
-                                    <FolderOpen className="w-4 h-4 text-primary" />
+                                    <FolderOpen
+                                      className="w-4 h-4"
+                                      fill="none"
+                                      stroke="rgb(220, 48, 77)"
+                                      strokeWidth={2}
+                                    />
                                   )}
                                   {index === 2 && (
-                                    <CheckCircle className="w-4 h-4 text-primary" />
+                                    <CheckCircle2
+                                      className="w-4 h-4"
+                                      fill="none"
+                                      stroke="rgb(220, 48, 77)"
+                                      strokeWidth={2}
+                                    />
                                   )}
                                 </div>
                                 {item}
@@ -419,7 +449,7 @@ export default function Features() {
                   </div>
                 </div>
                 <div className="flex min-h-[300px] grow items-start justify-center select-none mb-6">
-                  <h1 className="mt-8 text-center text-5xl leading-[100%] font-semibold sm:leading-normal lg:mt-12 lg:text-6xl">
+                  <h3 className="mt-8 text-center text-5xl leading-[100%] font-semibold sm:leading-normal lg:mt-12 lg:text-6xl">
                     <span
                       className="bg-background relative mt-3 inline-block w-fit rounded-md border px-1.5 py-0.5"
                       style={{
@@ -431,13 +461,13 @@ export default function Features() {
                         scrambleSpeed={70}
                         maxIterations={20}
                         useOriginalCharsOnly={false}
-                        className="cursor-pointer bg-gradient-to-t from-primary to-primary bg-clip-text text-transparent"
+                        className="cursor-pointer bg-gradient-to-t from-primary to-primary bg-clip-text text-transparent font-mono"
                         isHovering={isHovering}
                         setIsHovering={setIsHovering}
                         characters="abcdefghijklmnopqrstuvwxyz!@#$%^&*()_+-=[]{}|;':\,./<>?"
                       />
                     </span>
-                  </h1>
+                  </h3>
                   <div className="absolute top-64 z-10 flex items-center justify-center">
                     <div className="w-[400px] h-[400px]">
                       <Suspense

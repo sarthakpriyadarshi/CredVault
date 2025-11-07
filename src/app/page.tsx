@@ -89,6 +89,7 @@ export default function Home() {
 
         <div className="absolute inset-0 hidden flex-1 flex-row items-center justify-center space-x-2 text-sm font-medium text-muted-foreground transition duration-200 hover:text-foreground md:flex md:space-x-2">
           <a
+            href="#features"
             className="relative px-4 py-2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
             onClick={(e) => {
               e.preventDefault();
@@ -109,6 +110,7 @@ export default function Home() {
             <span className="relative z-20">Features</span>
           </a>
           <a
+            href="#pricing"
             className="relative px-4 py-2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
             onClick={(e) => {
               e.preventDefault();
@@ -129,6 +131,7 @@ export default function Home() {
             <span className="relative z-20">Pricing</span>
           </a>
           <a
+            href="#testimonials"
             className="relative px-4 py-2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
             onClick={(e) => {
               e.preventDefault();
@@ -149,6 +152,7 @@ export default function Home() {
             <span className="relative z-20">Testimonials</span>
           </a>
           <a
+            href="#faq"
             className="relative px-4 py-2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
             onClick={(e) => {
               e.preventDefault();
@@ -231,30 +235,50 @@ export default function Home() {
         <div className="fixed inset-0 z-[9998] bg-black/50 backdrop-blur-sm md:hidden">
           <div className="absolute top-22 left-4 right-4 bg-background/95 backdrop-blur-md border border-border/50 rounded-2xl shadow-2xl p-6">
             <nav className="flex flex-col space-y-4">
-              <button
-                onClick={() => handleMobileNavClick("features")}
+              <a
+                href="#features"
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleMobileNavClick("features");
+                }}
                 className="text-left px-4 py-3 text-lg font-medium text-muted-foreground hover:text-foreground transition-colors rounded-lg hover:bg-background/50"
+                aria-label="Navigate to Features section"
               >
                 Features
-              </button>
-              <button
-                onClick={() => handleMobileNavClick("pricing")}
+              </a>
+              <a
+                href="#pricing"
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleMobileNavClick("pricing");
+                }}
                 className="text-left px-4 py-3 text-lg font-medium text-muted-foreground hover:text-foreground transition-colors rounded-lg hover:bg-background/50"
+                aria-label="Navigate to Pricing section"
               >
                 Pricing
-              </button>
-              <button
-                onClick={() => handleMobileNavClick("testimonials")}
+              </a>
+              <a
+                href="#testimonials"
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleMobileNavClick("testimonials");
+                }}
                 className="text-left px-4 py-3 text-lg font-medium text-muted-foreground hover:text-foreground transition-colors rounded-lg hover:bg-background/50"
+                aria-label="Navigate to Testimonials section"
               >
                 Testimonials
-              </button>
-              <button
-                onClick={() => handleMobileNavClick("faq")}
+              </a>
+              <a
+                href="#faq"
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleMobileNavClick("faq");
+                }}
                 className="text-left px-4 py-3 text-lg font-medium text-muted-foreground hover:text-foreground transition-colors rounded-lg hover:bg-background/50"
+                aria-label="Navigate to FAQ section"
               >
                 FAQ
-              </button>
+              </a>
               <div className="border-t border-border/50 pt-4 mt-4 flex flex-col space-y-3">
                 <a
                   href="/privacy"
