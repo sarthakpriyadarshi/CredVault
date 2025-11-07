@@ -1,3 +1,4 @@
+import Image from "next/image"
 import { Marquee } from "@/components/marquee"
 
 const testimonials = [
@@ -5,55 +6,55 @@ const testimonials = [
     name: "Sarah Chen",
     username: "@sarah.edu",
     body: "CredVault has transformed how we issue certificates. Bulk issuance saved us countless hours, and recipients love the easy verification.",
-    img: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&h=150&fit=crop&crop=face",
+    img: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=80&h=80&fit=crop&crop=face&auto=format&q=75",
   },
   {
     name: "Michael Torres",
     username: "@mtorres",
     body: "The blockchain verification feature is incredible. Our credentials now have immutable proof that employers trust completely.",
-    img: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face",
+    img: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&h=80&fit=crop&crop=face&auto=format&q=75",
   },
   {
     name: "Emma Johnson",
     username: "@emma.j",
     body: "As an HR manager, CredVault makes it so easy to create custom templates and issue badges at scale. The dashboard is intuitive.",
-    img: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face",
+    img: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=80&h=80&fit=crop&crop=face&auto=format&q=75",
   },
   {
     name: "David Park",
     username: "@davidp",
     body: "We issued 500+ credentials in minutes using CSV upload. The verification system works flawlessly, and recipients can easily share their achievements.",
-    img: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&h=150&fit=crop&crop=face",
+    img: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=80&h=80&fit=crop&crop=face&auto=format&q=75",
   },
   {
     name: "Lisa Anderson",
     username: "@lisa.anderson",
     body: "The template builder is powerful yet simple. Creating certificates and badges with custom placeholders is a breeze.",
-    img: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face",
+    img: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&h=80&fit=crop&crop=face&auto=format&q=75",
   },
   {
     name: "James Wilson",
     username: "@jamesw",
     body: "CredVault streamlined our entire credential process. From template creation to blockchain verification, everything just works.",
-    img: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&h=150&fit=crop&crop=face",
+    img: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=80&h=80&fit=crop&crop=face&auto=format&q=75",
   },
   {
     name: "Rachel Kim",
     username: "@rachel.kim",
     body: "Love how I can view all my credentials in one place, filter by blockchain status, and track expiration dates. So convenient.",
-    img: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&crop=face",
+    img: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=80&h=80&fit=crop&crop=face&auto=format&q=75",
   },
   {
     name: "Alex Martinez",
     username: "@alex.m",
     body: "The recipient dashboard is beautifully designed. Verifying credentials is instant, whether they're on blockchain or database.",
-    img: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&h=150&fit=crop&crop=face",
+    img: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=80&h=80&fit=crop&crop=face&auto=format&q=75",
   },
   {
     name: "Priya Patel",
     username: "@priya.patel",
     body: "CredVault helped us migrate from paper certificates to digital badges. Our students appreciate the instant access and verification.",
-    img: "https://images.unsplash.com/photo-1507591064344-4c6ce005b128?w=150&h=150&fit=crop&crop=face",
+    img: "https://images.unsplash.com/photo-1507591064344-4c6ce005b128?w=80&h=80&fit=crop&crop=face&auto=format&q=75",
   },
 ]
 
@@ -79,7 +80,15 @@ const TestimonialCard = ({
       <div className="text-white/90 leading-relaxed">{body}</div>
 
       <div className="mt-5 flex items-center gap-2">
-        <img src={img || "/placeholder.svg"} alt={name} height="40" width="40" className="h-10 w-10 rounded-full" />
+        <Image
+          src={img || "/placeholder.svg"}
+          alt={name}
+          width={40}
+          height={40}
+          className="h-10 w-10 rounded-full"
+          loading="lazy"
+          quality={75}
+        />
         <div className="flex flex-col">
           <div className="leading-5 font-medium tracking-tight text-white">{name}</div>
           <div className="leading-5 tracking-tight text-white/60">{username}</div>

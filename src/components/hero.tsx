@@ -1,22 +1,12 @@
-"use client"
+"use client";
 
-import { motion } from "framer-motion"
-import { useState, useEffect } from "react"
-import Link from "next/link"
-import { Badge } from "@/components/ui/badge"
-import { Sparkles } from "lucide-react"
+import { motion } from "framer-motion";
+import Image from "next/image";
+import Link from "next/link";
+import { Badge } from "@/components/ui/badge";
+import { Sparkles } from "lucide-react";
 
 export default function Hero() {
-  const [mounted, setMounted] = useState(false)
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-
-  if (!mounted) {
-    return null
-  }
-
   return (
     <>
       <section className="relative overflow-hidden min-h-screen flex flex-col">
@@ -29,7 +19,10 @@ export default function Hero() {
               transition={{ duration: 0.5 }}
               className="mb-8"
             >
-              <Badge variant="secondary" className="inline-flex items-center gap-2 px-4 py-2 text-sm">
+              <Badge
+                variant="secondary"
+                className="inline-flex items-center gap-2 px-4 py-2 text-sm"
+              >
                 <Sparkles className="h-4 w-4" />
                 Trusted Credential Platform
               </Badge>
@@ -42,7 +35,10 @@ export default function Hero() {
               transition={{ duration: 0.5, delay: 0.1 }}
               className="mb-8"
             >
-              <h1 id="main-title" className="text-4xl font-bold tracking-tight text-foreground sm:text-6xl lg:text-7xl">
+              <h1
+                id="main-title"
+                className="text-4xl font-bold tracking-tight text-foreground sm:text-6xl lg:text-7xl"
+              >
                 Issue <strong>credentials</strong> <span>&</span> <br />
                 <strong>badges</strong> <em className="italic">seamlessly</em>
               </h1>
@@ -55,7 +51,10 @@ export default function Hero() {
               transition={{ duration: 0.5, delay: 0.2 }}
               className="mx-auto mb-12 max-w-2xl text-lg text-muted-foreground"
             >
-              Make credential issuance easier for organizations and recipients. Create custom templates, issue certificates and badges in bulk, and verify credentials with blockchain integration. Just like Credly and Accredible, but better.
+              Make credential issuance easier for organizations and recipients.
+              Create custom templates, issue certificates and badges in bulk,
+              and verify credentials with blockchain integration. Just like
+              Credly and Accredible, but better.
             </motion.p>
 
             <motion.div
@@ -124,16 +123,22 @@ export default function Hero() {
                     </div>
                   </div>
                 </a>
-                
+
                 {/* Privacy and Terms Agreement */}
                 <div className="mt-2 text-center">
                   <p className="text-sm text-zinc-300">
                     By continuing, you agree to our{" "}
-                    <Link href="/terms" className="text-primary hover:text-primary/80 underline">
+                    <Link
+                      href="/terms"
+                      className="text-primary hover:text-primary/80 underline"
+                    >
                       Terms & Conditions
                     </Link>{" "}
                     and{" "}
-                    <Link href="/privacy" className="text-primary hover:text-primary/80 underline">
+                    <Link
+                      href="/privacy"
+                      className="text-primary hover:text-primary/80 underline"
+                    >
                       Privacy Policy
                     </Link>
                   </p>
@@ -150,43 +155,164 @@ export default function Hero() {
             className="mt-auto pb-8"
           >
             <div className="text-center">
-              <p className="text-sm text-muted-foreground mb-6 mt-8">Built with</p>
+              <p className="text-sm text-muted-foreground mb-6 mt-8">
+                Built with
+              </p>
               <div className="flex items-center justify-center gap-8">
-                {/* Vercel Logo */}
-                <div className="opacity-60 grayscale hover:opacity-100 hover:grayscale-0 hover:drop-shadow-[0_0_8px_rgba(255,255,255,0.3)] transition-all duration-300">
-                  <svg
-                    width="32"
-                    height="32"
-                    viewBox="0 0 512 512"
-                    className="h-8 w-8 fill-current text-foreground"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path fillRule="evenodd" d="M256,48,496,464H16Z" />
-                  </svg>
-                </div>
-
-                {/* Tailwind CSS Logo */}
-                <div className="opacity-60 grayscale hover:opacity-100 hover:grayscale-0 hover:drop-shadow-[0_0_8px_rgba(56,189,248,0.5)] transition-all duration-300">
-                  <img
-                    src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Tailwind_CSS_Logo.svg-6xxjTKleFAC9zoBBGesuy0rIESAcXA.png"
-                    alt="Tailwind CSS"
-                    className="h-8 object-contain"
-                  />
-                </div>
-
                 {/* Next.js Logo */}
-                <div className="opacity-60 grayscale hover:opacity-100 hover:grayscale-0 hover:drop-shadow-[0_0_8px_rgba(255,255,255,0.3)] transition-all duration-300">
+                <div className="opacity-60 grayscale hover:opacity-100 hover:grayscale-0 hover:drop-shadow-[0_0_8px_rgba(220,48,77,0.5)] transition-all duration-300 group">
                   <svg
                     width="32"
                     height="32"
                     viewBox="0 0 256 256"
-                    className="h-8 w-8 fill-current text-foreground"
+                    className="h-8 w-8 fill-current text-foreground group-hover:text-primary transition-colors duration-300"
                     xmlns="http://www.w3.org/2000/svg"
+                    aria-labelledby="Next.js"
+                    role="img"
                   >
+                    <title id="Next.js">Next.js</title>
                     <path
                       d="M119.616813,0.0688905149 C119.066276,0.118932037 117.314565,0.294077364 115.738025,0.419181169 C79.3775171,3.69690087 45.3192571,23.3131775 23.7481916,53.4631946 C11.7364614,70.2271045 4.05395894,89.2428829 1.15112414,109.384595 C0.12512219,116.415429 0,118.492153 0,128.025062 C0,137.557972 0.12512219,139.634696 1.15112414,146.665529 C8.10791789,194.730411 42.3163245,235.11392 88.7116325,250.076335 C97.0197458,252.753556 105.778299,254.580072 115.738025,255.680985 C119.616813,256.106338 136.383187,256.106338 140.261975,255.680985 C157.453763,253.779407 172.017986,249.525878 186.382014,242.194795 C188.584164,241.068861 189.00958,240.768612 188.709286,240.518404 C188.509091,240.36828 179.124927,227.782837 167.86393,212.570214 L147.393939,184.922273 L121.743891,146.965779 C107.630108,126.098464 96.0187683,109.034305 95.9186706,109.034305 C95.8185728,109.009284 95.7184751,125.873277 95.6684262,146.465363 C95.5933529,182.52028 95.5683284,183.971484 95.1178886,184.82219 C94.4672532,186.048207 93.9667644,186.548623 92.915738,187.099079 C92.114956,187.499411 91.4142717,187.574474 87.6355816,187.574474 L83.3063539,187.574474 L82.1552297,186.848872 C81.4044966,186.373477 80.8539589,185.747958 80.4785924,185.022356 L79.9530792,183.896422 L80.0031281,133.729796 L80.0782014,83.5381493 L80.8539589,82.5623397 C81.25435,82.0369037 82.1051808,81.3613431 82.7057674,81.0360732 C83.7317693,80.535658 84.1321603,80.4856165 88.4613881,80.4856165 C93.5663734,80.4856165 94.4172043,80.6857826 95.7434995,82.1369867 C96.1188661,82.5373189 110.007429,103.454675 126.623656,128.650581 C143.239883,153.846488 165.962072,188.250034 177.122972,205.139048 L197.392766,235.839522 L198.418768,235.163961 C207.502639,229.259062 217.112023,220.852086 224.719453,212.09482 C240.910264,193.504394 251.345455,170.835585 254.848876,146.665529 C255.874878,139.634696 256,137.557972 256,128.025062 C256,118.492153 255.874878,116.415429 254.848876,109.384595 C247.892082,61.3197135 213.683675,20.9362052 167.288368,5.97379012 C159.105376,3.32158945 150.396872,1.49507389 140.637341,0.394160408 C138.234995,0.143952798 121.693842,-0.131275573 119.616813,0.0688905149 Z M172.017986,77.4831252 C173.219159,78.0836234 174.195112,79.2345784 174.545455,80.435575 C174.74565,81.0861148 174.795699,94.9976579 174.74565,126.348671 L174.670577,171.336 L166.73783,159.17591 L158.780059,147.01582 L158.780059,114.313685 C158.780059,93.1711423 158.880156,81.2862808 159.030303,80.7108033 C159.430694,79.3096407 160.306549,78.2087272 161.507722,77.5581875 C162.533724,77.0327515 162.909091,76.98271 166.837928,76.98271 C170.541544,76.98271 171.19218,77.0327515 172.017986,77.4831252 Z"
-                      fill="#ffffff"
+                      fill="currentColor"
                     />
+                  </svg>
+                </div>
+
+                {/* Tailwind CSS Logo */}
+                <div className="opacity-60 grayscale hover:opacity-100 hover:grayscale-0 hover:drop-shadow-[0_0_8px_rgba(220,48,77,0.5)] transition-all duration-300 group">
+                  <Image
+                    src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Tailwind_CSS_Logo.svg-6xxjTKleFAC9zoBBGesuy0rIESAcXA.png"
+                    alt="Tailwind CSS"
+                    width={32}
+                    height={32}
+                    className="h-8 object-contain transition-all duration-300"
+                    aria-labelledby="Tailwind CSS"
+                    role="img"
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.filter =
+                        "brightness(0) saturate(100%) invert(27%) sepia(95%) saturate(1352%) hue-rotate(325deg) brightness(96%) contrast(86%)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.filter = "";
+                    }}
+                    loading="lazy"
+                  />
+                </div>
+
+                {/* MongoDB Logo */}
+                <div className="opacity-60 grayscale hover:opacity-100 hover:grayscale-0 hover:drop-shadow-[0_0_8px_rgba(220,48,77,0.5)] transition-all duration-300 group">
+                  <svg
+                    width="32"
+                    height="32"
+                    viewBox="0 0 1024 1024"
+                    className="h-8 w-8 transition-all duration-300"
+                    xmlns="http://www.w3.org/2000/svg"
+                    aria-labelledby="MongoDB"
+                    role="img"
+                    onMouseEnter={(e) => {
+                      const svg = e.currentTarget;
+                      const circle = svg.querySelector("circle");
+                      const path = svg.querySelector("path");
+                      if (circle)
+                        circle.setAttribute("fill", "rgb(220, 48, 77)");
+                      if (path) path.setAttribute("fill", "#fff");
+                    }}
+                    onMouseLeave={(e) => {
+                      const svg = e.currentTarget;
+                      const circle = svg.querySelector("circle");
+                      const path = svg.querySelector("path");
+                      if (circle) circle.setAttribute("fill", "#fff");
+                      if (path) path.setAttribute("fill", "#000");
+                    }}
+                  >
+                    <title id="MongoDB">MongoDB</title>
+                    <circle cx="512" cy="512" r="512" fill="#fff" />
+                    <path
+                      d="M648.86 449.44c-32.34-142.73-108.77-189.66-117-207.59-9-12.65-18.12-35.15-18.12-35.15-.15-.38-.39-1.05-.67-1.7-.93 12.65-1.41 17.53-13.37 30.29-18.52 14.48-113.54 94.21-121.27 256.37-7.21 151.24 109.25 241.36 125 252.85l1.79 1.27v-.11c.1.76 5 36 8.44 73.34H526a726.68 726.68 0 0 1 13-78.53l1-.65a204.48 204.48 0 0 0 20.11-16.45l.72-.65c33.48-30.93 93.67-102.47 93.08-216.53a347.07 347.07 0 0 0-5.05-56.76zM512.35 659.12s0-212.12 7-212.08c5.46 0 12.53 273.61 12.53 273.61-9.72-1.17-19.53-45.03-19.53-61.53z"
+                      fill="#000"
+                    />
+                  </svg>
+                </div>
+
+                {/* Vault Protocol Logo */}
+                <div className="opacity-60 grayscale hover:opacity-100 hover:grayscale-0 hover:drop-shadow-[0_0_8px_rgba(220,48,77,0.5)] transition-all duration-300 group">
+                  <svg
+                    width="32"
+                    height="32"
+                    viewBox="20 20 60 60"
+                    xmlns="http://www.w3.org/2000/svg"
+                    aria-labelledby="Vault Protocol"
+                    role="img"
+                    className="h-8 w-8 transition-all duration-300"
+                    onMouseEnter={(e) => {
+                      const svg = e.currentTarget;
+                      const rect = svg.querySelector("rect");
+                      const circle = svg.querySelector("circle");
+                      if (rect) rect.setAttribute("fill", "rgb(220, 48, 77)");
+                      if (circle) circle.setAttribute("fill", "#fff");
+                    }}
+                    onMouseLeave={(e) => {
+                      const svg = e.currentTarget;
+                      const rect = svg.querySelector("rect");
+                      const circle = svg.querySelector("circle");
+                      if (rect) rect.setAttribute("fill", "#1a1a1a");
+                      if (circle) circle.setAttribute("fill", "#FFFFFF");
+                    }}
+                  >
+                    <title id="Vault Protocol">Vault Protocol</title>
+                    <rect
+                      x="20"
+                      y="20"
+                      width="60"
+                      height="60"
+                      rx="10"
+                      ry="10"
+                      fill="#1a1a1a"
+                    />
+                    <circle cx="50" cy="50" r="22" fill="#FFFFFF" />
+                    <rect
+                      x="36"
+                      y="45"
+                      width="6"
+                      height="11"
+                      rx="1.5"
+                      ry="1.5"
+                      fill="#333333"
+                    />
+                    <rect
+                      x="58"
+                      y="45"
+                      width="6"
+                      height="11"
+                      rx="1.5"
+                      ry="1.5"
+                      fill="#333333"
+                    />
+                    <rect
+                      x="43"
+                      y="49"
+                      width="14"
+                      height="3"
+                      rx="0.5"
+                      ry="0.5"
+                      fill="#666666"
+                    />
+                  </svg>
+                </div>
+
+                {/* Vercel Logo */}
+                <div className="opacity-60 grayscale hover:opacity-100 hover:grayscale-0 hover:drop-shadow-[0_0_8px_rgba(220,48,77,0.5)] transition-all duration-300 group">
+                  <svg
+                    width="32"
+                    height="32"
+                    viewBox="0 0 512 512"
+                    className="h-8 w-8 fill-current text-foreground group-hover:text-primary transition-colors duration-300"
+                    xmlns="http://www.w3.org/2000/svg"
+                    aria-labelledby="Vercel"
+                    role="img"
+                  >
+                    <title id="Vercel">Vercel</title>
+                    <path fillRule="evenodd" d="M256,48,496,464H16Z" />
                   </svg>
                 </div>
               </div>
@@ -195,5 +321,5 @@ export default function Hero() {
         </div>
       </section>
     </>
-  )
+  );
 }

@@ -4,6 +4,7 @@ import type React from "react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import Image from "next/image";
 import Link from "next/link";
 import { PrimaryButton } from "@/components/ui/primary-button";
 import { Input } from "@/components/ui/input";
@@ -189,6 +190,7 @@ export default function IssuerSignupPage() {
   };
 
   const handleOAuth = (provider: "google" | "github") => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { signIn } = require("next-auth/react");
     // Store role in cookie before OAuth
     document.cookie = `oauth_role=issuer; path=/; max-age=900; SameSite=Lax`;
@@ -228,10 +230,13 @@ export default function IssuerSignupPage() {
               <div className="text-center mb-8 mt-8 md:mt-0">
                 <Link href="/" className="inline-block mb-6">
                   <div className="flex items-center justify-center space-x-2">
-                    <img
+                    <Image
                       src="/logo.svg"
                       alt="Logo"
+                      width={32}
+                      height={32}
                       className="rounded-full size-8 w-8 h-8 object-contain"
+                      priority
                     />
                   </div>
                 </Link>
@@ -383,10 +388,12 @@ export default function IssuerSignupPage() {
                     {proofPreview && (
                       <div className="mt-2">
                         <p className="text-xs text-zinc-400 mb-2">Preview:</p>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={proofPreview}
                           alt="Proof preview"
                           className="max-h-32 w-auto rounded-lg border border-zinc-700"
+                          loading="lazy"
                         />
                       </div>
                     )}
