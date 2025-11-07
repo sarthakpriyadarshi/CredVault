@@ -94,7 +94,10 @@ export default function TermsAndConditionsPage() {
             <div className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-8">
               <h2 className="text-2xl font-semibold text-white mb-4">1. Acceptance of Terms</h2>
               <p className="text-zinc-300 leading-relaxed">
-                By accessing and using CredVault (&ldquo;the Platform,&rdquo; &ldquo;we,&rdquo; &ldquo;us,&rdquo; or &ldquo;our&rdquo;), you accept and agree to be bound by these Terms and Conditions. If you do not agree to these terms, please do not use our services. We reserve the right to modify these terms at any time, and your continued use of the Platform constitutes acceptance of any changes.
+                Welcome to CredVault (&ldquo;the Platform,&rdquo; &ldquo;we,&rdquo; &ldquo;us,&rdquo; or &ldquo;our&rdquo;), an enterprise-grade digital credential and badge issuance platform. By accessing, registering for, or using CredVault, you accept and agree to be bound by these Terms and Conditions (&ldquo;Terms&rdquo;). These Terms constitute a legally binding agreement between you and CredVault.
+              </p>
+              <p className="text-zinc-300 leading-relaxed mt-3">
+                If you do not agree to these Terms, you must not access or use the Platform. We reserve the right to modify these Terms at any time. Material changes will be communicated via email or platform notification. Your continued use of the Platform after such modifications constitutes acceptance of the updated Terms.
               </p>
             </div>
 
@@ -102,16 +105,21 @@ export default function TermsAndConditionsPage() {
             <div className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-8">
               <h2 className="text-2xl font-semibold text-white mb-4">2. Description of Service</h2>
               <p className="text-zinc-300 leading-relaxed mb-3">
-                CredVault provides a digital credential and badge issuance platform that enables:
+                CredVault is an enterprise-grade digital credential and badge issuance platform that enables organizations to create, issue, and manage verifiable digital credentials. Our Platform provides:
               </p>
               <ul className="list-disc list-inside text-zinc-300 space-y-2 ml-4">
-                <li>Organizations to issue verifiable digital credentials and badges</li>
-                <li>Recipients to receive, store, and share their credentials</li>
-                <li>Third parties to verify the authenticity of credentials</li>
-                <li>Blockchain-based verification for enhanced security</li>
-                <li>Template creation and customization tools</li>
-                <li>Analytics and reporting features</li>
+                <li><strong className="text-white">Credential Issuance:</strong> Organizations (Issuers) can create custom certificate and badge templates, issue credentials to recipients individually or in bulk via CSV upload, and manage credential lifecycle</li>
+                <li><strong className="text-white">Credential Management:</strong> Recipients can receive, store, view, download, and share their digital credentials through public profile pages</li>
+                <li><strong className="text-white">Verification System:</strong> Third parties can verify the authenticity of credentials through QR codes and blockchain verification</li>
+                <li><strong className="text-white">Blockchain Integration:</strong> Optional blockchain-based verification using VAULT Protocol for tamper-proof, immutable credential storage with IPFS integration</li>
+                <li><strong className="text-white">Template Designer:</strong> Drag-and-drop certificate/badge designer with 50+ Google Fonts, coordinate-based placement, and dynamic field support</li>
+                <li><strong className="text-white">Analytics Dashboard:</strong> Real-time analytics and insights for issuers, recipients, and administrators</li>
+                <li><strong className="text-white">Organization Management:</strong> Admin-verified organization registration with role-based access control</li>
+                <li><strong className="text-white">Bulk Operations:</strong> CSV-based bulk credential issuance with auto-fill support for QR codes and issue dates</li>
               </ul>
+              <p className="text-zinc-300 leading-relaxed mt-3">
+                The Platform is built using Next.js, MongoDB, and integrates with blockchain networks (VAULT Protocol) and IPFS for decentralized storage when blockchain features are enabled.
+              </p>
             </div>
 
             {/* Section 3 */}
@@ -122,7 +130,15 @@ export default function TermsAndConditionsPage() {
                 <div>
                   <h3 className="text-xl font-semibold text-white mb-3">3.1 Account Creation</h3>
                   <p className="text-zinc-300 leading-relaxed mb-3">
-                    To use certain features of the Platform, you must create an account. You agree to:
+                    To use the Platform, you must create an account. You can register using:
+                  </p>
+                  <ul className="list-disc list-inside text-zinc-300 space-y-2 ml-4 mb-3">
+                    <li><strong className="text-white">Email and Password:</strong> Traditional registration with email verification</li>
+                    <li><strong className="text-white">Google OAuth:</strong> Sign in with your Google account</li>
+                    <li><strong className="text-white">GitHub OAuth:</strong> Sign in with your GitHub account</li>
+                  </ul>
+                  <p className="text-zinc-300 leading-relaxed mb-3">
+                    When using OAuth providers (Google or GitHub), you authorize us to access certain information from your OAuth account as described in our Privacy Policy. By creating an account, you agree to:
                   </p>
                   <ul className="list-disc list-inside text-zinc-300 space-y-2 ml-4">
                     <li>Provide accurate, current, and complete information</li>
@@ -130,19 +146,24 @@ export default function TermsAndConditionsPage() {
                     <li>Maintain the security of your account credentials</li>
                     <li>Accept responsibility for all activities under your account</li>
                     <li>Notify us immediately of any unauthorized access</li>
+                    <li>Verify your email address when required</li>
+                    <li>Comply with the terms of service of any OAuth providers you use to access the Platform</li>
                   </ul>
                 </div>
 
                 <div>
-                  <h3 className="text-xl font-semibold text-white mb-3">3.2 Account Types</h3>
+                  <h3 className="text-xl font-semibold text-white mb-3">3.2 Account Types and Roles</h3>
                   <p className="text-zinc-300 leading-relaxed mb-3">
-                    We offer different account types with varying permissions:
+                    CredVault supports three distinct user roles with different permissions:
                   </p>
                   <ul className="list-disc list-inside text-zinc-300 space-y-2 ml-4">
-                    <li><strong className="text-white">Admin:</strong> Full platform management and configuration</li>
-                    <li><strong className="text-white">Issuer:</strong> Create and issue credentials to recipients</li>
-                    <li><strong className="text-white">Recipient:</strong> Receive, view, and share credentials</li>
+                    <li><strong className="text-white">Recipient:</strong> Users who receive credentials. Recipients can view, download, and share their credentials, manage their public profile, and verify credentials. Recipient accounts are automatically verified upon registration.</li>
+                    <li><strong className="text-white">Issuer:</strong> Organizations that issue credentials. Issuers must register their organization, which requires admin verification. Issuers can create custom templates, issue credentials individually or in bulk, manage their organization, and access analytics. Issuer accounts created via OAuth must complete organization registration separately.</li>
+                    <li><strong className="text-white">Admin:</strong> Platform administrators with full system management capabilities, including organization verification, user management, system analytics, and configuration. Admin accounts are created through separate administrative processes.</li>
                   </ul>
+                  <p className="text-zinc-300 leading-relaxed mt-3">
+                    Role-based access control ensures that users can only access features and data appropriate to their role. Organization isolation ensures that issuers can only access data from their own organization.
+                  </p>
                 </div>
 
                 <div>
@@ -195,12 +216,16 @@ export default function TermsAndConditionsPage() {
                     Organizations issuing credentials through CredVault agree to:
                   </p>
                   <ul className="list-disc list-inside text-zinc-300 space-y-2 ml-4">
-                    <li>Verify recipient eligibility before issuing credentials</li>
-                    <li>Ensure accuracy of credential information</li>
-                    <li>Comply with all applicable laws and regulations</li>
-                    <li>Maintain appropriate documentation and records</li>
-                    <li>Handle recipient data responsibly and securely</li>
-                    <li>Not issue credentials for fraudulent or illegal purposes</li>
+                    <li>Complete organization registration with accurate information and provide verification proof documents as required</li>
+                    <li>Wait for admin verification before issuing credentials (organizations start with &ldquo;pending&rdquo; status)</li>
+                    <li>Verify recipient eligibility and accuracy before issuing credentials</li>
+                    <li>Ensure all credential information is accurate and truthful</li>
+                    <li>Comply with all applicable laws, regulations, and industry standards</li>
+                    <li>Maintain appropriate documentation and records of credential issuance</li>
+                    <li>Handle recipient data responsibly, securely, and in accordance with our Privacy Policy</li>
+                    <li>Not issue credentials for fraudulent, misleading, or illegal purposes</li>
+                    <li>Respect intellectual property rights when creating templates and issuing credentials</li>
+                    <li>Manage credential lifecycle appropriately, including revocation when necessary</li>
                   </ul>
                 </div>
 
@@ -213,8 +238,18 @@ export default function TermsAndConditionsPage() {
 
                 <div>
                   <h3 className="text-xl font-semibold text-white mb-3">5.3 Blockchain Verification</h3>
-                  <p className="text-zinc-300 leading-relaxed">
-                    Credentials verified on blockchain are immutable and permanently recorded. You acknowledge that blockchain verification cannot be undone, and credential data on the blockchain is publicly accessible.
+                  <p className="text-zinc-300 leading-relaxed mb-3">
+                    CredVault offers optional blockchain verification using the VAULT Protocol. When enabled:
+                  </p>
+                  <ul className="list-disc list-inside text-zinc-300 space-y-2 ml-4">
+                    <li>Credentials are encrypted using AES-256-GCM encryption before storage</li>
+                    <li>Encrypted credentials are stored on IPFS (InterPlanetary File System) for decentralized storage</li>
+                    <li>Verification data is recorded on the blockchain, making it tamper-proof and immutable</li>
+                    <li>Blockchain transaction IDs, wallet addresses, and verification timestamps are stored</li>
+                    <li>Once verified on blockchain, credentials cannot be modified or deleted from the blockchain</li>
+                  </ul>
+                  <p className="text-zinc-300 leading-relaxed mt-3">
+                    You acknowledge that blockchain-verified credentials are permanently recorded and publicly accessible on the blockchain network. Blockchain verification is optional and requires self-hosted infrastructure or a future cloud plan. The Free plan does not include blockchain integration.
                   </p>
                 </div>
               </div>
@@ -254,16 +289,21 @@ export default function TermsAndConditionsPage() {
               
               <div className="space-y-6">
                 <div>
-                  <h3 className="text-xl font-semibold text-white mb-3">7.1 Pricing</h3>
-                  <p className="text-zinc-300 leading-relaxed">
-                    We offer various pricing plans for different user types and feature sets. Current pricing is available on our website and may be modified with notice.
+                  <h3 className="text-xl font-semibold text-white mb-3">7.1 Pricing Plans</h3>
+                  <p className="text-zinc-300 leading-relaxed mb-3">
+                    We offer the following pricing plans:
                   </p>
+                  <ul className="list-disc list-inside text-zinc-300 space-y-2 ml-4">
+                    <li><strong className="text-white">Free Plan:</strong> Our main plan available to all users at no cost, providing unlimited credential storage, verification, templates, and bulk issuance without blockchain integration.</li>
+                    <li><strong className="text-white">Self-Hosted Plan:</strong> Free and open-source, available on GitHub. Allows you to self-host the platform with full blockchain infrastructure control. Visit our <a href="https://github.com/sarthakpriyadarshi/credvault" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">GitHub repository</a> for installation and setup instructions.</li>
+                    <li><strong className="text-white">Cloud Plan:</strong> Coming soon. A managed cloud-based solution with automatic blockchain infrastructure management.</li>
+                  </ul>
                 </div>
 
                 <div>
                   <h3 className="text-xl font-semibold text-white mb-3">7.2 Payment Terms</h3>
                   <p className="text-zinc-300 leading-relaxed mb-3">
-                    By purchasing a paid plan, you agree to:
+                    Currently, all available plans are free. If paid plans are introduced in the future, by purchasing a paid plan, you agree to:
                   </p>
                   <ul className="list-disc list-inside text-zinc-300 space-y-2 ml-4">
                     <li>Provide accurate billing information</li>
@@ -276,7 +316,7 @@ export default function TermsAndConditionsPage() {
                 <div>
                   <h3 className="text-xl font-semibold text-white mb-3">7.3 Refunds</h3>
                   <p className="text-zinc-300 leading-relaxed">
-                    Refunds are handled on a case-by-case basis. Generally, payments are non-refundable, but we may provide refunds at our discretion for service failures or billing errors.
+                    As all current plans are free, refunds are not applicable at this time. If paid plans are introduced in the future, refunds will be handled on a case-by-case basis. Generally, payments are non-refundable, but we may provide refunds at our discretion for service failures or billing errors.
                   </p>
                 </div>
               </div>
@@ -287,7 +327,7 @@ export default function TermsAndConditionsPage() {
               <div>
                 <h2 className="text-2xl font-semibold text-white mb-4">8. Privacy and Data Protection</h2>
                 <p className="text-zinc-300 leading-relaxed">
-                  Our collection, use, and protection of your personal information is governed by our Privacy Policy. By using the Platform, you consent to our data practices as described in the Privacy Policy.
+                  Our collection, use, disclosure, and protection of your personal information is governed by our Privacy Policy. By using the Platform, including when you authenticate via Google OAuth, GitHub OAuth, or email/password, you consent to our data practices as described in the Privacy Policy. Please review our Privacy Policy carefully to understand how we handle your information, including data received from OAuth providers.
                 </p>
               </div>
 
@@ -331,7 +371,7 @@ export default function TermsAndConditionsPage() {
                 <div>
                   <h3 className="text-xl font-semibold text-white mb-3">12.1 Informal Resolution</h3>
                   <p className="text-zinc-300 leading-relaxed">
-                    Before filing a legal claim, you agree to attempt to resolve disputes informally by contacting us at sarthak@sarthakpriyadarshi.com. We will attempt to resolve the dispute within 30 days.
+                    Before filing a legal claim, you agree to attempt to resolve disputes informally by contacting us at support@credvault.app. We will attempt to resolve the dispute within 30 days.
                   </p>
                 </div>
 
@@ -367,10 +407,10 @@ export default function TermsAndConditionsPage() {
                 </p>
                 <div className="bg-zinc-800/50 border border-zinc-700 rounded-xl p-6 space-y-2">
                   <p className="text-zinc-300">
-                    <strong className="text-white">Email:</strong> sarthak@sarthakpriyadarshi.com
+                    <strong className="text-white">Support Email:</strong> support@credvault.app
                   </p>
                   <p className="text-zinc-300">
-                    <strong className="text-white">Support:</strong> sarthak@sarthakpriyadarshi.com
+                    <strong className="text-white">Admin Email:</strong> admin@credvault.app
                   </p>
                   <p className="text-zinc-300">
                     <strong className="text-white">Response Time:</strong> We aim to respond within 48 hours
