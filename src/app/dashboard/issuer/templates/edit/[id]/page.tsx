@@ -27,6 +27,7 @@ import { LoadingScreen } from "@/components/loading-screen"
 import { ColorPickerComponent } from "@/components/ui/color-picker"
 import { generateDummyQRCodeBrowser } from "@/lib/qrcode/browser-generator"
 import { IQRCodeStyling } from "@/models/Template"
+import { GoogleFontsLoader } from "@/components/google-fonts-loader"
 
 interface TemplateField {
   id: string
@@ -1171,8 +1172,10 @@ export default function EditTemplatePage() {
   }
 
   return (
-    <div className="min-h-screen w-full bg-black relative">
-      <div className="fixed inset-0 bg-linear-to-br from-zinc-900 via-black to-zinc-900 z-0" />
+    <>
+      <GoogleFontsLoader />
+      <div className="min-h-screen w-full bg-black relative">
+        <div className="fixed inset-0 bg-linear-to-br from-zinc-900 via-black to-zinc-900 z-0" />
       <div className="fixed top-20 left-20 w-72 h-72 bg-primary/10 rounded-full blur-3xl z-0" />
       <div className="fixed bottom-20 right-20 w-96 h-96 bg-primary/5 rounded-full blur-3xl z-0" />
 
@@ -1935,5 +1938,6 @@ export default function EditTemplatePage() {
         </DialogContent>
       </Dialog>
     </div>
+    </>
   )
 }

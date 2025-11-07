@@ -26,6 +26,7 @@ import { GOOGLE_FONTS } from "@/lib/fonts"
 import { ColorPickerComponent } from "@/components/ui/color-picker"
 import { generateDummyQRCodeBrowser } from "@/lib/qrcode/browser-generator"
 import { IQRCodeStyling } from "@/models/Template"
+import { GoogleFontsLoader } from "@/components/google-fonts-loader"
 
 interface TemplateField {
   id: string
@@ -1128,7 +1129,9 @@ export default function CreateTemplatePage() {
   }
 
   return (
-    <div className="min-h-screen w-full bg-black relative">
+    <>
+      <GoogleFontsLoader />
+      <div className="min-h-screen w-full bg-black relative">
       {/* Background gradient - fixed to viewport */}
       <div className="fixed inset-0 bg-gradient-to-br from-zinc-900 via-black to-zinc-900 z-0" />
 
@@ -2273,5 +2276,6 @@ export default function CreateTemplatePage() {
         </DialogContent>
       </Dialog>
     </div>
+    </>
   )
 }

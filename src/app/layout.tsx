@@ -3,7 +3,6 @@ import type { Metadata } from "next";
 import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
 import { Analytics } from "@vercel/analytics/react";
-import Script from "next/script";
 import { Providers } from "@/components/providers";
 import { SetupChecker } from "@/components/setup-checker";
 import "./globals.css";
@@ -90,23 +89,8 @@ html {
           <SetupChecker>{children}</SetupChecker>
         </Providers>
         <Analytics />
-        {/* Load Google Fonts asynchronously to prevent render blocking */}
-        <Script
-          id="load-google-fonts"
-          strategy="afterInteractive"
-          dangerouslySetInnerHTML={{
-            __html: `
-              (function() {
-                var link = document.createElement('link');
-                link.rel = 'stylesheet';
-                link.href = 'https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&family=Roboto:wght@100;300;400;500;700;900&family=Open+Sans:wght@300;400;600;700;800&family=Lato:wght@100;300;400;700;900&family=Montserrat:wght@100;200;300;400;500;600;700;800;900&family=Raleway:wght@100;200;300;400;500;600;700;800;900&family=Poppins:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:wght@400;500;600;700;800;900&family=Merriweather:wght@300;400;700;900&family=Oswald:wght@200;300;400;500;600;700&family=Lora:wght@400;500;600;700&family=Source+Sans+Pro:wght@200;300;400;600;700;900&family=Ubuntu:wght@300;400;500;700&family=Nunito:wght@200;300;400;500;600;700;800;900&family=PT+Sans:wght@400;700&family=Noto+Sans:wght@400;500;600;700&family=Crimson+Text:wght@400;600;700&family=Libre+Baskerville:wght@400;700&family=Playfair+Display+SC:wght@400;700;900&family=Cormorant+Garamond:wght@300;400;500;600;700&family=EB+Garamond:wght@400;500;600;700;800&family=Alfa+Slab+One&family=Bebas+Neue&family=Righteous&family=Abril+Fatface&family=Anton&family=Archivo+Black&family=Bangers&family=Courgette&family=Croissant+One&family=Dancing+Script:wght@400;500;600;700&family=Fredoka+One&family=Great+Vibes&family=Lobster&family=Pacifico&family=Permanent+Marker&family=Quicksand:wght@300;400;500;600;700&family=Satisfy&family=Shadows+Into+Light&family=Yellowtail&display=swap';
-                link.media = 'print';
-                link.onload = function() { this.media = 'all'; };
-                document.head.appendChild(link);
-              })();
-            `,
-          }}
-        />
+        {/* Load Google Fonts asynchronously only when needed (for template editor) */}
+        {/* Fonts are loaded dynamically in template editor pages to reduce initial bundle size */}
       </body>
     </html>
   );
