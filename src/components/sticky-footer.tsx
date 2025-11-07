@@ -196,7 +196,7 @@ export function StickyFooter() {
                     target.style.color = "#121113"
                   }}
                 >
-                  <a href="https://docs.credvault.com" target="_blank" rel="noopener noreferrer" style={{ color: "inherit", textDecoration: "none" }}>Documentation</a>
+                  <a href="/terms" style={{ color: "inherit", textDecoration: "none" }}>Terms & Conditions</a>
                 </li>
                 <li
                   className="hover:underline cursor-pointer transition-colors"
@@ -210,7 +210,7 @@ export function StickyFooter() {
                     target.style.color = "#121113"
                   }}
                 >
-                  <a href="https://support.credvault.com" target="_blank" rel="noopener noreferrer" style={{ color: "inherit", textDecoration: "none" }}>Support</a>
+                  <a href="/privacy" style={{ color: "inherit", textDecoration: "none" }}>Privacy Policy</a>
                 </li>
               </ul>
             </motion.div>

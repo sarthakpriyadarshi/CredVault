@@ -11,7 +11,6 @@ import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Checkbox } from "@/components/ui/checkbox"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Upload, Download, CheckCircle, AlertCircle, FileText } from "lucide-react"
 import { PrimaryButton } from "@/components/ui/primary-button"
@@ -44,7 +43,7 @@ export default function BulkIssuancePage() {
   const [csvFile, setCsvFile] = useState<File | null>(null)
   const [csvPreview, setCsvPreview] = useState<CSVRow[]>([])
   const [csvHeaders, setCsvHeaders] = useState<string[]>([])
-  const [useBlockchain, setUseBlockchain] = useState(false)
+  const [blockchainEnabled, setBlockchainEnabled] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
   const [issuanceRecords, setIssuanceRecords] = useState<IssuanceRecord[]>([])
   const [loading, setLoading] = useState(true)
@@ -61,6 +60,7 @@ export default function BulkIssuancePage() {
     } else if (status === "authenticated" && session?.user?.role === "issuer" && !session.user?.isVerified) {
       router.push("/auth/issuer/login?pending=true")
     } else if (status === "authenticated" && session?.user?.role === "issuer" && session.user?.isVerified) {
+      loadOrganization()
       loadTemplates()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -73,6 +73,22 @@ export default function BulkIssuancePage() {
       setTemplateFields([])
     }
   }, [selectedTemplate])
+
+  const loadOrganization = async () => {
+    try {
+      const res = await fetch("/api/v1/issuer/organization", {
+        credentials: "include",
+      })
+
+      if (res.ok) {
+        const data = await res.json()
+        const enabled = data.blockchainEnabled || false
+        setBlockchainEnabled(enabled)
+      }
+    } catch (error) {
+      console.error("Error loading organization:", error)
+    }
+  }
 
   const loadTemplates = async () => {
     setLoading(true)
@@ -197,7 +213,7 @@ export default function BulkIssuancePage() {
       const formData = new FormData()
       formData.append("file", csvFile)
       formData.append("templateId", selectedTemplate)
-      formData.append("useBlockchain", String(useBlockchain))
+      formData.append("useBlockchain", String(blockchainEnabled)) // Always use organization setting
 
       const res = await fetch("/api/v1/issuer/credentials/bulk", {
         method: "POST",
@@ -407,25 +423,31 @@ export default function BulkIssuancePage() {
                           )}
                         </div>
 
-                        {/* Blockchain Option and Issue Button */}
-                        <div className="flex items-center justify-between pt-4 border-t border-border/50">
-                          <label 
-                            htmlFor="blockchain" 
-                            className="flex items-center gap-3 cursor-pointer"
-                          >
-                            <Checkbox checked={useBlockchain} onCheckedChange={setUseBlockchain} id="blockchain" />
-                            <span className="font-normal flex-1">
-                              Issue with Blockchain
-                            </span>
-                          </label>
-                          <PrimaryButton
-                            onClick={handleProcessBulkIssuance}
-                            disabled={isProcessing}
-                            className="gap-2"
-                          >
-                            <Upload className="h-4 w-4" />
-                            {isProcessing ? "Processing..." : "Issue Credentials"}
-                          </PrimaryButton>
+                        {/* Blockchain Status and Issue Button */}
+                        <div className="space-y-3 pt-4 border-t border-border/50">
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1">
+                              <div className="p-3 bg-background/50 rounded-lg">
+                                <p className="font-medium text-foreground">Blockchain Status</p>
+                                <p className={`text-sm ${blockchainEnabled ? 'text-emerald-400' : 'text-muted-foreground'}`}>
+                                  {blockchainEnabled ? "Enabled - Credentials will be stored on blockchain" : "Disabled"}
+                                </p>
+                                {!blockchainEnabled && (
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                    Contact your admin to enable blockchain for your organization
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                            <PrimaryButton
+                              onClick={handleProcessBulkIssuance}
+                              disabled={isProcessing}
+                              className="gap-2"
+                            >
+                              <Upload className="h-4 w-4" />
+                              {isProcessing ? "Processing..." : "Issue Credentials"}
+                            </PrimaryButton>
+                          </div>
                         </div>
                       </div>
                     )}

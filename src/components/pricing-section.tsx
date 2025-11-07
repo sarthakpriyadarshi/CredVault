@@ -4,7 +4,30 @@ import { motion } from "framer-motion"
 import { Check, Sparkles } from "lucide-react"
 import { useState } from "react"
 
-const pricingPlans = [
+type PricingPlan = 
+  | {
+      name: string
+      price: string
+      description: string
+      features: string[]
+      popular: boolean
+      cta: string
+      link: string
+      external?: boolean
+    }
+  | {
+      name: string
+      monthlyPrice: number
+      annualPrice: number
+      description: string
+      features: string[]
+      popular: boolean
+      cta: string
+      link: string
+      external?: boolean
+    }
+
+const pricingPlans: PricingPlan[] = [
   {
     name: "Free",
     price: "Free",
@@ -19,7 +42,7 @@ const pricingPlans = [
       "Analytics dashboard",
       "No blockchain integration",
     ],
-    popular: false,
+    popular: true,
     cta: "Get Started",
     link: "/signup",
   },
@@ -38,13 +61,13 @@ const pricingPlans = [
       "IPFS integration",
     ],
     popular: false,
-    cta: "Learn More",
-    link: "/auth/issuer/signup",
+    cta: "View on GitHub",
+    link: "https://github.com/sarthakpriyadarshi/credvault",
+    external: true,
   },
   {
     name: "Cloud",
-    monthlyPrice: 20,
-    annualPrice: 18,
+    price: "Coming Soon",
     description: "Cloud-based with managed blockchain",
     features: [
       "Everything in Free plan",
@@ -56,9 +79,9 @@ const pricingPlans = [
       "Automatic scaling",
       "Gas costs charged separately",
     ],
-    popular: true,
-    cta: "Start Free Trial",
-    link: "/auth/issuer/signup",
+    popular: false,
+    cta: "Coming Soon",
+    link: "#",
   },
 ]
 
@@ -152,16 +175,16 @@ export function PricingSection() {
               <div className="text-center mb-8">
                 <h3 className="text-xl font-bold text-white mb-2">{plan.name}</h3>
                 <div className="flex items-baseline justify-center gap-1 mb-2">
-                  {plan.price ? (
+                  {"price" in plan ? (
                     <span className="text-4xl font-bold text-white">{plan.price}</span>
-                  ) : (
+                  ) : "monthlyPrice" in plan ? (
                     <>
                       <span className="text-4xl font-bold text-white">
                         ${isAnnual ? plan.annualPrice : plan.monthlyPrice}
                       </span>
                       <span className="text-white/60 text-lg">{isAnnual ? "/year" : "/month"}</span>
                     </>
-                  )}
+                  ) : null}
                 </div>
                 <p className="text-white/60 text-sm">{plan.description}</p>
               </div>
@@ -177,10 +200,14 @@ export function PricingSection() {
 
               <motion.a
                 href={plan.link || "/signup"}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
+                target={"external" in plan && plan.external ? "_blank" : undefined}
+                rel={"external" in plan && plan.external ? "noopener noreferrer" : undefined}
+                whileHover={plan.link !== "#" ? { scale: 1.02 } : {}}
+                whileTap={plan.link !== "#" ? { scale: 0.98 } : {}}
                 className={`w-full py-3 px-6 rounded-lg font-medium transition-all duration-200 text-center block ${
-                  plan.popular
+                  plan.link === "#"
+                    ? "bg-white/5 text-white/50 border border-white/10 cursor-not-allowed"
+                    : plan.popular
                     ? "bg-gradient-to-r from-primary to-primary/80 text-white shadow-lg shadow-primary/25 hover:shadow-primary/40"
                     : "bg-white/10 text-white border border-white/20 hover:bg-white/20"
                 }`}

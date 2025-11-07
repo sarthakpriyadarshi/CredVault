@@ -34,6 +34,7 @@ async function handler(
         verificationStatus: organization.verificationStatus,
         description: organization.description,
         logo: organization.logo,
+        blockchainEnabled: organization.blockchainEnabled || false,
       })
     } catch (error: unknown) {
       return handleApiError(error)
@@ -88,6 +89,7 @@ async function handler(
           verificationStatus: organization.verificationStatus,
           description: organization.description,
           logo: organization.logo,
+          blockchainEnabled: organization.blockchainEnabled || false,
         },
       })
     } catch (error: unknown) {

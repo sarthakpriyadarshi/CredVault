@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/dialog"
 import { Plus, Search, Edit2, Trash2, Eye } from "lucide-react"
 import { PrimaryButton } from "@/components/ui/primary-button"
+import { Checkbox } from "@/components/ui/checkbox"
 import Image from "next/image"
 
 interface Organization {
@@ -33,6 +34,7 @@ interface Organization {
   verifiedBy?: { id: string; name: string; email: string }
   verifiedAt?: string
   rejectionReason?: string
+  blockchainEnabled?: boolean
   createdAt: string
   issuerCount: number
   issuers: Array<{
@@ -56,6 +58,7 @@ export default function OrganizationsPage() {
     description: "",
     website: "",
     verificationStatus: "pending" as "pending" | "approved" | "rejected",
+    blockchainEnabled: false,
   })
   const [organizations, setOrganizations] = useState<Organization[]>([])
   const [loading, setLoading] = useState(true)
@@ -113,6 +116,7 @@ export default function OrganizationsPage() {
       description: org.description || "",
       website: org.website || "",
       verificationStatus: org.verificationStatus || "pending",
+      blockchainEnabled: org.blockchainEnabled || false,
     })
     setIsEditOpen(true)
   }
@@ -411,6 +415,19 @@ export default function OrganizationsPage() {
                                                 {selectedOrg.verifiedAt ? new Date(selectedOrg.verifiedAt).toLocaleDateString() : "-"}
                                               </p>
                                             </div>
+                                            <div>
+                                              <p className="text-xs text-muted-foreground">Blockchain</p>
+                                              <Badge
+                                                variant="outline"
+                                                className={`capitalize font-medium ${
+                                                  selectedOrg.blockchainEnabled
+                                                    ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
+                                                    : "bg-gray-500/20 text-gray-400 border-gray-500/30"
+                                                }`}
+                                              >
+                                                {selectedOrg.blockchainEnabled ? "Enabled" : "Disabled"}
+                                              </Badge>
+                                            </div>
                                           </div>
                                           {selectedOrg.verificationProof && (
                                             <div className="border-t border-border/50 pt-4">
@@ -530,6 +547,23 @@ export default function OrganizationsPage() {
                         <option value="approved">Approved</option>
                         <option value="rejected">Rejected</option>
                       </select>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-foreground mb-2 block">Blockchain Settings</label>
+                      <Checkbox
+                        id="blockchain-enabled"
+                        checked={editForm.blockchainEnabled}
+                        onCheckedChange={(checked) =>
+                          setEditForm({
+                            ...editForm,
+                            blockchainEnabled: checked as boolean,
+                          })
+                        }
+                        label="Enable blockchain for this organization"
+                      />
+                      <p className="text-xs text-muted-foreground mt-2">
+                        When enabled, credentials issued by this organization will be stored on the blockchain
+                      </p>
                     </div>
                   </div>
                   <DialogFooter>

@@ -63,6 +63,7 @@ async function getHandler(req: NextRequest) {
           : null,
         verifiedAt: org.verifiedAt,
         rejectionReason: org.rejectionReason,
+        blockchainEnabled: org.blockchainEnabled || false,
         createdAt: org.createdAt,
         issuerCount: users.length,
         issuers: users.map((u) => ({
