@@ -26,8 +26,6 @@ export default function Features() {
   const { theme } = useTheme();
   const [isHovering, setIsHovering] = useState(false);
   const [isCliHovering, setIsCliHovering] = useState(false);
-  const [isFeature3Hovering, setIsFeature3Hovering] = useState(false);
-  const [isFeature4Hovering, setIsFeature4Hovering] = useState(false);
   const [inputValue, setInputValue] = useState("");
 
   const [baseColor, setBaseColor] = useState<[number, number, number]>([
@@ -45,9 +43,12 @@ export default function Features() {
     const lightPrimary: [number, number, number] = [0.863, 0.188, 0.302]; // Primary pinkish-red for light mode
     const darkPrimary: [number, number, number] = [0.863, 0.204, 0.306]; // Primary pinkish-red for dark mode
     const color = theme === "dark" ? darkPrimary : lightPrimary;
-    setBaseColor(color);
-    setGlowColor(color);
-    setDark(theme === "dark" ? 1 : 0);
+    // Use requestAnimationFrame to avoid synchronous state updates in effect
+    requestAnimationFrame(() => {
+      setBaseColor(color);
+      setGlowColor(color);
+      setDark(theme === "dark" ? 1 : 0);
+    });
   }, [theme]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -95,8 +96,6 @@ export default function Features() {
                 onMouseEnter={() => {
                   setIsCliHovering(true);
                   setIsHovering(false);
-                  setIsFeature3Hovering(false);
-                  setIsFeature4Hovering(false);
                 }}
                 onMouseLeave={() => setIsCliHovering(false)}
                 ref={ref}
@@ -418,8 +417,6 @@ export default function Features() {
                 onMouseEnter={() => {
                   setIsHovering(true);
                   setIsCliHovering(false);
-                  setIsFeature3Hovering(false);
-                  setIsFeature4Hovering(false);
                 }}
                 onMouseLeave={() => setIsHovering(false)}
                 ref={ref}
@@ -495,12 +492,10 @@ export default function Features() {
               <motion.div
                 className="group border-secondary/40 text-card-foreground relative col-span-12 flex flex-col overflow-hidden rounded-xl border-2 p-6 shadow-xl transition-all ease-in-out md:col-span-6 xl:col-span-6 xl:col-start-1 px-4 md:px-6"
                 onMouseEnter={() => {
-                  setIsFeature3Hovering(true);
                   setIsCliHovering(false);
                   setIsHovering(false);
-                  setIsFeature4Hovering(false);
                 }}
-                onMouseLeave={() => setIsFeature3Hovering(false)}
+                onMouseLeave={() => {}}
                 initial={{ opacity: 0, y: 50 }}
                 animate={
                   isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 50 }
@@ -539,7 +534,7 @@ export default function Features() {
                       </div>
                       <div className="flex items-center justify-between px-4 pb-4">
                         <div className="flex items-center gap-3">
-                          <button 
+                          <button
                             className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
                             aria-label="Attach file"
                           >
@@ -578,7 +573,7 @@ export default function Features() {
                             Verify
                           </button>
                         </div>
-                        <button 
+                        <button
                           className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
                           aria-label="Share verification"
                         >
@@ -609,12 +604,10 @@ export default function Features() {
               <motion.div
                 className="group border-secondary/40 text-card-foreground relative col-span-12 flex flex-col overflow-hidden rounded-xl border-2 p-6 shadow-xl transition-all ease-in-out md:col-span-6 xl:col-span-6 xl:col-start-7 px-4 md:px-6"
                 onMouseEnter={() => {
-                  setIsFeature4Hovering(true);
                   setIsCliHovering(false);
                   setIsHovering(false);
-                  setIsFeature3Hovering(false);
                 }}
-                onMouseLeave={() => setIsFeature4Hovering(false)}
+                onMouseLeave={() => {}}
                 initial={{ opacity: 0, y: 50 }}
                 animate={
                   isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 50 }

@@ -1,21 +1,21 @@
-"use client"
+"use client";
 
-import type React from "react"
-import { useEffect, useRef } from "react"
-import createGlobe from "cobe"
-import { cn } from "@/lib/utils"
+import type React from "react";
+import { useEffect, useRef } from "react";
+import createGlobe from "cobe";
+import { cn } from "@/lib/utils";
 
 interface EarthProps {
-  className?: string
-  theta?: number
-  dark?: number
-  scale?: number
-  diffuse?: number
-  mapSamples?: number
-  mapBrightness?: number
-  baseColor?: [number, number, number]
-  markerColor?: [number, number, number]
-  glowColor?: [number, number, number]
+  className?: string;
+  theta?: number;
+  dark?: number;
+  scale?: number;
+  diffuse?: number;
+  mapSamples?: number;
+  mapBrightness?: number;
+  baseColor?: [number, number, number];
+  markerColor?: [number, number, number];
+  glowColor?: [number, number, number];
 }
 const Earth: React.FC<EarthProps> = ({
   className,
@@ -29,16 +29,17 @@ const Earth: React.FC<EarthProps> = ({
   markerColor = [1, 0, 0],
   glowColor = [0.2745, 0.5765, 0.898],
 }) => {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
-    let width = 0
-    const onResize = () => canvasRef.current && (width = canvasRef.current.offsetWidth)
-    window.addEventListener("resize", onResize)
-    onResize()
-    let phi = 0
+    let width = 0;
+    const onResize = () =>
+      canvasRef.current && (width = canvasRef.current.offsetWidth);
+    window.addEventListener("resize", onResize);
+    onResize();
+    let phi = 0;
 
-    onResize()
+    onResize();
     const globe = createGlobe(canvasRef.current!, {
       devicePixelRatio: 2,
       width: width * 2,
@@ -58,21 +59,36 @@ const Earth: React.FC<EarthProps> = ({
       markers: [
         // longitude latitude
       ],
-      onRender: (state: Record<string, any>) => {
+      onRender: (state: Record<string, unknown>) => {
         // Called on every animation frame.
         // `state` will be an empty object, return updated params.\
-        state.phi = phi
-        phi += 0.003
+        state.phi = phi;
+        phi += 0.003;
       },
-    })
+    });
 
     return () => {
-      globe.destroy()
-    }
-  }, [dark])
+      globe.destroy();
+    };
+  }, [
+    dark,
+    theta,
+    scale,
+    diffuse,
+    mapSamples,
+    mapBrightness,
+    baseColor,
+    markerColor,
+    glowColor,
+  ]);
 
   return (
-    <div className={cn("z-[10] mx-auto flex w-full max-w-[350px] items-center justify-center", className)}>
+    <div
+      className={cn(
+        "z-[10] mx-auto flex w-full max-w-[350px] items-center justify-center",
+        className
+      )}
+    >
       <canvas
         ref={canvasRef}
         style={{
@@ -83,7 +99,7 @@ const Earth: React.FC<EarthProps> = ({
         }}
       />
     </div>
-  )
-}
+  );
+};
 
-export default Earth
+export default Earth;

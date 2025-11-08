@@ -5,7 +5,7 @@ import { signOut, useSession } from "next-auth/react"
 import Link from "next/link"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { PrimaryButton } from "@/components/ui/primary-button"
 import { DropdownMenu, DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
@@ -105,7 +105,7 @@ export function DashboardHeader({ userRole, userName }: DashboardHeaderProps) {
   }, [userRole, session?.user?.id, session?.user?.image])
 
   // Fetch notifications
-  const fetchNotifications = async () => {
+  const fetchNotifications = useCallback(async () => {
     if (!session?.user?.id) return
 
     setIsLoadingNotifications(true)
@@ -123,7 +123,7 @@ export function DashboardHeader({ userRole, userName }: DashboardHeaderProps) {
     } finally {
       setIsLoadingNotifications(false)
     }
-  }
+  }, [session?.user?.id])
 
   useEffect(() => {
     if (session?.user?.id) {
@@ -132,7 +132,7 @@ export function DashboardHeader({ userRole, userName }: DashboardHeaderProps) {
       const interval = setInterval(fetchNotifications, 30000)
       return () => clearInterval(interval)
     }
-  }, [session?.user?.id])
+  }, [session?.user?.id, fetchNotifications])
 
   const handleMarkAsRead = async (notificationId: string) => {
     try {

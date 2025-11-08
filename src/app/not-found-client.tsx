@@ -1,19 +1,20 @@
-"use client"
+"use client";
 
-import { useRouter } from "next/navigation"
-import { motion } from "framer-motion"
-import { Home, ArrowLeft } from "lucide-react"
-import Link from "next/link"
-import { PrimaryButton } from "@/components/ui/primary-button"
+import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
+import { Home, ArrowLeft } from "lucide-react";
+import Link from "next/link";
+import Image from "next/image";
+import { PrimaryButton } from "@/components/ui/primary-button";
 
 export function NotFoundPage() {
-  const router = useRouter()
+  const router = useRouter();
 
   return (
     <div className="min-h-screen bg-black flex items-center justify-center relative overflow-x-hidden">
       {/* Background gradient - fixed to viewport */}
-      <div className="fixed inset-0 bg-gradient-to-br from-zinc-900 via-black to-zinc-900 z-0" />
-      
+      <div className="fixed inset-0 bg-linear-to-br from-zinc-900 via-black to-zinc-900 z-0" />
+
       {/* Decorative elements - fixed to viewport */}
       <div className="fixed top-20 left-20 w-72 h-72 bg-primary/10 rounded-full blur-3xl z-0" />
       <div className="fixed bottom-20 right-20 w-96 h-96 bg-primary/5 rounded-full blur-3xl z-0" />
@@ -38,10 +39,12 @@ export function NotFoundPage() {
             }}
             className="inline-block"
           >
-            <img
+            <Image
               src="/logo.svg"
               alt="CredVault Logo"
-              className="w-24 h-24 rounded-full object-contain"
+              width={96}
+              height={96}
+              className="rounded-full object-contain"
             />
           </motion.div>
         </motion.div>
@@ -86,7 +89,8 @@ export function NotFoundPage() {
             Page Not Found
           </h2>
           <p className="text-zinc-400 text-lg max-w-md mx-auto">
-            Oops! The page you&apos;re looking for doesn&apos;t exist or has been moved.
+            Oops! The page you&apos;re looking for doesn&apos;t exist or has
+            been moved.
           </p>
         </motion.div>
 
@@ -119,17 +123,22 @@ export function NotFoundPage() {
         >
           <p className="text-zinc-500 text-sm">
             Need help?{" "}
-            <Link href="/auth/login" className="text-primary hover:text-primary/80 transition-colors">
+            <Link
+              href="/auth/login"
+              className="text-primary hover:text-primary/80 transition-colors"
+            >
               Sign in
             </Link>
             {" or "}
-            <Link href="/auth/signup" className="text-primary hover:text-primary/80 transition-colors">
+            <Link
+              href="/auth/signup"
+              className="text-primary hover:text-primary/80 transition-colors"
+            >
               create an account
             </Link>
           </p>
         </motion.div>
       </div>
     </div>
-  )
+  );
 }
-

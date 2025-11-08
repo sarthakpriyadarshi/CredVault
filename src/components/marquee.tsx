@@ -1,16 +1,16 @@
-"use client"
+"use client";
 
-import { cn } from "@/lib/utils"
-import type { ReactNode } from "react"
+import { cn } from "@/lib/utils";
+import type { ReactNode } from "react";
 
 interface MarqueeProps {
-  className?: string
-  reverse?: boolean
-  pauseOnHover?: boolean
-  children?: ReactNode
-  vertical?: boolean
-  repeat?: number
-  [key: string]: any
+  className?: string;
+  reverse?: boolean;
+  pauseOnHover?: boolean;
+  children?: ReactNode;
+  vertical?: boolean;
+  repeat?: number;
+  [key: string]: unknown;
 }
 
 export function Marquee({
@@ -31,7 +31,7 @@ export function Marquee({
           "flex-row": !vertical,
           "flex-col": vertical,
         },
-        className,
+        className
       )}
     >
       {Array(repeat)
@@ -50,5 +50,5 @@ export function Marquee({
           </div>
         ))}
     </div>
-  )
+  );
 }

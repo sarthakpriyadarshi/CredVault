@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
+import Image from "next/image"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { PrimaryButton } from "@/components/ui/primary-button"
 import { Eye, EyeOff, CheckCircle2 } from "lucide-react"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion } from "framer-motion"
 import {
   Dialog,
   DialogContent,
@@ -139,7 +140,7 @@ export default function SetupPage() {
           <div className="text-center mb-8">
             <div className="inline-block mb-6">
               <div className="flex items-center justify-center space-x-2">
-                <img src="/logo.svg" alt="Logo" className="rounded-full size-8 w-8 h-8 object-contain" />
+                <Image src="/logo.svg" alt="Logo" width={32} height={32} className="rounded-full object-contain" />
               </div>
             </div>
             <h1 className="text-3xl font-bold text-white mb-2">Welcome to CredVault</h1>

@@ -1,15 +1,14 @@
-"use client"
+"use client";
 
-import { useSession } from "next-auth/react"
-import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
-import { DashboardHeader } from "@/components/dashboard-header"
-import { DashboardSidebar } from "@/components/dashboard-sidebar"
-import { Card } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { DashboardHeader } from "@/components/dashboard-header";
+import { DashboardSidebar } from "@/components/dashboard-sidebar";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -17,69 +16,69 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { ChevronRight, Save, Lock, Bell, Edit2 } from "lucide-react"
-import { PrimaryButton } from "@/components/ui/primary-button"
-import { LoadingScreen } from "@/components/loading-screen"
+} from "@/components/ui/dialog";
+import { ChevronRight, Save, Lock, Bell, Edit2 } from "lucide-react";
+import { PrimaryButton } from "@/components/ui/primary-button";
+import { LoadingScreen } from "@/components/loading-screen";
 
 export default function RecipientSettingsPage() {
-  const { data: session, status } = useSession()
-  const router = useRouter()
-  const [activeSection, setActiveSection] = useState("notifications")
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState<string | null>(null)
-  const [showChangePassword, setShowChangePassword] = useState(false)
-
-  const { update: updateSession } = useSession()
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const [activeSection, setActiveSection] = useState("notifications");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [showChangePassword, setShowChangePassword] = useState(false);
 
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: "",
     newPassword: "",
     confirmPassword: "",
-  })
+  });
 
   const [notifications, setNotifications] = useState({
     emailNotifications: true,
-  })
+  });
 
   useEffect(() => {
     if (status === "unauthenticated") {
-      router.push("/auth/login")
-    } else if (status === "authenticated" && session?.user?.role !== "recipient") {
-      router.push("/auth/login")
-    } else if (status === "authenticated" && session?.user?.role === "recipient") {
-      setLoading(false)
+      router.push("/auth/login");
+    } else if (
+      status === "authenticated" &&
+      session?.user?.role !== "recipient"
+    ) {
+      router.push("/auth/login");
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session, status, router])
-
+  }, [session, status, router]);
 
   const handleChangePassword = async () => {
-    if (!passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
-      setError("All fields are required")
-      return
+    if (
+      !passwordForm.currentPassword ||
+      !passwordForm.newPassword ||
+      !passwordForm.confirmPassword
+    ) {
+      setError("All fields are required");
+      return;
     }
 
     if (passwordForm.newPassword.length < 8) {
-      setError("New password must be at least 8 characters")
-      return
+      setError("New password must be at least 8 characters");
+      return;
     }
 
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      setError("New password and confirm password do not match")
-      return
+      setError("New password and confirm password do not match");
+      return;
     }
 
     if (passwordForm.currentPassword === passwordForm.newPassword) {
-      setError("New password must be different from current password")
-      return
+      setError("New password must be different from current password");
+      return;
     }
 
-    setSaving(true)
-    setError(null)
-    setSuccess(null)
+    setSaving(true);
+    setError(null);
+    setSuccess(null);
 
     try {
       const res = await fetch("/api/v1/auth/change-password", {
@@ -92,64 +91,74 @@ export default function RecipientSettingsPage() {
           currentPassword: passwordForm.currentPassword,
           newPassword: passwordForm.newPassword,
         }),
-      })
+      });
 
       if (!res.ok) {
-        const errorData = await res.json()
-        throw new Error(errorData.error || "Failed to change password")
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Failed to change password");
       }
 
-      setSuccess("Password changed successfully")
-      setShowChangePassword(false)
+      setSuccess("Password changed successfully");
+      setShowChangePassword(false);
       setPasswordForm({
         currentPassword: "",
         newPassword: "",
         confirmPassword: "",
-      })
-      setTimeout(() => setSuccess(null), 3000)
+      });
+      setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
-      console.error("Error changing password:", err)
-      setError(err && typeof err === "object" && "message" in err ? String(err.message) : "Failed to change password")
+      console.error("Error changing password:", err);
+      setError(
+        err && typeof err === "object" && "message" in err
+          ? String(err.message)
+          : "Failed to change password"
+      );
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
-  }
+  };
 
   const handleSaveSettings = async () => {
-    setSaving(true)
-    setError(null)
+    setSaving(true);
+    setError(null);
     try {
       // Settings API can be added later if needed
-      setSuccess("Settings saved successfully!")
-      setTimeout(() => setSuccess(null), 3000)
+      setSuccess("Settings saved successfully!");
+      setTimeout(() => setSuccess(null), 3000);
     } catch (error) {
-      console.error("Error saving settings:", error)
-      setError("Failed to save settings")
+      console.error("Error saving settings:", error);
+      setError("Failed to save settings");
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
-  }
-
+  };
 
   if (status === "loading") {
-    return <LoadingScreen message="Loading session..." />
+    return <LoadingScreen message="Loading session..." />;
   }
 
-  if (status === "unauthenticated" || (status === "authenticated" && (!session || session.user?.role !== "recipient"))) {
-    return null
+  if (
+    status === "unauthenticated" ||
+    (status === "authenticated" &&
+      (!session || session.user?.role !== "recipient"))
+  ) {
+    return null;
   }
 
   return (
     <div className="min-h-screen w-full bg-black relative">
       {/* Background gradient - fixed to viewport */}
-      <div className="fixed inset-0 bg-gradient-to-br from-zinc-900 via-black to-zinc-900 z-0" />
+      <div className="fixed inset-0 bg-linear-to-br from-zinc-900 via-black to-zinc-900 z-0" />
 
       {/* Decorative elements - fixed to viewport */}
       <div className="fixed top-20 left-20 w-72 h-72 bg-primary/10 rounded-full blur-3xl z-0" />
       <div className="fixed bottom-20 right-20 w-96 h-96 bg-primary/5 rounded-full blur-3xl z-0" />
 
       <div className="relative z-10 overflow-x-hidden pt-20">
-        <DashboardHeader userRole="recipient" userName={session?.user?.name || undefined} />
+        <DashboardHeader
+          userRole="recipient"
+          userName={session?.user?.name || undefined}
+        />
 
         <div className="flex mt-4">
           <DashboardSidebar userRole="recipient" />
@@ -159,14 +168,19 @@ export default function RecipientSettingsPage() {
               {/* Header */}
               <div className="space-y-2">
                 <h1 className="text-3xl font-bold text-foreground">Settings</h1>
-                <p className="text-muted-foreground">Manage your profile and preferences</p>
+                <p className="text-muted-foreground">
+                  Manage your profile and preferences
+                </p>
               </div>
 
               {/* Messages */}
               {error && (
                 <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
                   {error}
-                  <button onClick={() => setError(null)} className="ml-2 text-red-300 hover:text-red-200">
+                  <button
+                    onClick={() => setError(null)}
+                    className="ml-2 text-red-300 hover:text-red-200"
+                  >
                     ×
                   </button>
                 </div>
@@ -188,7 +202,12 @@ export default function RecipientSettingsPage() {
                         title: "Notifications",
                         desc: "Alert settings",
                       },
-                      { id: "security", icon: <Lock className="h-5 w-5" />, title: "Security", desc: "Password & access" },
+                      {
+                        id: "security",
+                        icon: <Lock className="h-5 w-5" />,
+                        title: "Security",
+                        desc: "Password & access",
+                      },
                     ].map((section) => (
                       <button
                         key={section.id}
@@ -202,9 +221,13 @@ export default function RecipientSettingsPage() {
                         <div className="mt-1">{section.icon}</div>
                         <div className="flex-1 min-w-0">
                           <p className="font-medium text-sm">{section.title}</p>
-                          <p className="text-xs opacity-70 line-clamp-1">{section.desc}</p>
+                          <p className="text-xs opacity-70 line-clamp-1">
+                            {section.desc}
+                          </p>
                         </div>
-                        {activeSection === section.id && <ChevronRight className="h-4 w-4 mt-1 shrink-0" />}
+                        {activeSection === section.id && (
+                          <ChevronRight className="h-4 w-4 mt-1 shrink-0" />
+                        )}
                       </button>
                     ))}
                   </Card>
@@ -215,18 +238,29 @@ export default function RecipientSettingsPage() {
                   {activeSection === "notifications" && (
                     <div className="space-y-4">
                       <Card className="p-6 border border-border/50 bg-card/50 backdrop-blur">
-                        <h3 className="text-lg font-semibold text-foreground mb-4">Notification Settings</h3>
+                        <h3 className="text-lg font-semibold text-foreground mb-4">
+                          Notification Settings
+                        </h3>
                         <div className="space-y-4">
                           <div className="flex items-center justify-between p-4 bg-background/50 rounded-lg">
                             <div>
-                              <p className="font-medium text-foreground">Email Notifications</p>
-                              <p className="text-sm text-muted-foreground">Get updates about your credentials</p>
+                              <p className="font-medium text-foreground">
+                                Email Notifications
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                Get updates about your credentials
+                              </p>
                             </div>
                             <label className="relative inline-flex items-center cursor-pointer">
                               <input
                                 type="checkbox"
                                 checked={notifications.emailNotifications}
-                                onChange={(e) => setNotifications({ ...notifications, emailNotifications: e.target.checked })}
+                                onChange={(e) =>
+                                  setNotifications({
+                                    ...notifications,
+                                    emailNotifications: e.target.checked,
+                                  })
+                                }
                                 className="sr-only peer"
                               />
                               <div className="w-11 h-6 bg-muted peer-checked:bg-primary rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
@@ -240,14 +274,23 @@ export default function RecipientSettingsPage() {
                   {activeSection === "security" && (
                     <div className="space-y-4">
                       <Card className="p-6 border border-border/50 bg-card/50 backdrop-blur">
-                        <h3 className="text-lg font-semibold text-foreground mb-4">Security</h3>
+                        <h3 className="text-lg font-semibold text-foreground mb-4">
+                          Security
+                        </h3>
                         <div className="space-y-4">
                           <div className="flex items-center justify-between p-4 bg-background/50 rounded-lg">
                             <div>
-                              <p className="font-medium text-foreground">Change Password</p>
-                              <p className="text-sm text-muted-foreground">Update your account password</p>
+                              <p className="font-medium text-foreground">
+                                Change Password
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                Update your account password
+                              </p>
                             </div>
-                            <Dialog open={showChangePassword} onOpenChange={setShowChangePassword}>
+                            <Dialog
+                              open={showChangePassword}
+                              onOpenChange={setShowChangePassword}
+                            >
                               <Button
                                 variant="outline"
                                 size="sm"
@@ -256,9 +299,9 @@ export default function RecipientSettingsPage() {
                                     currentPassword: "",
                                     newPassword: "",
                                     confirmPassword: "",
-                                  })
-                                  setError(null)
-                                  setShowChangePassword(true)
+                                  });
+                                  setError(null);
+                                  setShowChangePassword(true);
                                 }}
                               >
                                 <Edit2 className="h-4 w-4 mr-1" />
@@ -268,18 +311,24 @@ export default function RecipientSettingsPage() {
                                 <DialogHeader>
                                   <DialogTitle>Change Password</DialogTitle>
                                   <DialogDescription>
-                                    Enter your current password and choose a new secure password
+                                    Enter your current password and choose a new
+                                    secure password
                                   </DialogDescription>
                                 </DialogHeader>
                                 <div className="space-y-4">
                                   <div>
-                                    <Label htmlFor="current-password">Current Password</Label>
+                                    <Label htmlFor="current-password">
+                                      Current Password
+                                    </Label>
                                     <Input
                                       id="current-password"
                                       type="password"
                                       value={passwordForm.currentPassword}
                                       onChange={(e) =>
-                                        setPasswordForm({ ...passwordForm, currentPassword: e.target.value })
+                                        setPasswordForm({
+                                          ...passwordForm,
+                                          currentPassword: e.target.value,
+                                        })
                                       }
                                       placeholder="Enter current password"
                                       className="mt-1"
@@ -287,25 +336,37 @@ export default function RecipientSettingsPage() {
                                     />
                                   </div>
                                   <div>
-                                    <Label htmlFor="new-password">New Password</Label>
+                                    <Label htmlFor="new-password">
+                                      New Password
+                                    </Label>
                                     <Input
                                       id="new-password"
                                       type="password"
                                       value={passwordForm.newPassword}
-                                      onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                                      onChange={(e) =>
+                                        setPasswordForm({
+                                          ...passwordForm,
+                                          newPassword: e.target.value,
+                                        })
+                                      }
                                       placeholder="Min. 8 characters"
                                       className="mt-1"
                                       autoComplete="new-password"
                                     />
                                   </div>
                                   <div>
-                                    <Label htmlFor="confirm-new-password">Confirm New Password</Label>
+                                    <Label htmlFor="confirm-new-password">
+                                      Confirm New Password
+                                    </Label>
                                     <Input
                                       id="confirm-new-password"
                                       type="password"
                                       value={passwordForm.confirmPassword}
                                       onChange={(e) =>
-                                        setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })
+                                        setPasswordForm({
+                                          ...passwordForm,
+                                          confirmPassword: e.target.value,
+                                        })
                                       }
                                       placeholder="Confirm new password"
                                       className="mt-1"
@@ -322,19 +383,22 @@ export default function RecipientSettingsPage() {
                                   <Button
                                     variant="outline"
                                     onClick={() => {
-                                      setShowChangePassword(false)
+                                      setShowChangePassword(false);
                                       setPasswordForm({
                                         currentPassword: "",
                                         newPassword: "",
                                         confirmPassword: "",
-                                      })
-                                      setError(null)
+                                      });
+                                      setError(null);
                                     }}
                                     disabled={saving}
                                   >
                                     Cancel
                                   </Button>
-                                  <PrimaryButton onClick={handleChangePassword} disabled={saving}>
+                                  <PrimaryButton
+                                    onClick={handleChangePassword}
+                                    disabled={saving}
+                                  >
                                     {saving ? "Changing..." : "Change Password"}
                                   </PrimaryButton>
                                 </DialogFooter>
@@ -366,6 +430,5 @@ export default function RecipientSettingsPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }
-

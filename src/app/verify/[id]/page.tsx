@@ -2,6 +2,8 @@
 
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import Link from "next/link";
+import Image from "next/image";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -45,7 +47,7 @@ interface Credential {
   title: string;
   issuer: string;
   recipientEmail: string;
-  credentialData: Record<string, any>;
+  credentialData: Record<string, string | number | boolean | null>;
   type: "certificate" | "badge" | "both";
   issuedAt: string;
   expiresAt: string | null;
@@ -228,7 +230,7 @@ export default function PublicVerifyCredentialPage() {
     return (
       <div className="min-h-screen w-full bg-black relative">
         {/* Background gradient - fixed to viewport */}
-        <div className="fixed inset-0 bg-gradient-to-br from-zinc-900 via-black to-zinc-900 z-0" />
+        <div className="fixed inset-0 bg-linear-to-br from-zinc-900 via-black to-zinc-900 z-0" />
 
         {/* Decorative elements - fixed to viewport */}
         <div className="fixed top-20 left-20 w-72 h-72 bg-primary/10 rounded-full blur-3xl z-0" />
@@ -257,22 +259,24 @@ export default function PublicVerifyCredentialPage() {
   return (
     <div className="min-h-screen w-full bg-black relative">
       {/* Background gradient - fixed to viewport */}
-      <div className="fixed inset-0 bg-gradient-to-br from-zinc-900 via-black to-zinc-900 z-0" />
+      <div className="fixed inset-0 bg-linear-to-br from-zinc-900 via-black to-zinc-900 z-0" />
 
       {/* Decorative elements - fixed to viewport */}
       <div className="fixed top-20 left-20 w-72 h-72 bg-primary/10 rounded-full blur-3xl z-0" />
       <div className="fixed bottom-20 right-20 w-96 h-96 bg-primary/5 rounded-full blur-3xl z-0" />
 
       {/* Header */}
-      <header className="sticky top-4 z-[9999] mx-4 flex w-auto flex-row items-center justify-between rounded-full bg-background/80 backdrop-blur-sm border border-border/50 shadow-lg px-4 md:px-6 py-3">
-        <a className="flex items-center justify-center gap-2" href="/">
-          <img
+      <header className="sticky top-4 z-9999 mx-4 flex w-auto flex-row items-center justify-between rounded-full bg-background/80 backdrop-blur-sm border border-border/50 shadow-lg px-4 md:px-6 py-3">
+        <Link className="flex items-center justify-center gap-2" href="/">
+          <Image
             src="/logo.svg"
             alt="CredVault Logo"
-            className="rounded-full size-8 w-8 h-8 object-contain"
+            width={32}
+            height={32}
+            className="rounded-full object-contain"
           />
           <span className="text-lg font-bold text-foreground">CredVault</span>
-        </a>
+        </Link>
 
         <div className="flex items-center gap-4">
           <a
@@ -284,7 +288,7 @@ export default function PublicVerifyCredentialPage() {
 
           <a
             href="/auth/signup"
-            className="rounded-md font-bold cursor-pointer hover:-translate-y-0.5 transition duration-200 inline-block text-center bg-gradient-to-b from-primary to-primary/80 text-primary-foreground shadow-[0px_2px_0px_0px_rgba(255,255,255,0.3)_inset] px-4 py-2 text-sm"
+            className="rounded-md font-bold cursor-pointer hover:-translate-y-0.5 transition duration-200 inline-block text-center bg-linear-to-b from-primary to-primary/80 text-primary-foreground shadow-[0px_2px_0px_0px_rgba(255,255,255,0.3)_inset] px-4 py-2 text-sm"
           >
             Sign Up
           </a>
@@ -326,17 +330,23 @@ export default function PublicVerifyCredentialPage() {
                           title="Certificate Preview"
                         />
                       ) : (
-                        <img
+                        <Image
                           src={credential.certificateUrl}
                           alt={credential.title}
+                          width={800}
+                          height={600}
                           className="max-w-full max-h-full w-auto h-auto object-contain"
+                          unoptimized
                         />
                       )
                     ) : activeTab === "badge" && credential.badgeUrl ? (
-                      <img
+                      <Image
                         src={credential.badgeUrl}
                         alt={credential.title}
+                        width={256}
+                        height={256}
                         className="max-w-[256px] max-h-[256px] w-auto h-auto object-contain"
+                        unoptimized
                       />
                     ) : credential.certificateUrl ? (
                       credential.certificateUrl.endsWith(".pdf") ? (
@@ -346,17 +356,23 @@ export default function PublicVerifyCredentialPage() {
                           title="Certificate Preview"
                         />
                       ) : (
-                        <img
+                        <Image
                           src={credential.certificateUrl}
                           alt={credential.title}
+                          width={800}
+                          height={600}
                           className="max-w-full max-h-full w-auto h-auto object-contain"
+                          unoptimized
                         />
                       )
                     ) : credential.badgeUrl ? (
-                      <img
+                      <Image
                         src={credential.badgeUrl}
                         alt={credential.title}
+                        width={256}
+                        height={256}
                         className="max-w-[256px] max-h-[256px] w-auto h-auto object-contain"
+                        unoptimized
                       />
                     ) : (
                       <div className="text-center space-y-2">
@@ -388,10 +404,13 @@ export default function PublicVerifyCredentialPage() {
                             </span>
                           </div>
                         ) : (
-                          <img
+                          <Image
                             src={credential.certificateUrl}
                             alt="Certificate preview"
-                            className="w-16 h-16 object-cover rounded-lg aspect-square"
+                            width={64}
+                            height={64}
+                            className="object-cover rounded-lg aspect-square"
+                            unoptimized
                           />
                         )}
                         {activeTab === "certificate" && (
@@ -407,10 +426,13 @@ export default function PublicVerifyCredentialPage() {
                         }`}
                         title="Badge"
                       >
-                        <img
+                        <Image
                           src={credential.badgeUrl}
                           alt="Badge preview"
-                          className="w-16 h-16 object-cover rounded-lg aspect-square"
+                          width={64}
+                          height={64}
+                          className="object-cover rounded-lg aspect-square"
+                          unoptimized
                         />
                         {activeTab === "badge" && (
                           <div className="absolute inset-0 bg-primary/10 border-2 border-primary rounded-lg" />

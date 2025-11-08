@@ -1,255 +1,303 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useSession } from "next-auth/react"
-import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
-import { DashboardHeader } from "@/components/dashboard-header"
-import { DashboardSidebar } from "@/components/dashboard-sidebar"
-import { Card } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Upload, Download, CheckCircle, AlertCircle, FileText } from "lucide-react"
-import { PrimaryButton } from "@/components/ui/primary-button"
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { DashboardHeader } from "@/components/dashboard-header";
+import { DashboardSidebar } from "@/components/dashboard-sidebar";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Upload, Download, CheckCircle, AlertCircle } from "lucide-react";
+import { PrimaryButton } from "@/components/ui/primary-button";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
 
 interface IssuanceRecord {
-  recipientName: string
-  email: string
-  status: "pending" | "success" | "error"
-  message?: string
-  [key: string]: any // For additional CSV fields
+  recipientName: string;
+  email: string;
+  status: "pending" | "success" | "error";
+  message?: string;
+  [key: string]: string | undefined; // For additional CSV fields
 }
 
 interface CSVRow {
-  [key: string]: string
+  [key: string]: string;
 }
 
 export default function BulkIssuancePage() {
-  const { data: session, status } = useSession()
-  const router = useRouter()
-  const [selectedTemplate, setSelectedTemplate] = useState("")
-  const [templates, setTemplates] = useState<Array<{ id: string; name: string; fields?: any[] }>>([])
-  const [templateFields, setTemplateFields] = useState<Array<{ name: string; type: string }>>([])
-  const [csvFile, setCsvFile] = useState<File | null>(null)
-  const [csvPreview, setCsvPreview] = useState<CSVRow[]>([])
-  const [csvHeaders, setCsvHeaders] = useState<string[]>([])
-  const [blockchainEnabled, setBlockchainEnabled] = useState(false)
-  const [isProcessing, setIsProcessing] = useState(false)
-  const [issuanceRecords, setIssuanceRecords] = useState<IssuanceRecord[]>([])
-  const [loading, setLoading] = useState(true)
-  const [showPreview, setShowPreview] = useState(false)
-  const [showErrorDialog, setShowErrorDialog] = useState(false)
-  const [showSuccessDialog, setShowSuccessDialog] = useState(false)
-  const [dialogMessage, setDialogMessage] = useState("")
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const [selectedTemplate, setSelectedTemplate] = useState("");
+  const [templates, setTemplates] = useState<
+    Array<{
+      id: string;
+      name: string;
+      fields?: Array<{ name: string; type: string }>;
+    }>
+  >([]);
+  const [templateFields, setTemplateFields] = useState<
+    Array<{ name: string; type: string }>
+  >([]);
+  const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [csvPreview, setCsvPreview] = useState<CSVRow[]>([]);
+  const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
+  const [blockchainEnabled, setBlockchainEnabled] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [issuanceRecords, setIssuanceRecords] = useState<IssuanceRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showPreview, setShowPreview] = useState(false);
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [dialogMessage, setDialogMessage] = useState("");
 
   useEffect(() => {
     if (status === "unauthenticated") {
-      router.push("/auth/issuer/login")
+      router.push("/auth/issuer/login");
     } else if (status === "authenticated" && session?.user?.role !== "issuer") {
-      router.push("/auth/issuer/login")
-    } else if (status === "authenticated" && session?.user?.role === "issuer" && !session.user?.isVerified) {
-      router.push("/auth/issuer/login?pending=true")
-    } else if (status === "authenticated" && session?.user?.role === "issuer" && session.user?.isVerified) {
-      loadOrganization()
-      loadTemplates()
+      router.push("/auth/issuer/login");
+    } else if (
+      status === "authenticated" &&
+      session?.user?.role === "issuer" &&
+      !session.user?.isVerified
+    ) {
+      router.push("/auth/issuer/login?pending=true");
+    } else if (
+      status === "authenticated" &&
+      session?.user?.role === "issuer" &&
+      session.user?.isVerified
+    ) {
+      loadOrganization();
+      loadTemplates();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session, status, router])
+  }, [session, status, router]);
 
   useEffect(() => {
     if (selectedTemplate) {
-      loadTemplateDetails(selectedTemplate)
+      loadTemplateDetails(selectedTemplate);
     } else {
-      setTemplateFields([])
+      setTemplateFields([]);
     }
-  }, [selectedTemplate])
+  }, [selectedTemplate]);
 
   const loadOrganization = async () => {
     try {
       const res = await fetch("/api/v1/issuer/organization", {
         credentials: "include",
-      })
+      });
 
       if (res.ok) {
-        const data = await res.json()
-        const enabled = data.blockchainEnabled || false
-        setBlockchainEnabled(enabled)
+        const data = await res.json();
+        const enabled = data.blockchainEnabled || false;
+        setBlockchainEnabled(enabled);
       }
     } catch (error) {
-      console.error("Error loading organization:", error)
+      console.error("Error loading organization:", error);
     }
-  }
+  };
 
   const loadTemplates = async () => {
-    setLoading(true)
+    setLoading(true);
     try {
       const res = await fetch("/api/v1/issuer/templates", {
         credentials: "include",
-      })
+      });
 
       if (!res.ok) {
         if (res.status === 401) {
-          router.push("/auth/issuer/login")
-          return
+          router.push("/auth/issuer/login");
+          return;
         }
-        console.error("Failed to fetch templates")
+        console.error("Failed to fetch templates");
       } else {
-        const data = await res.json()
-        const templatesList = data.data || data || []
-        setTemplates(templatesList.map((t: any) => ({
-          id: t.id || t._id?.toString() || "",
-          name: t.name || "Unnamed Template",
-          fields: t.fields || [],
-        })))
+        const data = await res.json();
+        const templatesList = data.data || data || [];
+        setTemplates(
+          templatesList.map(
+            (t: {
+              id?: string;
+              _id?: string;
+              name: string;
+              fields?: Array<{ name: string; type: string }>;
+            }) => ({
+              id: t.id || t._id?.toString() || "",
+              name: t.name || "Unnamed Template",
+              fields: t.fields || [],
+            })
+          )
+        );
       }
     } catch (error) {
-      console.error("Error loading templates:", error)
+      console.error("Error loading templates:", error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const loadTemplateDetails = async (templateId: string) => {
     try {
       const res = await fetch(`/api/v1/issuer/templates/${templateId}`, {
         credentials: "include",
-      })
+      });
 
       if (res.ok) {
-        const data = await res.json()
-        const template = data.template || data
-        const fields = template.placeholders || template.fields || []
-        
+        const data = await res.json();
+        const template = data.template || data;
+        const fields = template.placeholders || template.fields || [];
+
         if (fields.length === 0) {
-          console.warn("Template has no fields/placeholders")
-          setTemplateFields([])
-          return
+          console.warn("Template has no fields/placeholders");
+          setTemplateFields([]);
+          return;
         }
-        
-        const mappedFields = fields.map((f: any) => ({
-          name: f.fieldName || f.name || "",
-          type: f.type || "text",
-        })).filter((f: any) => f.name) // Filter out any fields without names
-        
-        setTemplateFields(mappedFields)
+
+        const mappedFields = fields
+          .map((f: { fieldName?: string; name?: string; type?: string }) => ({
+            name: f.fieldName || f.name || "",
+            type: f.type || "text",
+          }))
+          .filter((f: { name: string; type: string }) => f.name); // Filter out any fields without names
+
+        setTemplateFields(mappedFields);
       } else {
-        console.error("Failed to fetch template details:", res.status, res.statusText)
-        setTemplateFields([])
+        console.error(
+          "Failed to fetch template details:",
+          res.status,
+          res.statusText
+        );
+        setTemplateFields([]);
       }
     } catch (error) {
-      console.error("Error loading template details:", error)
-      setTemplateFields([])
+      console.error("Error loading template details:", error);
+      setTemplateFields([]);
     }
-  }
+  };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-    setCsvFile(file)
-    setCsvPreview([])
-    setCsvHeaders([])
-    setShowPreview(false)
+    setCsvFile(file);
+    setCsvPreview([]);
+    setCsvHeaders([]);
+    setShowPreview(false);
 
     try {
-      const text = await file.text()
-      const lines = text.split("\n").filter((line) => line.trim())
-      
+      const text = await file.text();
+      const lines = text.split("\n").filter((line) => line.trim());
+
       if (lines.length < 2) {
-        setDialogMessage("CSV must have header and at least one data row")
-        setShowErrorDialog(true)
-        return
+        setDialogMessage("CSV must have header and at least one data row");
+        setShowErrorDialog(true);
+        return;
       }
 
-      const headers = lines[0].split(",").map((h) => h.trim())
-      const rows: CSVRow[] = []
+      const headers = lines[0].split(",").map((h) => h.trim());
+      const rows: CSVRow[] = [];
 
       for (let i = 1; i < lines.length; i++) {
-        const values = lines[i].split(",").map((v) => v.trim())
-        const row: CSVRow = {}
+        const values = lines[i].split(",").map((v) => v.trim());
+        const row: CSVRow = {};
         headers.forEach((header, idx) => {
-          row[header] = values[idx] || ""
-        })
-        rows.push(row)
+          row[header] = values[idx] || "";
+        });
+        rows.push(row);
       }
 
-      setCsvHeaders(headers)
-      setCsvPreview(rows)
-      setShowPreview(true)
+      setCsvHeaders(headers);
+      setCsvPreview(rows);
+      setShowPreview(true);
     } catch (error) {
-      console.error("Error parsing CSV:", error)
-      setDialogMessage("Failed to parse CSV file")
-      setShowErrorDialog(true)
+      console.error("Error parsing CSV:", error);
+      setDialogMessage("Failed to parse CSV file");
+      setShowErrorDialog(true);
     }
-  }
+  };
 
   const handleProcessBulkIssuance = async () => {
     if (!csvFile || !selectedTemplate) {
-      setDialogMessage("Please select template and upload CSV file")
-      setShowErrorDialog(true)
-      return
+      setDialogMessage("Please select template and upload CSV file");
+      setShowErrorDialog(true);
+      return;
     }
 
     if (csvPreview.length === 0) {
-      setDialogMessage("CSV file is empty")
-      setShowErrorDialog(true)
-      return
+      setDialogMessage("CSV file is empty");
+      setShowErrorDialog(true);
+      return;
     }
 
-    setIsProcessing(true)
-    setIssuanceRecords([])
+    setIsProcessing(true);
+    setIssuanceRecords([]);
 
     try {
-      const formData = new FormData()
-      formData.append("file", csvFile)
-      formData.append("templateId", selectedTemplate)
-      formData.append("useBlockchain", String(blockchainEnabled)) // Always use organization setting
+      const formData = new FormData();
+      formData.append("file", csvFile);
+      formData.append("templateId", selectedTemplate);
+      formData.append("useBlockchain", String(blockchainEnabled)); // Always use organization setting
 
       const res = await fetch("/api/v1/issuer/credentials/bulk", {
         method: "POST",
         credentials: "include",
         body: formData,
-      })
+      });
 
       if (!res.ok) {
-        const error = await res.json()
-        setDialogMessage(error.error || "Failed to process bulk issuance")
-        setShowErrorDialog(true)
-        return
+        const error = await res.json();
+        setDialogMessage(error.error || "Failed to process bulk issuance");
+        setShowErrorDialog(true);
+        return;
       }
 
-      const data = await res.json()
-      const records = data.records || []
-      setIssuanceRecords(records)
-      
+      const data = await res.json();
+      const records = data.records || [];
+      setIssuanceRecords(records);
+
       // Calculate success count from the received data
-      const actualSuccessCount = records.filter((r: IssuanceRecord) => r.status === "success").length
-      setDialogMessage(`Bulk issuance completed! Successfully issued ${actualSuccessCount} credentials`)
-      setShowSuccessDialog(true)
+      const actualSuccessCount = records.filter(
+        (r: IssuanceRecord) => r.status === "success"
+      ).length;
+      setDialogMessage(
+        `Bulk issuance completed! Successfully issued ${actualSuccessCount} credentials`
+      );
+      setShowSuccessDialog(true);
     } catch (error) {
-      console.error("Error processing bulk issuance:", error)
-      setDialogMessage("An error occurred while processing bulk issuance")
-      setShowErrorDialog(true)
+      console.error("Error processing bulk issuance:", error);
+      setDialogMessage("An error occurred while processing bulk issuance");
+      setShowErrorDialog(true);
     } finally {
-      setIsProcessing(false)
+      setIsProcessing(false);
     }
-  }
+  };
 
   const downloadTemplate = async () => {
     if (!selectedTemplate) {
-      setDialogMessage("Please select a template first")
-      setShowErrorDialog(true)
-      return
+      setDialogMessage("Please select a template first");
+      setShowErrorDialog(true);
+      return;
     }
 
     try {
@@ -257,17 +305,18 @@ export default function BulkIssuancePage() {
       const headers = templateFields
         .filter((f) => {
           // Exclude QR Code fields
-          if (f.type === "qr") return false
+          if (f.type === "qr") return false;
           // Exclude Issue Date fields (auto-filled)
-          if (f.type === "date" && f.name.toLowerCase().trim() === "issue date") return false
-          return true
+          if (f.type === "date" && f.name.toLowerCase().trim() === "issue date")
+            return false;
+          return true;
         })
-        .map((f) => f.name)
-      
+        .map((f) => f.name);
+
       if (headers.length === 0) {
-        setDialogMessage("Template has no fields defined")
-        setShowErrorDialog(true)
-        return
+        setDialogMessage("Template has no fields defined");
+        setShowErrorDialog(true);
+        return;
       }
 
       // Create CSV content with sample data
@@ -275,39 +324,52 @@ export default function BulkIssuancePage() {
         headers.join(","), // Header row
         headers.map(() => "Sample Value").join(","), // Sample row 1
         headers.map(() => "Sample Value").join(","), // Sample row 2
-      ]
+      ];
 
-      const csv = csvRows.join("\n")
+      const csv = csvRows.join("\n");
 
       // Download CSV
-      const element = document.createElement("a")
-      element.setAttribute("href", "data:text/csv;charset=utf-8," + encodeURIComponent(csv))
-      const templateName = templates.find((t) => t.id === selectedTemplate)?.name || "template"
-      element.setAttribute("download", `${templateName.replace(/[^a-z0-9]/gi, "_")}_template.csv`)
-      element.style.display = "none"
-      document.body.appendChild(element)
-      element.click()
-      document.body.removeChild(element)
+      const element = document.createElement("a");
+      element.setAttribute(
+        "href",
+        "data:text/csv;charset=utf-8," + encodeURIComponent(csv)
+      );
+      const templateName =
+        templates.find((t) => t.id === selectedTemplate)?.name || "template";
+      element.setAttribute(
+        "download",
+        `${templateName.replace(/[^a-z0-9]/gi, "_")}_template.csv`
+      );
+      element.style.display = "none";
+      document.body.appendChild(element);
+      element.click();
+      document.body.removeChild(element);
     } catch (error) {
-      console.error("Error downloading CSV template:", error)
-      setDialogMessage("Failed to download CSV template")
-      setShowErrorDialog(true)
+      console.error("Error downloading CSV template:", error);
+      setDialogMessage("Failed to download CSV template");
+      setShowErrorDialog(true);
     }
-  }
+  };
 
-  const successCount = issuanceRecords.filter((r) => r.status === "success").length
-  const errorCount = issuanceRecords.filter((r) => r.status === "error").length
+  const successCount = issuanceRecords.filter(
+    (r) => r.status === "success"
+  ).length;
+  const errorCount = issuanceRecords.filter((r) => r.status === "error").length;
 
   if (status === "loading") {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-foreground">Loading session...</div>
       </div>
-    )
+    );
   }
 
-  if (status === "unauthenticated" || (status === "authenticated" && (!session || session.user?.role !== "issuer"))) {
-    return null
+  if (
+    status === "unauthenticated" ||
+    (status === "authenticated" &&
+      (!session || session.user?.role !== "issuer"))
+  ) {
+    return null;
   }
 
   return (
@@ -320,7 +382,10 @@ export default function BulkIssuancePage() {
       <div className="fixed bottom-20 right-20 w-96 h-96 bg-primary/5 rounded-full blur-3xl z-0" />
 
       <div className="relative z-10 overflow-x-hidden pt-20">
-        <DashboardHeader userRole="issuer" userName={session?.user?.name || undefined} />
+        <DashboardHeader
+          userRole="issuer"
+          userName={session?.user?.name || undefined}
+        />
 
         <div className="flex mt-4">
           <DashboardSidebar userRole="issuer" />
@@ -329,8 +394,12 @@ export default function BulkIssuancePage() {
             <div className="space-y-8">
               {/* Header */}
               <div className="space-y-2">
-                <h1 className="text-3xl font-bold text-foreground">Bulk Issuance</h1>
-                <p className="text-muted-foreground">Issue credentials to multiple recipients using CSV file</p>
+                <h1 className="text-3xl font-bold text-foreground">
+                  Bulk Issuance
+                </h1>
+                <p className="text-muted-foreground">
+                  Issue credentials to multiple recipients using CSV file
+                </p>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -342,8 +411,14 @@ export default function BulkIssuancePage() {
                       <Label htmlFor="template" className="font-semibold">
                         Select Template *
                       </Label>
-                      <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
-                        <SelectTrigger id="template" className="bg-background/50">
+                      <Select
+                        value={selectedTemplate}
+                        onValueChange={setSelectedTemplate}
+                      >
+                        <SelectTrigger
+                          id="template"
+                          className="bg-background/50"
+                        >
                           <SelectValue placeholder="Choose a template" />
                         </SelectTrigger>
                         <SelectContent>
@@ -372,10 +447,19 @@ export default function BulkIssuancePage() {
                       <label className="flex items-center justify-center p-8 border-2 border-dashed border-border/50 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors">
                         <div className="text-center">
                           <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                          <p className="font-medium text-foreground mb-1">Drop CSV file here or click to upload</p>
-                          <p className="text-sm text-muted-foreground">Format: Recipient Name, Email, [Additional Fields]</p>
+                          <p className="font-medium text-foreground mb-1">
+                            Drop CSV file here or click to upload
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            Format: Recipient Name, Email, [Additional Fields]
+                          </p>
                         </div>
-                        <input type="file" accept=".csv" onChange={handleFileUpload} className="hidden" />
+                        <input
+                          type="file"
+                          accept=".csv"
+                          onChange={handleFileUpload}
+                          className="hidden"
+                        />
                       </label>
                       {csvFile && (
                         <p className="text-sm text-emerald-500 flex items-center gap-2">
@@ -389,7 +473,9 @@ export default function BulkIssuancePage() {
                     {showPreview && csvPreview.length > 0 && (
                       <div className="space-y-4 pt-4 border-t border-border/50">
                         <div className="flex items-center justify-between">
-                          <h3 className="font-semibold text-foreground">CSV Preview ({csvPreview.length} rows)</h3>
+                          <h3 className="font-semibold text-foreground">
+                            CSV Preview ({csvPreview.length} rows)
+                          </h3>
                         </div>
                         <div className="border border-border/50 rounded-lg">
                           <div className="max-h-96 overflow-y-auto">
@@ -397,7 +483,10 @@ export default function BulkIssuancePage() {
                               <TableHeader>
                                 <TableRow className="bg-background/50">
                                   {csvHeaders.map((header) => (
-                                    <TableHead key={header} className="font-semibold">
+                                    <TableHead
+                                      key={header}
+                                      className="font-semibold"
+                                    >
                                       {header}
                                     </TableHead>
                                   ))}
@@ -407,7 +496,10 @@ export default function BulkIssuancePage() {
                                 {csvPreview.slice(0, 10).map((row, idx) => (
                                   <TableRow key={idx}>
                                     {csvHeaders.map((header) => (
-                                      <TableCell key={header} className="text-sm">
+                                      <TableCell
+                                        key={header}
+                                        className="text-sm"
+                                      >
                                         {row[header] || "-"}
                                       </TableCell>
                                     ))}
@@ -418,7 +510,8 @@ export default function BulkIssuancePage() {
                           </div>
                           {csvPreview.length > 10 && (
                             <div className="p-2 text-xs text-muted-foreground text-center bg-background/30">
-                              Showing first 10 rows of {csvPreview.length} total rows
+                              Showing first 10 rows of {csvPreview.length} total
+                              rows
                             </div>
                           )}
                         </div>
@@ -428,13 +521,24 @@ export default function BulkIssuancePage() {
                           <div className="flex items-center justify-between">
                             <div className="flex-1">
                               <div className="p-3 bg-background/50 rounded-lg">
-                                <p className="font-medium text-foreground">Blockchain Status</p>
-                                <p className={`text-sm ${blockchainEnabled ? 'text-emerald-400' : 'text-muted-foreground'}`}>
-                                  {blockchainEnabled ? "Enabled - Credentials will be stored on blockchain" : "Disabled"}
+                                <p className="font-medium text-foreground">
+                                  Blockchain Status
+                                </p>
+                                <p
+                                  className={`text-sm ${
+                                    blockchainEnabled
+                                      ? "text-emerald-400"
+                                      : "text-muted-foreground"
+                                  }`}
+                                >
+                                  {blockchainEnabled
+                                    ? "Enabled - Credentials will be stored on blockchain"
+                                    : "Disabled"}
                                 </p>
                                 {!blockchainEnabled && (
                                   <p className="text-xs text-muted-foreground mt-1">
-                                    Contact your admin to enable blockchain for your organization
+                                    Contact your admin to enable blockchain for
+                                    your organization
                                   </p>
                                 )}
                               </div>
@@ -445,7 +549,9 @@ export default function BulkIssuancePage() {
                               className="gap-2"
                             >
                               <Upload className="h-4 w-4" />
-                              {isProcessing ? "Processing..." : "Issue Credentials"}
+                              {isProcessing
+                                ? "Processing..."
+                                : "Issue Credentials"}
                             </PrimaryButton>
                           </div>
                         </div>
@@ -455,7 +561,16 @@ export default function BulkIssuancePage() {
                     {/* Action Buttons (if no preview shown) */}
                     {!showPreview && (
                       <div className="flex gap-2 justify-end pt-4 border-t border-border/50">
-                        <Button variant="outline" onClick={() => { setCsvFile(null); setSelectedTemplate(""); setShowPreview(false); setCsvPreview([]); setCsvHeaders([]) }}>
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setCsvFile(null);
+                            setSelectedTemplate("");
+                            setShowPreview(false);
+                            setCsvPreview([]);
+                            setCsvHeaders([]);
+                          }}
+                        >
                           Reset
                         </Button>
                       </div>
@@ -466,8 +581,14 @@ export default function BulkIssuancePage() {
                   {issuanceRecords.length > 0 && (
                     <Card className="p-6 border border-border/50 bg-card/50 backdrop-blur space-y-4">
                       <div className="flex items-center justify-between">
-                        <h3 className="text-lg font-semibold text-foreground">Issuance Results</h3>
-                        <Button variant="outline" size="sm" className="gap-2 bg-transparent">
+                        <h3 className="text-lg font-semibold text-foreground">
+                          Issuance Results
+                        </h3>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-2 bg-transparent"
+                        >
                           <Download className="h-4 w-4" />
                           Export Report
                         </Button>
@@ -475,16 +596,28 @@ export default function BulkIssuancePage() {
 
                       <div className="grid grid-cols-3 gap-4">
                         <div className="p-4 bg-background/50 rounded-lg">
-                          <p className="text-sm text-muted-foreground">Total Processed</p>
-                          <p className="text-2xl font-bold text-foreground">{issuanceRecords.length}</p>
+                          <p className="text-sm text-muted-foreground">
+                            Total Processed
+                          </p>
+                          <p className="text-2xl font-bold text-foreground">
+                            {issuanceRecords.length}
+                          </p>
                         </div>
                         <div className="p-4 bg-emerald-500/10 rounded-lg">
-                          <p className="text-sm text-muted-foreground">Successful</p>
-                          <p className="text-2xl font-bold text-emerald-500">{successCount}</p>
+                          <p className="text-sm text-muted-foreground">
+                            Successful
+                          </p>
+                          <p className="text-2xl font-bold text-emerald-500">
+                            {successCount}
+                          </p>
                         </div>
                         <div className="p-4 bg-red-500/10 rounded-lg">
-                          <p className="text-sm text-muted-foreground">Failed</p>
-                          <p className="text-2xl font-bold text-red-500">{errorCount}</p>
+                          <p className="text-sm text-muted-foreground">
+                            Failed
+                          </p>
+                          <p className="text-2xl font-bold text-red-500">
+                            {errorCount}
+                          </p>
                         </div>
                       </div>
 
@@ -499,8 +632,12 @@ export default function BulkIssuancePage() {
                             }`}
                           >
                             <div className="flex-1">
-                              <p className="font-medium text-foreground">{record.recipientName}</p>
-                              <p className="text-sm text-muted-foreground">{record.email}</p>
+                              <p className="font-medium text-foreground">
+                                {record.recipientName}
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                {record.email}
+                              </p>
                             </div>
                             <div className="flex items-center gap-2">
                               {record.status === "success" ? (
@@ -508,7 +645,9 @@ export default function BulkIssuancePage() {
                               ) : (
                                 <AlertCircle className="h-5 w-5 text-red-500" />
                               )}
-                              <p className="text-sm text-muted-foreground">{record.message}</p>
+                              <p className="text-sm text-muted-foreground">
+                                {record.message}
+                              </p>
                             </div>
                           </div>
                         ))}
@@ -520,50 +659,87 @@ export default function BulkIssuancePage() {
                 {/* Sidebar */}
                 <div className="space-y-4">
                   <Card className="p-6 border border-border/50 bg-card/50 backdrop-blur">
-                    <h3 className="font-semibold text-foreground mb-4">CSV Format Guide</h3>
+                    <h3 className="font-semibold text-foreground mb-4">
+                      CSV Format Guide
+                    </h3>
                     <div className="text-sm text-muted-foreground space-y-3">
                       {selectedTemplate && templateFields.length > 0 ? (
                         <>
                           <div className="p-3 bg-background/50 rounded-lg font-mono text-xs space-y-1">
-                            <p className="text-foreground font-semibold mb-2">Required Fields:</p>
+                            <p className="text-foreground font-semibold mb-2">
+                              Required Fields:
+                            </p>
                             {templateFields
                               .filter((field) => {
                                 // Exclude QR code fields (auto-filled)
-                                if (field.type === "qr") return false
+                                if (field.type === "qr") return false;
                                 // Exclude Issue Date fields (auto-filled)
-                                if (field.type === "date" && field.name.toLowerCase().trim() === "issue date") return false
-                                return true
+                                if (
+                                  field.type === "date" &&
+                                  field.name.toLowerCase().trim() ===
+                                    "issue date"
+                                )
+                                  return false;
+                                return true;
                               })
                               .map((field, idx) => {
-                                const isEmail = field.type === "email"
-                                const isName = field.name.toLowerCase().trim() === "name"
-                                const isExpiryDate = field.name.toLowerCase().trim() === "expiry date" && field.type === "date"
-                                const isRequired = isEmail || isName
-                                
+                                const isEmail = field.type === "email";
+                                const isName =
+                                  field.name.toLowerCase().trim() === "name";
+                                const isExpiryDate =
+                                  field.name.toLowerCase().trim() ===
+                                    "expiry date" && field.type === "date";
+                                const isRequired = isEmail || isName;
+
                                 return (
                                   <p key={idx}>
-                                    {field.name} {isRequired && <span className="text-primary">(Required)</span>}
-                                    {isExpiryDate && <span className="text-muted-foreground text-[10px] ml-1">(Optional)</span>}
+                                    {field.name}{" "}
+                                    {isRequired && (
+                                      <span className="text-primary">
+                                        (Required)
+                                      </span>
+                                    )}
+                                    {isExpiryDate && (
+                                      <span className="text-muted-foreground text-[10px] ml-1">
+                                        (Optional)
+                                      </span>
+                                    )}
                                   </p>
-                                )
+                                );
                               })}
                           </div>
                           <div className="p-3 bg-background/50 rounded-lg font-mono text-xs">
-                            <p className="text-foreground font-semibold mb-2">Example:</p>
-                            <p>{templateFields
-                              .filter((f) => {
-                                if (f.type === "qr") return false
-                                if (f.type === "date" && f.name.toLowerCase().trim() === "issue date") return false
-                                return true
-                              })
-                              .map((f) => f.name).join(",")}</p>
-                            <p>{templateFields
-                              .filter((f) => {
-                                if (f.type === "qr") return false
-                                if (f.type === "date" && f.name.toLowerCase().trim() === "issue date") return false
-                                return true
-                              })
-                              .map(() => "Sample Value").join(",")}</p>
+                            <p className="text-foreground font-semibold mb-2">
+                              Example:
+                            </p>
+                            <p>
+                              {templateFields
+                                .filter((f) => {
+                                  if (f.type === "qr") return false;
+                                  if (
+                                    f.type === "date" &&
+                                    f.name.toLowerCase().trim() === "issue date"
+                                  )
+                                    return false;
+                                  return true;
+                                })
+                                .map((f) => f.name)
+                                .join(",")}
+                            </p>
+                            <p>
+                              {templateFields
+                                .filter((f) => {
+                                  if (f.type === "qr") return false;
+                                  if (
+                                    f.type === "date" &&
+                                    f.name.toLowerCase().trim() === "issue date"
+                                  )
+                                    return false;
+                                  return true;
+                                })
+                                .map(() => "Sample Value")
+                                .join(",")}
+                            </p>
                           </div>
                         </>
                       ) : (
@@ -584,7 +760,9 @@ export default function BulkIssuancePage() {
                         </li>
                         <li className="flex gap-2">
                           <span className="text-primary">•</span>
-                          <span>Issue Date and QR Code are auto-filled automatically</span>
+                          <span>
+                            Issue Date and QR Code are auto-filled automatically
+                          </span>
                         </li>
                         <li className="flex gap-2">
                           <span className="text-primary">•</span>
@@ -594,13 +772,20 @@ export default function BulkIssuancePage() {
                     </div>
                   </Card>
 
-                  <Button onClick={downloadTemplate} variant="outline" className="w-full gap-2 bg-transparent" disabled={!selectedTemplate}>
+                  <Button
+                    onClick={downloadTemplate}
+                    variant="outline"
+                    className="w-full gap-2 bg-transparent"
+                    disabled={!selectedTemplate}
+                  >
                     <Download className="h-4 w-4" />
                     Download Template
                   </Button>
 
                   <Card className="p-6 border border-border/50 bg-card/50 backdrop-blur">
-                    <h3 className="font-semibold text-foreground mb-4">Quick Tips</h3>
+                    <h3 className="font-semibold text-foreground mb-4">
+                      Quick Tips
+                    </h3>
                     <ul className="text-sm text-muted-foreground space-y-3">
                       <li className="flex gap-2">
                         <span className="text-primary">•</span>
@@ -671,5 +856,5 @@ export default function BulkIssuancePage() {
         </DialogContent>
       </Dialog>
     </div>
-  )
+  );
 }
