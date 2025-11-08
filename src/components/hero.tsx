@@ -2,7 +2,6 @@
 
 import { motion } from "framer-motion";
 import Image from "next/image";
-import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Sparkles } from "lucide-react";
 
@@ -96,6 +95,7 @@ export default function Hero() {
                           strokeLinecap="round"
                           strokeLinejoin="round"
                           className="lucide lucide-globe animate-spin"
+                          aria-hidden="true"
                         >
                           <circle cx="12" cy="12" r="10"></circle>
                           <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path>
@@ -140,12 +140,12 @@ export default function Hero() {
               </p>
               <div className="flex items-center justify-center gap-8">
                 {/* Next.js Logo */}
-                <div className="opacity-60 grayscale hover:opacity-100 hover:grayscale-0 hover:drop-shadow-[0_0_8px_rgba(220,48,77,0.5)] transition-all duration-300 group">
+                <div className="opacity-60 grayscale hover:opacity-100 hover:grayscale-0 hover:drop-shadow-[0_0_8px_rgba(220,48,77,0.5)] active:opacity-100 active:grayscale-0 active:drop-shadow-[0_0_8px_rgba(220,48,77,0.5)] transition-all duration-300 group">
                   <svg
                     width="32"
                     height="32"
                     viewBox="0 0 256 256"
-                    className="h-8 w-8 fill-current text-foreground group-hover:text-primary transition-colors duration-300"
+                    className="h-8 w-8 fill-current text-foreground group-hover:text-primary group-active:text-primary transition-colors duration-300"
                     xmlns="http://www.w3.org/2000/svg"
                     aria-labelledby="Next.js"
                     role="img"
@@ -159,7 +159,7 @@ export default function Hero() {
                 </div>
 
                 {/* Tailwind CSS Logo */}
-                <div className="opacity-60 grayscale hover:opacity-100 hover:grayscale-0 hover:drop-shadow-[0_0_8px_rgba(220,48,77,0.5)] transition-all duration-300 group">
+                <div className="opacity-60 grayscale hover:opacity-100 hover:grayscale-0 hover:drop-shadow-[0_0_8px_rgba(220,48,77,0.5)] active:opacity-100 active:grayscale-0 active:drop-shadow-[0_0_8px_rgba(220,48,77,0.5)] transition-all duration-300 group">
                   <Image
                     src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Tailwind_CSS_Logo.svg-6xxjTKleFAC9zoBBGesuy0rIESAcXA.png"
                     alt="Tailwind CSS"
@@ -175,12 +175,21 @@ export default function Hero() {
                     onMouseLeave={(e) => {
                       e.currentTarget.style.filter = "";
                     }}
+                    onTouchStart={(e) => {
+                      e.currentTarget.style.filter =
+                        "brightness(0) saturate(100%) invert(27%) sepia(95%) saturate(1352%) hue-rotate(325deg) brightness(96%) contrast(86%)";
+                    }}
+                    onTouchEnd={(e) => {
+                      setTimeout(() => {
+                        e.currentTarget.style.filter = "";
+                      }, 300);
+                    }}
                     loading="lazy"
                   />
                 </div>
 
                 {/* MongoDB Logo */}
-                <div className="opacity-60 grayscale hover:opacity-100 hover:grayscale-0 hover:drop-shadow-[0_0_8px_rgba(220,48,77,0.5)] transition-all duration-300 group">
+                <div className="opacity-60 grayscale hover:opacity-100 hover:grayscale-0 hover:drop-shadow-[0_0_8px_rgba(220,48,77,0.5)] active:opacity-100 active:grayscale-0 active:drop-shadow-[0_0_8px_rgba(220,48,77,0.5)] transition-all duration-300 group">
                   <svg
                     width="32"
                     height="32"
@@ -215,6 +224,34 @@ export default function Hero() {
                         path.setAttribute("fill", "#000");
                       }
                     }}
+                    onTouchStart={(e) => {
+                      const svg = e.currentTarget;
+                      const circle = svg.querySelector("circle");
+                      const path = svg.querySelector("path");
+                      if (circle) {
+                        circle.style.transition = "fill 0.3s ease";
+                        circle.setAttribute("fill", "rgb(220, 48, 77)");
+                      }
+                      if (path) {
+                        path.style.transition = "fill 0.3s ease";
+                        path.setAttribute("fill", "#fff");
+                      }
+                    }}
+                    onTouchEnd={(e) => {
+                      setTimeout(() => {
+                        const svg = e.currentTarget;
+                        const circle = svg.querySelector("circle");
+                        const path = svg.querySelector("path");
+                        if (circle) {
+                          circle.style.transition = "fill 0.3s ease";
+                          circle.setAttribute("fill", "#fff");
+                        }
+                        if (path) {
+                          path.style.transition = "fill 0.3s ease";
+                          path.setAttribute("fill", "#000");
+                        }
+                      }, 300);
+                    }}
                   >
                     <title id="MongoDB">MongoDB</title>
                     <circle
@@ -233,7 +270,7 @@ export default function Hero() {
                 </div>
 
                 {/* Vault Protocol Logo */}
-                <div className="opacity-60 grayscale hover:opacity-100 hover:grayscale-0 hover:drop-shadow-[0_0_8px_rgba(220,48,77,0.5)] transition-all duration-300 group">
+                <div className="opacity-60 grayscale hover:opacity-100 hover:grayscale-0 hover:drop-shadow-[0_0_8px_rgba(220,48,77,0.5)] active:opacity-100 active:grayscale-0 active:drop-shadow-[0_0_8px_rgba(220,48,77,0.5)] transition-all duration-300 group">
                   <svg
                     width="32"
                     height="32"
@@ -296,6 +333,62 @@ export default function Hero() {
                         rects[3].setAttribute("fill", "#9ca3af");
                       }
                     }}
+                    onTouchStart={(e) => {
+                      const svg = e.currentTarget;
+                      const rects = svg.querySelectorAll("rect");
+                      const circle = svg.querySelector("circle");
+                      // First rect is the background
+                      if (rects[0]) {
+                        rects[0].style.transition = "fill 0.3s ease";
+                        rects[0].setAttribute("fill", "rgb(220, 48, 77)");
+                      }
+                      if (circle) {
+                        circle.style.transition = "fill 0.3s ease";
+                        circle.setAttribute("fill", "#fff");
+                      }
+                      // Inner rectangles (lock details) - keep them grey or make darker
+                      if (rects[1]) {
+                        rects[1].style.transition = "fill 0.3s ease";
+                        rects[1].setAttribute("fill", "#9ca3af");
+                      }
+                      if (rects[2]) {
+                        rects[2].style.transition = "fill 0.3s ease";
+                        rects[2].setAttribute("fill", "#9ca3af");
+                      }
+                      if (rects[3]) {
+                        rects[3].style.transition = "fill 0.3s ease";
+                        rects[3].setAttribute("fill", "#9ca3af");
+                      }
+                    }}
+                    onTouchEnd={(e) => {
+                      setTimeout(() => {
+                        const svg = e.currentTarget;
+                        const rects = svg.querySelectorAll("rect");
+                        const circle = svg.querySelector("circle");
+                        // First rect is the background - grey
+                        if (rects[0]) {
+                          rects[0].style.transition = "fill 0.3s ease";
+                          rects[0].setAttribute("fill", "#9ca3af");
+                        }
+                        if (circle) {
+                          circle.style.transition = "fill 0.3s ease";
+                          circle.setAttribute("fill", "#4b5563");
+                        }
+                        // Inner rectangles - grey
+                        if (rects[1]) {
+                          rects[1].style.transition = "fill 0.3s ease";
+                          rects[1].setAttribute("fill", "#9ca3af");
+                        }
+                        if (rects[2]) {
+                          rects[2].style.transition = "fill 0.3s ease";
+                          rects[2].setAttribute("fill", "#9ca3af");
+                        }
+                        if (rects[3]) {
+                          rects[3].style.transition = "fill 0.3s ease";
+                          rects[3].setAttribute("fill", "#9ca3af");
+                        }
+                      }, 300);
+                    }}
                   >
                     <title id="Vault Protocol">Vault Protocol</title>
                     <rect
@@ -349,12 +442,12 @@ export default function Hero() {
                 </div>
 
                 {/* Vercel Logo */}
-                <div className="opacity-60 grayscale hover:opacity-100 hover:grayscale-0 hover:drop-shadow-[0_0_8px_rgba(220,48,77,0.5)] transition-all duration-300 group">
+                <div className="opacity-60 grayscale hover:opacity-100 hover:grayscale-0 hover:drop-shadow-[0_0_8px_rgba(220,48,77,0.5)] active:opacity-100 active:grayscale-0 active:drop-shadow-[0_0_8px_rgba(220,48,77,0.5)] transition-all duration-300 group">
                   <svg
                     width="32"
                     height="32"
                     viewBox="0 0 512 512"
-                    className="h-8 w-8 fill-current text-foreground group-hover:text-primary transition-colors duration-300"
+                    className="h-8 w-8 fill-current text-foreground group-hover:text-primary group-active:text-primary transition-colors duration-300"
                     xmlns="http://www.w3.org/2000/svg"
                     aria-labelledby="Vercel"
                     role="img"

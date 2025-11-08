@@ -149,7 +149,14 @@ export function TestimonialsSection() {
         </div>
 
         <div className="-mt-8 flex justify-center">
-          <button className="group relative inline-flex items-center gap-2 rounded-full border border-primary/30 bg-black/50 px-6 py-3 text-sm font-medium text-white transition-all hover:border-primary/60 hover:bg-primary/10 active:scale-95">
+          <button
+            onClick={() => {
+              const text = encodeURIComponent("I'm using CredVault to issue and verify credentials! Check it out: https://credvault.com");
+              const url = `https://twitter.com/intent/tweet?text=${text}`;
+              window.open(url, "_blank", "noopener,noreferrer");
+            }}
+            className="group relative inline-flex items-center gap-2 rounded-full border border-primary/30 bg-black/50 px-6 py-3 text-sm font-medium text-white transition-all hover:border-primary/60 hover:bg-primary/10 active:scale-95 cursor-pointer"
+          >
             <div className="absolute inset-x-0 -top-px mx-auto h-px w-3/4 bg-gradient-to-r from-transparent via-primary/40 to-transparent"></div>
             <div className="absolute inset-x-0 -bottom-px mx-auto h-px w-3/4 bg-gradient-to-r from-transparent via-primary/40 to-transparent"></div>
             <svg className="h-4 w-4 text-primary" fill="currentColor" viewBox="0 0 24 24">

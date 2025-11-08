@@ -539,7 +539,10 @@ export default function Features() {
                       </div>
                       <div className="flex items-center justify-between px-4 pb-4">
                         <div className="flex items-center gap-3">
-                          <button className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors">
+                          <button 
+                            className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+                            aria-label="Attach file"
+                          >
                             <svg
                               xmlns="http://www.w3.org/2000/svg"
                               width="16"
@@ -551,6 +554,7 @@ export default function Features() {
                               strokeLinecap="round"
                               strokeLinejoin="round"
                               className="text-white/70"
+                              aria-hidden="true"
                             >
                               <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
                             </svg>
@@ -574,7 +578,10 @@ export default function Features() {
                             Verify
                           </button>
                         </div>
-                        <button className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors">
+                        <button 
+                          className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+                          aria-label="Share verification"
+                        >
                           <svg
                             xmlns="http://www.w3.org/2000/svg"
                             width="16"
@@ -586,6 +593,7 @@ export default function Features() {
                             strokeLinecap="round"
                             strokeLinejoin="round"
                             className="text-white/70"
+                            aria-hidden="true"
                           >
                             <path d="m22 2-7 20-4-9-9-4Z"></path>
                             <path d="M22 2 11 13"></path>
