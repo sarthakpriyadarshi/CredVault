@@ -123,26 +123,6 @@ export default function Hero() {
                     </div>
                   </div>
                 </a>
-
-                {/* Privacy and Terms Agreement */}
-                <div className="mt-2 text-center">
-                  <p className="text-sm text-zinc-300">
-                    By continuing, you agree to our{" "}
-                    <Link
-                      href="/terms"
-                      className="text-primary hover:text-primary/80 underline"
-                    >
-                      Terms & Conditions
-                    </Link>{" "}
-                    and{" "}
-                    <Link
-                      href="/privacy"
-                      className="text-primary hover:text-primary/80 underline"
-                    >
-                      Privacy Policy
-                    </Link>
-                  </p>
-                </div>
               </div>
             </motion.div>
           </div>

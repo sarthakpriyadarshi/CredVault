@@ -84,7 +84,6 @@ export default function Home() {
             className="rounded-full size-8 w-8 h-8 object-contain"
             priority
           />
-          <span className="text-white font-semibold text-lg">CredVault</span>
         </Link>
 
         <div className="absolute inset-0 hidden flex-1 flex-row items-center justify-center space-x-2 text-sm font-medium text-muted-foreground transition duration-200 hover:text-foreground md:flex md:space-x-2">
@@ -202,7 +201,6 @@ export default function Home() {
             className="rounded-full size-7 w-7 h-7 object-contain"
             priority
           />
-          <span className="text-white font-semibold text-base">CredVault</span>
         </Link>
 
         <button
@@ -280,18 +278,6 @@ export default function Home() {
                 FAQ
               </a>
               <div className="border-t border-border/50 pt-4 mt-4 flex flex-col space-y-3">
-                <a
-                  href="/privacy"
-                  className="px-4 py-3 text-lg font-medium text-muted-foreground hover:text-foreground transition-colors rounded-lg hover:bg-background/50 cursor-pointer"
-                >
-                  Privacy Policy
-                </a>
-                <a
-                  href="/terms"
-                  className="px-4 py-3 text-lg font-medium text-muted-foreground hover:text-foreground transition-colors rounded-lg hover:bg-background/50 cursor-pointer"
-                >
-                  Terms & Conditions
-                </a>
                 <a
                   href="/auth/login"
                   className="px-4 py-3 text-lg font-medium text-muted-foreground hover:text-foreground transition-colors rounded-lg hover:bg-background/50 cursor-pointer"
