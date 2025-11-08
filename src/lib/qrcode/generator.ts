@@ -218,6 +218,12 @@ export async function generateQRCodeWithLogo(
       ctx.globalCompositeOperation = "source-over"
     }
 
+    // Prepare background fill for finder patterns
+    let backgroundFill: string | CanvasGradient = bgColor
+    if (styling?.backgroundOptions?.gradient) {
+      backgroundFill = createGradient(ctx, size, size, styling.backgroundOptions.gradient)
+    }
+
     // Helper to draw finder pattern with rounded corner squares as unified shapes
     // Outer square leaves space for inner square, inner square leaves space for center dot
     const drawFinderPattern = (startRow: number, startCol: number) => {
@@ -236,6 +242,12 @@ export async function generateQRCodeWithLogo(
       const innerRadius = cornersSquareType === "extra-rounded" ? innerSize * 0.6 : 
                          cornersSquareType === "square" ? innerSize * 0.05 : 
                          innerSize * 0.3
+
+      // Draw background for the entire finder pattern area
+      ctx.fillStyle = backgroundFill
+      ctx.beginPath()
+      drawRoundedRect(ctx, x, y, patternSize, patternSize, outerRadius)
+      ctx.fill()
 
       // Draw outer square as a frame (border only, leaving space for inner square)
       // The border is 1 module wide on each side
