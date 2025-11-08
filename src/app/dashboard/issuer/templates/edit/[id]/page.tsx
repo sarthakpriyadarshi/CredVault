@@ -927,9 +927,9 @@ export default function EditTemplatePage() {
       return
     }
 
-    // Check if Name field exists (case-insensitive)
+    // Check if Name field exists (case-insensitive) - Not required for badge templates
     const hasNameField = fields.some((f) => f.name.toLowerCase().trim() === "name")
-    if (!hasNameField) {
+    if (!hasNameField && templateType !== "badge") {
       setModalMessage("Please add a 'Name' field. Name is required for credential issuance.")
       setShowErrorModal(true)
       return
@@ -945,10 +945,20 @@ export default function EditTemplatePage() {
       return
     }
 
-    if (!certificateImage || !imageRef.current) {
-      setModalMessage("Please upload a certificate image first")
-      setShowErrorModal(true)
-      return
+    // Validate images based on template type
+    if (templateType === "certificate" || templateType === "both") {
+      if (!certificateImage || !imageRef.current) {
+        setModalMessage("Please upload a certificate image first")
+        setShowErrorModal(true)
+        return
+      }
+    }
+    if (templateType === "badge" || templateType === "both") {
+      if (!badgeImage || !badgeImageRef.current) {
+        setModalMessage("Please upload a badge image first")
+        setShowErrorModal(true)
+        return
+      }
     }
 
     setSaving(true)
@@ -964,8 +974,16 @@ export default function EditTemplatePage() {
 
       const canvasWidth = canvas.width
       const canvasHeight = canvas.height
-      const actualImageWidth = imageRef.current.width
-      const actualImageHeight = imageRef.current.height
+      // Use appropriate image dimensions based on template type
+      let actualImageWidth = 800
+      let actualImageHeight = 600
+      if (templateType === "certificate" || templateType === "both") {
+        actualImageWidth = imageRef.current?.width || 800
+        actualImageHeight = imageRef.current?.height || 600
+      } else if (templateType === "badge") {
+        actualImageWidth = badgeImageRef.current?.width || 800
+        actualImageHeight = badgeImageRef.current?.height || 600
+      }
 
       const templateData = {
         name: templateName.trim(),
@@ -1415,8 +1433,16 @@ export default function EditTemplatePage() {
                             setShowErrorModal(true)
                             return
                           }
-                          if (!canvasRef.current || !certificateImage) {
-                            setModalMessage("Please upload a certificate image first.")
+                          // Check if appropriate image is uploaded based on template type
+                          const hasImage = (templateType === "certificate" || templateType === "both") 
+                            ? (certificateImage && imageRef.current)
+                            : (templateType === "badge" || templateType === "both")
+                            ? (badgeImage && badgeImageRef.current)
+                            : false
+                          
+                          if (!canvasRef.current || !hasImage) {
+                            const imageType = templateType === "badge" ? "badge" : "certificate"
+                            setModalMessage(`Please upload a ${imageType} image first.`)
                             setShowErrorModal(true)
                             return
                           }

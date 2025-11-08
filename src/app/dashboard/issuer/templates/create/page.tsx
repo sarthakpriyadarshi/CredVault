@@ -74,6 +74,8 @@ export default function CreateTemplatePage() {
   const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, fieldX: 0, fieldY: 0, fieldWidth: 0, fieldHeight: 0 })
   const [saving, setSaving] = useState(false)
   const imageRef = useRef<HTMLImageElement | null>(null)
+  const badgeImageRef = useRef<HTMLImageElement | null>(null)
+  const [activeTab, setActiveTab] = useState<"certificate" | "badge">("certificate")
   const animationFrameRef = useRef<number | null>(null)
   const qrCodeImagesRef = useRef<Map<string, HTMLImageElement>>(new Map())
   const [selectedFontFamily, setSelectedFontFamily] = useState<string>("Arial")
@@ -122,6 +124,38 @@ export default function CreateTemplatePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [certificateImage])
 
+  // Load image when badgeImage changes (can be URL or base64)
+  useEffect(() => {
+    if (badgeImage) {
+      const img = new Image()
+      img.crossOrigin = "anonymous"
+      img.onload = () => {
+        badgeImageRef.current = img
+        drawCanvas()
+      }
+      img.onerror = () => {
+        console.error("Failed to load badge image")
+        badgeImageRef.current = null
+        drawCanvas()
+      }
+      // Handle both URLs and base64 data URLs
+      img.src = badgeImage.startsWith("/") ? `${window.location.origin}${badgeImage}` : badgeImage
+    } else {
+      badgeImageRef.current = null
+      drawCanvas()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [badgeImage])
+
+  // Auto-switch to badge tab when templateType is badge-only
+  useEffect(() => {
+    if (templateType === "badge") {
+      setActiveTab("badge")
+    } else if (templateType === "certificate") {
+      setActiveTab("certificate")
+    }
+  }, [templateType])
+
   // Draw canvas when fields or state changes (but use requestAnimationFrame to prevent flickering)
   useEffect(() => {
     if (animationFrameRef.current) {
@@ -138,7 +172,7 @@ export default function CreateTemplatePage() {
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fields, selectedField, isDragging, dragStart, dragCurrent, isMovingField, selectedFontFamily, selectedFontSize, selectedFontColor])
+  }, [fields, selectedField, isDragging, dragStart, dragCurrent, isMovingField, isResizing, previewMode, selectedFontFamily, selectedFontSize, selectedFontColor, activeTab, templateType, certificateImage, badgeImage])
 
   // Helper function to get resize handle position
   const getResizeHandlePosition = useCallback((field: TemplateField, handle: string): { x: number; y: number } => {
@@ -224,7 +258,10 @@ export default function CreateTemplatePage() {
   }, [])
 
   const handleCanvasMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!canvasRef.current || previewMode || !certificateImage) return
+    // Disable interactions when badge tab is active (badge is non-editable)
+    const isBadgeActive = (activeTab === "badge" && (templateType === "badge" || templateType === "both")) || 
+                          (templateType === "badge")
+    if (!canvasRef.current || previewMode || !certificateImage || isBadgeActive) return
 
     const rect = canvasRef.current.getBoundingClientRect()
     const x = (e.clientX - rect.left) * (canvasRef.current.width / rect.width)
@@ -514,8 +551,14 @@ export default function CreateTemplatePage() {
     ctx.fillStyle = "#1a1a1a"
     ctx.fillRect(0, 0, canvas.width, canvas.height)
 
-    // Draw certificate image if available (use cached image)
-    if (imageRef.current) {
+    // Determine which image to show based on activeTab and templateType
+    const showCertificate = (activeTab === "certificate" && (templateType === "certificate" || templateType === "both")) || 
+                           (templateType === "certificate")
+    const showBadge = (activeTab === "badge" && (templateType === "badge" || templateType === "both")) || 
+                      (templateType === "badge")
+
+    // Draw certificate image if available and should be shown
+    if (showCertificate && imageRef.current) {
       const img = imageRef.current
       // Display image at full scale without compressing
       const maxWidth = canvas.width
@@ -534,19 +577,44 @@ export default function CreateTemplatePage() {
       const y = (canvas.height - displayHeight) / 2
 
       ctx.drawImage(img, x, y, displayWidth, displayHeight)
-    } else {
+    } 
+    // Draw badge image if available and should be shown
+    else if (showBadge && badgeImageRef.current) {
+      const img = badgeImageRef.current
+      // Display image at full scale without compressing
+      const maxWidth = canvas.width
+      const maxHeight = canvas.height
+      let displayWidth = img.width
+      let displayHeight = img.height
+
+      // Only scale down if image is larger than canvas
+      if (displayWidth > maxWidth || displayHeight > maxHeight) {
+        const scale = Math.min(maxWidth / displayWidth, maxHeight / displayHeight)
+        displayWidth *= scale
+        displayHeight *= scale
+      }
+
+      const x = (canvas.width - displayWidth) / 2
+      const y = (canvas.height - displayHeight) / 2
+
+      ctx.drawImage(img, x, y, displayWidth, displayHeight)
+    } 
+    else {
       // Draw placeholder
       ctx.fillStyle = "#2a2a2a"
       ctx.fillRect(10, 10, canvas.width - 20, canvas.height - 20)
       ctx.fillStyle = "#666"
       ctx.font = "16px Arial"
       ctx.textAlign = "center"
-      ctx.fillText("Certificate Preview", canvas.width / 2, canvas.height / 2 - 20)
+      const previewText = templateType === "badge" ? "Badge Preview" : "Certificate Preview"
+      ctx.fillText(previewText, canvas.width / 2, canvas.height / 2 - 20)
       ctx.fillText("Upload image above to see preview", canvas.width / 2, canvas.height / 2 + 20)
     }
 
-    // Always draw fields on top
-    drawFields(ctx)
+    // Only draw fields on top if showing certificate (badge is non-editable)
+    if (showCertificate && !showBadge) {
+      drawFields(ctx)
+    }
   }
 
   const drawFields = (ctx: CanvasRenderingContext2D) => {
@@ -877,9 +945,9 @@ export default function CreateTemplatePage() {
       return
     }
 
-    // Check if Name field exists (case-insensitive)
+    // Check if Name field exists (case-insensitive) - Not required for badge templates
     const hasNameField = fields.some((f) => f.name.toLowerCase().trim() === "name")
-    if (!hasNameField) {
+    if (!hasNameField && templateType !== "badge") {
       setModalMessage("Please add a 'Name' field. Name is required for credential issuance.")
       setShowErrorModal(true)
       return
@@ -895,10 +963,20 @@ export default function CreateTemplatePage() {
       return
     }
 
-    if (!certificateImage || !imageRef.current) {
-      setModalMessage("Please upload a certificate image first")
-      setShowErrorModal(true)
-      return
+    // Validate images based on template type
+    if (templateType === "certificate" || templateType === "both") {
+      if (!certificateImage || !imageRef.current) {
+        setModalMessage("Please upload a certificate image first")
+        setShowErrorModal(true)
+        return
+      }
+    }
+    if (templateType === "badge" || templateType === "both") {
+      if (!badgeImage) {
+        setModalMessage("Please upload a badge image first")
+        setShowErrorModal(true)
+        return
+      }
     }
 
     setSaving(true)
@@ -914,8 +992,16 @@ export default function CreateTemplatePage() {
 
       const canvasWidth = canvas.width // 800
       const canvasHeight = canvas.height // 600
-      const actualImageWidth = imageRef.current.width
-      const actualImageHeight = imageRef.current.height
+      // Use appropriate image dimensions based on template type
+      let actualImageWidth = 800
+      let actualImageHeight = 600
+      if (templateType === "certificate" || templateType === "both") {
+        actualImageWidth = imageRef.current?.width || 800
+        actualImageHeight = imageRef.current?.height || 600
+      } else if (templateType === "badge") {
+        actualImageWidth = badgeImageRef.current?.width || 800
+        actualImageHeight = badgeImageRef.current?.height || 600
+      }
 
       const templateData = {
         name: templateName.trim(),
@@ -1393,8 +1479,16 @@ export default function CreateTemplatePage() {
                             setShowErrorModal(true)
                             return
                           }
-                          if (!canvasRef.current || !certificateImage) {
-                            setModalMessage("Please upload a certificate image first.")
+                          // Check if appropriate image is uploaded based on template type
+                          const hasImage = (templateType === "certificate" || templateType === "both") 
+                            ? (certificateImage && imageRef.current)
+                            : (templateType === "badge" || templateType === "both")
+                            ? badgeImage
+                            : false
+                          
+                          if (!canvasRef.current || !hasImage) {
+                            const imageType = templateType === "badge" ? "badge" : "certificate"
+                            setModalMessage(`Please upload a ${imageType} image first.`)
                             setShowErrorModal(true)
                             return
                           }
@@ -1748,7 +1842,7 @@ export default function CreateTemplatePage() {
                     )}
 
                     {/* Formatting Toolbar - Header Style */}
-                    {selectedField && !previewMode && certificateImage && fields.find((f) => f.id === selectedField)?.x !== undefined && fields.find((f) => f.id === selectedField)?.y !== undefined && (
+                    {selectedField && !previewMode && certificateImage && activeTab === "certificate" && templateType !== "badge" && fields.find((f) => f.id === selectedField)?.x !== undefined && fields.find((f) => f.id === selectedField)?.y !== undefined && (
                       <div className="flex items-center gap-3 rounded-full bg-background/80 backdrop-blur-sm border border-border/50 shadow-lg px-4 py-2">
                         {/* Show font controls only for non-QR fields */}
                         {fields.find((f) => f.id === selectedField)?.type !== "qr" && (
@@ -2069,8 +2163,8 @@ export default function CreateTemplatePage() {
                     {/* Canvas */}
                     <div
                       className={`border border-border/50 rounded-lg overflow-hidden bg-black/50 ${
-                        !previewMode && certificateImage ? "cursor-crosshair" : "cursor-default"
-                      } ${!certificateImage ? "opacity-50" : ""}`}
+                        !previewMode && certificateImage && activeTab === "certificate" && templateType !== "badge" ? "cursor-crosshair" : "cursor-default"
+                      } ${!certificateImage && templateType !== "badge" ? "opacity-50" : ""}`}
                     >
                       <canvas
                         ref={canvasRef}
@@ -2091,6 +2185,48 @@ export default function CreateTemplatePage() {
                         style={{ maxWidth: "100%", height: "auto" }}
                       />
                     </div>
+
+                    {/* Tab Switcher - Only show if both certificate and badge are available, positioned below preview */}
+                    {(templateType === "both" && certificateImage && badgeImage) && (
+                      <div className="flex gap-3 justify-center border-t border-border/50 pt-4 mt-4">
+                        <button
+                          onClick={() => setActiveTab("certificate")}
+                          className={`relative overflow-hidden rounded-lg transition-all ${
+                            activeTab === "certificate"
+                              ? "ring-2 ring-primary ring-offset-2 ring-offset-card"
+                              : "opacity-60 hover:opacity-100"
+                          }`}
+                          title="Certificate"
+                        >
+                          <img
+                            src={certificateImage}
+                            alt="Certificate preview"
+                            className="w-16 h-16 object-cover rounded-lg aspect-square"
+                          />
+                          {activeTab === "certificate" && (
+                            <div className="absolute inset-0 bg-primary/10 border-2 border-primary rounded-lg" />
+                          )}
+                        </button>
+                        <button
+                          onClick={() => setActiveTab("badge")}
+                          className={`relative overflow-hidden rounded-lg transition-all ${
+                            activeTab === "badge"
+                              ? "ring-2 ring-primary ring-offset-2 ring-offset-card"
+                              : "opacity-60 hover:opacity-100"
+                          }`}
+                          title="Badge"
+                        >
+                          <img
+                            src={badgeImage}
+                            alt="Badge preview"
+                            className="w-16 h-16 object-cover rounded-lg aspect-square"
+                          />
+                          {activeTab === "badge" && (
+                            <div className="absolute inset-0 bg-primary/10 border-2 border-primary rounded-lg" />
+                          )}
+                        </button>
+                      </div>
+                    )}
 
                     {/* Real-time JSON Preview */}
                     <Card className="p-4 border border-border/50 bg-card/50 backdrop-blur">
@@ -2157,7 +2293,7 @@ export default function CreateTemplatePage() {
                     </Card>
 
                     {/* Field Controls */}
-                    {selectedField && !previewMode && certificateImage && fields.find((f) => f.id === selectedField)?.x !== undefined && fields.find((f) => f.id === selectedField)?.y !== undefined && (
+                    {selectedField && !previewMode && certificateImage && activeTab === "certificate" && templateType !== "badge" && fields.find((f) => f.id === selectedField)?.x !== undefined && fields.find((f) => f.id === selectedField)?.y !== undefined && (
                       <>
                         <Card className="p-4 bg-background/50 border border-primary/20 space-y-3">
                           <h3 className="font-semibold text-sm text-foreground">Field Controls</h3>

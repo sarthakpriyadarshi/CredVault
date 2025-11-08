@@ -23,6 +23,7 @@ import {
 interface Template {
   id: string
   name: string
+  type?: string
   fields: Array<{ name: string; type: string }>
 }
 
@@ -90,6 +91,7 @@ export default function IssuePage() {
           templatesList.map((t: any) => ({
             id: t.id || t._id?.toString() || "",
             name: t.name || "Unnamed Template",
+            type: t.type,
             fields: t.fields || [],
           }))
         )
@@ -122,6 +124,7 @@ export default function IssuePage() {
             }))
             setTemplateDetails({
               ...currentTemplate,
+              type: template.type,
               fields,
             })
           } else {
@@ -193,9 +196,9 @@ export default function IssuePage() {
       return
     }
 
-    // Validate Name field (case-insensitive)
+    // Validate Name field (case-insensitive) - Not required for badge templates
     const nameField = activeTemplate.fields.find((f) => f.name.toLowerCase().trim() === "name")
-    if (nameField && (!formData[nameField.name] || !formData[nameField.name].trim())) {
+    if (nameField && activeTemplate.type !== "badge" && (!formData[nameField.name] || !formData[nameField.name].trim())) {
       setDialogMessage("Please fill in the Name field")
       setShowErrorDialog(true)
       return

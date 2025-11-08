@@ -171,8 +171,8 @@ async function handler(
         // Ensure email is set correctly
         credentialData[emailField.fieldName] = emailValue
 
-        // Validate Name field (required)
-        if (nameField && (!credentialData[nameField.fieldName] || !credentialData[nameField.fieldName].trim())) {
+        // Validate Name field (required) - Not required for badge templates
+        if (nameField && template.type !== "badge" && (!credentialData[nameField.fieldName] || !credentialData[nameField.fieldName].trim())) {
           records.push({
             recipientName: values[0] || "Unknown",
             email: emailValue || "N/A",

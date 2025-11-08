@@ -62,10 +62,25 @@ export default function VerifyCredentialPage() {
   const [dialogMessage, setDialogMessage] = useState("")
   const [dialogTitle, setDialogTitle] = useState("")
   const [shareDialogOpen, setShareDialogOpen] = useState(false)
+  const [activeTab, setActiveTab] = useState<"certificate" | "badge">("certificate")
 
   const blockscoutUrl = process.env.NEXT_PUBLIC_BLOCKSCOUT_URL || "http://localhost:26000"
   // Use public verification link (public, no authentication required)
   const publicUrl = credentialId ? `${typeof window !== 'undefined' ? window.location.origin : ''}/verify/${credentialId}` : ''
+  
+  // Determine which tab to show initially
+  useEffect(() => {
+    if (credential) {
+      if (credential.type === "both") {
+        // Default to certificate if both are available
+        setActiveTab(credential.certificateUrl ? "certificate" : "badge")
+      } else if (credential.type === "badge") {
+        setActiveTab("badge")
+      } else {
+        setActiveTab("certificate")
+      }
+    }
+  }, [credential])
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -264,14 +279,16 @@ export default function VerifyCredentialPage() {
                 <p className="text-muted-foreground">Verify the authenticity of your credential</p>
               </div>
 
-              {/* Two Column Layout: Certificate (70%) + Verification Card (30%) */}
+              {/* Two Column Layout: Certificate/Badge (70%) + Verification Card (30%) */}
               <div className="flex flex-col lg:flex-row gap-6">
-                {/* Left Column - Certificate Preview (70%) */}
+                {/* Left Column - Certificate/Badge Preview (70%) */}
                 <div className="flex-1 lg:w-[70%]">
                   <Card className="p-6 border border-border/50 bg-card/50 backdrop-blur flex flex-col h-full">
-                    <h2 className="text-xl font-semibold text-foreground mb-4">Certificate Preview</h2>
-                    <div className="flex-1 bg-background/30 rounded-lg border border-border/30 overflow-auto flex items-center justify-center min-h-[400px]">
-                      {credential.certificateUrl ? (
+                    <h2 className="text-xl font-semibold text-foreground mb-4">
+                      {credential.type === "badge" ? "Badge Preview" : credential.type === "both" ? "Preview" : "Certificate Preview"}
+                    </h2>
+                    <div className="flex-1 bg-background/30 rounded-lg border border-border/30 overflow-auto flex items-center justify-center min-h-[400px] mb-4 p-4">
+                      {activeTab === "certificate" && credential.certificateUrl ? (
                         credential.certificateUrl.endsWith('.pdf') ? (
                           <iframe
                             src={credential.certificateUrl}
@@ -282,14 +299,34 @@ export default function VerifyCredentialPage() {
                           <img
                             src={credential.certificateUrl}
                             alt={credential.title}
-                            className="w-full h-auto max-w-full"
+                            className="max-w-full max-h-full w-auto h-auto object-contain"
+                          />
+                        )
+                      ) : activeTab === "badge" && credential.badgeUrl ? (
+                        <img
+                          src={credential.badgeUrl}
+                          alt={credential.title}
+                          className="max-w-[256px] max-h-[256px] w-auto h-auto object-contain"
+                        />
+                      ) : credential.certificateUrl ? (
+                        credential.certificateUrl.endsWith('.pdf') ? (
+                          <iframe
+                            src={credential.certificateUrl}
+                            className="w-full h-full"
+                            title="Certificate Preview"
+                          />
+                        ) : (
+                          <img
+                            src={credential.certificateUrl}
+                            alt={credential.title}
+                            className="max-w-full max-h-full w-auto h-auto object-contain"
                           />
                         )
                       ) : credential.badgeUrl ? (
                         <img
                           src={credential.badgeUrl}
                           alt={credential.title}
-                          className="w-full h-auto max-w-full"
+                          className="max-w-[256px] max-h-[256px] w-auto h-auto object-contain"
                         />
                       ) : (
                         <div className="text-center space-y-2">
@@ -298,6 +335,53 @@ export default function VerifyCredentialPage() {
                         </div>
                       )}
                     </div>
+                    {/* Tab Switcher - Only show if both certificate and badge are available, positioned below preview */}
+                    {credential.type === "both" && credential.certificateUrl && credential.badgeUrl ? (
+                      <div className="flex gap-3 justify-center border-t border-border/50 pt-4">
+                        <button
+                          onClick={() => setActiveTab("certificate")}
+                          className={`relative overflow-hidden rounded-lg transition-all ${
+                            activeTab === "certificate"
+                              ? "ring-2 ring-primary ring-offset-2 ring-offset-card"
+                              : "opacity-60 hover:opacity-100"
+                          }`}
+                          title="Certificate"
+                        >
+                          {credential.certificateUrl.endsWith('.pdf') ? (
+                            <div className="w-16 h-16 bg-background/50 border-2 border-border flex items-center justify-center rounded-lg">
+                              <span className="text-xs text-muted-foreground">PDF</span>
+                            </div>
+                          ) : (
+                            <img
+                              src={credential.certificateUrl}
+                              alt="Certificate preview"
+                              className="w-16 h-16 object-cover rounded-lg aspect-square"
+                            />
+                          )}
+                          {activeTab === "certificate" && (
+                            <div className="absolute inset-0 bg-primary/10 border-2 border-primary rounded-lg" />
+                          )}
+                        </button>
+                        <button
+                          onClick={() => setActiveTab("badge")}
+                          className={`relative overflow-hidden rounded-lg transition-all ${
+                            activeTab === "badge"
+                              ? "ring-2 ring-primary ring-offset-2 ring-offset-card"
+                              : "opacity-60 hover:opacity-100"
+                          }`}
+                          title="Badge"
+                        >
+                          <img
+                            src={credential.badgeUrl}
+                            alt="Badge preview"
+                            className="w-16 h-16 object-cover rounded-lg aspect-square"
+                          />
+                          {activeTab === "badge" && (
+                            <div className="absolute inset-0 bg-primary/10 border-2 border-primary rounded-lg" />
+                          )}
+                        </button>
+                      </div>
+                    ) : null}
                   </Card>
                 </div>
 
@@ -375,6 +459,46 @@ export default function VerifyCredentialPage() {
                               <ExternalLink className="h-3 w-3 shrink-0" />
                             </a>
                           </div>
+                        </div>
+                      )}
+
+                      {/* Credential Info - Show for non-blockchain records to fill space */}
+                      {verification.method !== "blockchain" && (
+                        <div className="p-3 bg-background/50 rounded-lg space-y-3">
+                          <div>
+                            <p className="text-xs text-muted-foreground mb-1">Issuer</p>
+                            <p className="text-xs font-medium text-foreground">
+                              {credential.issuer}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground mb-1">Recipient</p>
+                            <p className="text-xs font-medium text-foreground">
+                              {credential.recipientEmail}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground mb-1">Issued On</p>
+                            <p className="text-xs font-medium text-foreground">
+                              {new Date(credential.issuedAt).toLocaleDateString("en-US", {
+                                year: "numeric",
+                                month: "short",
+                                day: "numeric",
+                              })}
+                            </p>
+                          </div>
+                          {credential.expiresAt && (
+                            <div>
+                              <p className="text-xs text-muted-foreground mb-1">Expires On</p>
+                              <p className="text-xs font-medium text-foreground">
+                                {new Date(credential.expiresAt).toLocaleDateString("en-US", {
+                                  year: "numeric",
+                                  month: "short",
+                                  day: "numeric",
+                                })}
+                              </p>
+                            </div>
+                          )}
                         </div>
                       )}
 
@@ -497,22 +621,34 @@ export default function VerifyCredentialPage() {
                       </div>
                     )}
                   </div>
-
-                  {/* Additional Details */}
-                  {Object.keys(credential.credentialData).length > 0 && (
-                    <div className="pt-4 mt-4 border-t border-border/50">
-                      <h4 className="text-sm font-semibold text-foreground mb-3">Additional Details</h4>
-                      <div className="space-y-2">
-                        {Object.entries(credential.credentialData).map(([key, value]) => (
-                          <div key={key} className="p-2 bg-background/50 rounded-lg">
-                            <p className="text-xs text-muted-foreground mb-0.5">{key}</p>
-                            <p className="text-xs font-medium text-foreground">{String(value)}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
                 </Card>
+
+                {/* Additional Details - Only for non-blockchain records */}
+                {verification.method !== "blockchain" &&
+                  Object.keys(credential.credentialData).length > 0 && (
+                    <Card className="p-6 border border-border/50 bg-card/50 backdrop-blur">
+                      <h3 className="text-lg font-semibold text-foreground mb-4">
+                        Additional Details
+                      </h3>
+                      <div className="space-y-2">
+                        {Object.entries(credential.credentialData).map(
+                          ([key, value]) => (
+                            <div
+                              key={key}
+                              className="p-2 bg-background/50 rounded-lg"
+                            >
+                              <p className="text-xs text-muted-foreground mb-0.5">
+                                {key}
+                              </p>
+                              <p className="text-xs font-medium text-foreground">
+                                {String(value)}
+                              </p>
+                            </div>
+                          )
+                        )}
+                      </div>
+                    </Card>
+                  )}
 
                 {/* Blockchain Details */}
                 {verification.method === "blockchain" && verification.details && (
