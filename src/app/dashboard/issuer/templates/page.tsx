@@ -1,267 +1,337 @@
-"use client"
+"use client";
 
-import { useSession } from "next-auth/react"
-import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
-import { DashboardHeader } from "@/components/dashboard-header"
-import { DashboardSidebar } from "@/components/dashboard-sidebar"
-import { Card } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { FileText, Edit, Trash2, Plus, Eye, Archive, Download } from "lucide-react"
-import Link from "next/link"
-import { PrimaryButton } from "@/components/ui/primary-button"
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import Image from "next/image";
+import { DashboardHeader } from "@/components/dashboard-header";
+import { DashboardSidebar } from "@/components/dashboard-sidebar";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import type { ITemplate } from "@/models";
+import {
+  FileText,
+  Edit,
+  Trash2,
+  Plus,
+  Eye,
+  Archive,
+  Download,
+} from "lucide-react";
+import Link from "next/link";
+import { PrimaryButton } from "@/components/ui/primary-button";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
 
 interface Template {
-  id: string
-  name: string
-  category?: string
-  credentialsIssued: number
-  createdAt: string
-  archived?: boolean
-  fields?: Array<{ name: string; type: string }>
-  certificateImageUrl?: string
-  badgeImageUrl?: string
-  placeholders?: Array<{ fieldName: string; type: string; x?: number; y?: number }>
+  id: string;
+  name: string;
+  category?: string;
+  credentialsIssued: number;
+  createdAt: string;
+  archived?: boolean;
+  fields?: Array<{ name: string; type: string }>;
+  certificateImageUrl?: string;
+  badgeImageUrl?: string;
+  placeholders?: Array<{
+    fieldName: string;
+    type: string;
+    x?: number;
+    y?: number;
+  }>;
 }
 
 export default function TemplatesPage() {
-  const { data: session, status } = useSession()
-  const router = useRouter()
-  const [templates, setTemplates] = useState<Template[]>([])
-  const [searchTerm, setSearchTerm] = useState("")
-  const [filterArchived, setFilterArchived] = useState(false)
-  const [loading, setLoading] = useState(true)
-  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null)
-  const [showViewDialog, setShowViewDialog] = useState(false)
-  
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterArchived, setFilterArchived] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(
+    null
+  );
+  const [showViewDialog, setShowViewDialog] = useState(false);
+
   // Modal states for error and success messages
-  const [showErrorModal, setShowErrorModal] = useState(false)
-  const [showSuccessModal, setShowSuccessModal] = useState(false)
-  const [modalMessage, setModalMessage] = useState("")
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
-  const [templateToDelete, setTemplateToDelete] = useState<string | null>(null)
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [modalMessage, setModalMessage] = useState("");
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [templateToDelete, setTemplateToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === "unauthenticated") {
-      router.push("/auth/issuer/login")
+      router.push("/auth/issuer/login");
     } else if (status === "authenticated" && session?.user?.role !== "issuer") {
-      router.push("/auth/issuer/login")
-    } else if (status === "authenticated" && session?.user?.role === "issuer" && !session.user?.isVerified) {
-      router.push("/auth/issuer/login?pending=true")
-    } else if (status === "authenticated" && session?.user?.role === "issuer" && session.user?.isVerified) {
-      loadTemplates()
+      router.push("/auth/issuer/login");
+    } else if (
+      status === "authenticated" &&
+      session?.user?.role === "issuer" &&
+      !session.user?.isVerified
+    ) {
+      router.push("/auth/issuer/login?pending=true");
+    } else if (
+      status === "authenticated" &&
+      session?.user?.role === "issuer" &&
+      session.user?.isVerified
+    ) {
+      loadTemplates();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session, status, router])
+  }, [session, status, router]);
 
   const loadTemplates = async () => {
-    setLoading(true)
+    setLoading(true);
     try {
       const fetchOptions: RequestInit = {
         credentials: "include",
-      }
+      };
 
-      const res = await fetch("/api/v1/issuer/templates", fetchOptions)
+      const res = await fetch("/api/v1/issuer/templates", fetchOptions);
       if (!res.ok) {
         if (res.status === 401) {
-          router.push("/auth/issuer/login")
-          return
+          router.push("/auth/issuer/login");
+          return;
         }
-        console.error("Failed to fetch templates:", res.statusText)
+        console.error("Failed to fetch templates:", res.statusText);
       } else {
-        const data = await res.json()
-        const templatesList = data.data || data || []
+        const data = await res.json();
+        const templatesList = data.data || data || [];
         setTemplates(
-          templatesList.map((t: Template & { _id?: any; isArchived?: boolean }) => ({
-            id: t.id || t._id?.toString() || "",
-            name: t.name || "Unnamed Template",
-            category: t.category || "General",
-            credentialsIssued: t.credentialsIssued || 0,
-            createdAt: t.createdAt
-              ? new Date(t.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
-              : new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
-            archived: t.archived || t.isArchived || false,
-            fields: t.fields || [],
-            certificateImageUrl: t.certificateImageUrl,
-            badgeImageUrl: t.badgeImageUrl,
-            placeholders: t.placeholders,
-          }))
-        )
+          templatesList.map(
+            (
+              t: ITemplate & {
+                _id?: string | { toString: () => string };
+                isArchived?: boolean;
+                id?: string;
+                credentialsIssued?: number;
+                archived?: boolean;
+                fields?: Array<{ name: string; type: string }>;
+                certificateImageUrl?: string;
+                badgeImageUrl?: string;
+              }
+            ) => ({
+              id: t.id || t._id?.toString() || "",
+              name: t.name || "Unnamed Template",
+              category: t.category || "General",
+              credentialsIssued: t.credentialsIssued || 0,
+              createdAt: t.createdAt
+                ? new Date(t.createdAt).toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  })
+                : new Date().toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  }),
+              archived: t.archived || t.isArchived || false,
+              fields: t.fields || [],
+              certificateImageUrl: t.certificateImageUrl || t.certificateImage,
+              badgeImageUrl: t.badgeImageUrl || t.badgeImage,
+              placeholders: t.placeholders,
+            })
+          )
+        );
       }
     } catch (error) {
-      console.error("Error loading templates:", error)
+      console.error("Error loading templates:", error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const filteredTemplates = templates.filter((template) => {
-    const matchesSearch = template.name.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesArchived = filterArchived ? template.archived : !template.archived
-    return matchesSearch && matchesArchived
-  })
+    const matchesSearch = template.name
+      .toLowerCase()
+      .includes(searchTerm.toLowerCase());
+    const matchesArchived = filterArchived
+      ? template.archived
+      : !template.archived;
+    return matchesSearch && matchesArchived;
+  });
 
   const handleArchive = async (id: string) => {
     try {
       const res = await fetch(`/api/v1/issuer/templates/${id}/archive`, {
         method: "PUT",
         credentials: "include",
-      })
+      });
 
       if (res.ok) {
-        await loadTemplates()
-        setModalMessage("Template archived successfully")
-        setShowSuccessModal(true)
+        await loadTemplates();
+        setModalMessage("Template archived successfully");
+        setShowSuccessModal(true);
       } else {
-        setModalMessage("Failed to archive template")
-        setShowErrorModal(true)
+        setModalMessage("Failed to archive template");
+        setShowErrorModal(true);
       }
     } catch (error) {
-      console.error("Error archiving template:", error)
-      setModalMessage("An error occurred")
-      setShowErrorModal(true)
+      console.error("Error archiving template:", error);
+      setModalMessage("An error occurred");
+      setShowErrorModal(true);
     }
-  }
+  };
 
   const handleDelete = async (id: string) => {
-    setTemplateToDelete(id)
-    setShowDeleteConfirm(true)
-  }
+    setTemplateToDelete(id);
+    setShowDeleteConfirm(true);
+  };
 
   const confirmDelete = async () => {
-    if (!templateToDelete) return
+    if (!templateToDelete) return;
 
     try {
       const res = await fetch(`/api/v1/issuer/templates/${templateToDelete}`, {
         method: "DELETE",
         credentials: "include",
-      })
+      });
 
       if (res.ok) {
-        await loadTemplates()
-        setModalMessage("Template deleted successfully")
-        setShowSuccessModal(true)
+        await loadTemplates();
+        setModalMessage("Template deleted successfully");
+        setShowSuccessModal(true);
       } else {
-        setModalMessage("Failed to delete template")
-        setShowErrorModal(true)
+        setModalMessage("Failed to delete template");
+        setShowErrorModal(true);
       }
     } catch (error) {
-      console.error("Error deleting template:", error)
-      setModalMessage("An error occurred")
-      setShowErrorModal(true)
+      console.error("Error deleting template:", error);
+      setModalMessage("An error occurred");
+      setShowErrorModal(true);
     } finally {
-      setTemplateToDelete(null)
-      setShowDeleteConfirm(false)
+      setTemplateToDelete(null);
+      setShowDeleteConfirm(false);
     }
-  }
+  };
 
   const downloadCSVTemplate = async (template: Template) => {
     try {
       // Fetch full template details to get all fields
       const res = await fetch(`/api/v1/issuer/templates/${template.id}`, {
         credentials: "include",
-      })
+      });
 
       if (!res.ok) {
-        setModalMessage("Failed to fetch template details")
-        setShowErrorModal(true)
-        return
+        setModalMessage("Failed to fetch template details");
+        setShowErrorModal(true);
+        return;
       }
 
-      const templateData = await res.json()
-      const templateDetails = templateData.template || templateData
+      const templateData = await res.json();
+      const templateDetails = templateData.template || templateData;
 
       // Get all field names from placeholders
-      const fields = templateDetails.placeholders || templateDetails.fields || template.fields || []
-      
+      const fields =
+        templateDetails.placeholders ||
+        templateDetails.fields ||
+        template.fields ||
+        [];
+
       // Create CSV header row
-      const headers = fields.map((f: { fieldName?: string; name?: string }) => f.fieldName || f.name || "Field")
-      
+      const headers = fields.map(
+        (f: { fieldName?: string; name?: string }) =>
+          f.fieldName || f.name || "Field"
+      );
+
       // Create CSV content with sample data
       const csvRows = [
         headers.join(","), // Header row
         headers.map(() => "Sample Value").join(","), // Sample row 1
         headers.map(() => "Sample Value").join(","), // Sample row 2
-      ]
+      ];
 
-      const csv = csvRows.join("\n")
+      const csv = csvRows.join("\n");
 
       // Download CSV
-      const element = document.createElement("a")
-      element.setAttribute("href", "data:text/csv;charset=utf-8," + encodeURIComponent(csv))
-      element.setAttribute("download", `${template.name.replace(/[^a-z0-9]/gi, "_")}_template.csv`)
-      element.style.display = "none"
-      document.body.appendChild(element)
-      element.click()
-      document.body.removeChild(element)
+      const element = document.createElement("a");
+      element.setAttribute(
+        "href",
+        "data:text/csv;charset=utf-8," + encodeURIComponent(csv)
+      );
+      element.setAttribute(
+        "download",
+        `${template.name.replace(/[^a-z0-9]/gi, "_")}_template.csv`
+      );
+      element.style.display = "none";
+      document.body.appendChild(element);
+      element.click();
+      document.body.removeChild(element);
     } catch (error) {
-      console.error("Error downloading CSV template:", error)
-      setModalMessage("Failed to download CSV template")
-      setShowErrorModal(true)
+      console.error("Error downloading CSV template:", error);
+      setModalMessage("Failed to download CSV template");
+      setShowErrorModal(true);
     }
-  }
+  };
 
   const handleViewTemplate = async (template: Template) => {
     try {
       // Fetch full template details
       const res = await fetch(`/api/v1/issuer/templates/${template.id}`, {
         credentials: "include",
-      })
+      });
 
       if (!res.ok) {
-        setModalMessage("Failed to fetch template details")
-        setShowErrorModal(true)
-        return
+        setModalMessage("Failed to fetch template details");
+        setShowErrorModal(true);
+        return;
       }
 
-      const templateData = await res.json()
-      const templateDetails = templateData.template || templateData
+      const templateData = await res.json();
+      const templateDetails = templateData.template || templateData;
 
       setSelectedTemplate({
         ...template,
         certificateImageUrl: templateDetails.certificateImageUrl,
         badgeImageUrl: templateDetails.badgeImageUrl,
         placeholders: templateDetails.placeholders,
-      })
-      setShowViewDialog(true)
+      });
+      setShowViewDialog(true);
     } catch (error) {
-      console.error("Error loading template:", error)
-      setModalMessage("Failed to load template")
-      setShowErrorModal(true)
+      console.error("Error loading template:", error);
+      setModalMessage("Failed to load template");
+      setShowErrorModal(true);
     }
-  }
+  };
 
   if (status === "loading") {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-foreground">Loading session...</div>
       </div>
-    )
+    );
   }
 
-  if (status === "unauthenticated" || (status === "authenticated" && (!session || session.user?.role !== "issuer"))) {
-    return null
+  if (
+    status === "unauthenticated" ||
+    (status === "authenticated" &&
+      (!session || session.user?.role !== "issuer"))
+  ) {
+    return null;
   }
 
   return (
     <div className="min-h-screen w-full bg-black relative">
       {/* Background gradient - fixed to viewport */}
-      <div className="fixed inset-0 bg-gradient-to-br from-zinc-900 via-black to-zinc-900 z-0" />
+      <div className="fixed inset-0 bg-linear-to-br from-zinc-900 via-black to-zinc-900 z-0" />
 
       {/* Decorative elements - fixed to viewport */}
       <div className="fixed top-20 left-20 w-72 h-72 bg-primary/10 rounded-full blur-3xl z-0" />
       <div className="fixed bottom-20 right-20 w-96 h-96 bg-primary/5 rounded-full blur-3xl z-0" />
 
       <div className="relative z-10 overflow-x-hidden pt-20">
-        <DashboardHeader userRole="issuer" userName={session?.user?.name || undefined} />
+        <DashboardHeader
+          userRole="issuer"
+          userName={session?.user?.name || undefined}
+        />
 
         <div className="flex mt-4">
           <DashboardSidebar userRole="issuer" />
@@ -271,8 +341,12 @@ export default function TemplatesPage() {
               {/* Header */}
               <div className="flex items-center justify-between">
                 <div className="space-y-2">
-                  <h1 className="text-3xl font-bold text-foreground">Templates</h1>
-                  <p className="text-muted-foreground">Manage all your credential templates</p>
+                  <h1 className="text-3xl font-bold text-foreground">
+                    Templates
+                  </h1>
+                  <p className="text-muted-foreground">
+                    Manage all your credential templates
+                  </p>
                 </div>
                 <Link href="/dashboard/issuer/templates/create">
                   <PrimaryButton className="gap-2">
@@ -303,13 +377,19 @@ export default function TemplatesPage() {
 
               {/* Templates Grid */}
               {loading ? (
-                <div className="text-center text-muted-foreground py-12">Loading templates...</div>
+                <div className="text-center text-muted-foreground py-12">
+                  Loading templates...
+                </div>
               ) : filteredTemplates.length === 0 ? (
                 <Card className="p-12 border border-border/50 bg-card/50 backdrop-blur text-center">
                   <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
-                  <h3 className="text-lg font-semibold text-foreground mb-2">No templates found</h3>
+                  <h3 className="text-lg font-semibold text-foreground mb-2">
+                    No templates found
+                  </h3>
                   <p className="text-muted-foreground mb-6">
-                    {searchTerm ? "Try adjusting your search" : "Create your first template to get started"}
+                    {searchTerm
+                      ? "Try adjusting your search"
+                      : "Create your first template to get started"}
                   </p>
                   {!searchTerm && (
                     <Link href="/dashboard/issuer/templates/create">
@@ -333,8 +413,12 @@ export default function TemplatesPage() {
                             <FileText className="h-6 w-6 text-primary" />
                           </div>
                           <div className="space-y-1">
-                            <h3 className="font-semibold text-foreground">{template.name}</h3>
-                            <p className="text-xs text-muted-foreground">{template.category || "General"}</p>
+                            <h3 className="font-semibold text-foreground">
+                              {template.name}
+                            </h3>
+                            <p className="text-xs text-muted-foreground">
+                              {template.category || "General"}
+                            </p>
                           </div>
                         </div>
                         {template.archived && (
@@ -346,16 +430,22 @@ export default function TemplatesPage() {
 
                       <div className="space-y-3 mb-4">
                         <div className="flex items-center justify-between p-3 bg-background/50 rounded-lg">
-                          <span className="text-sm text-muted-foreground">Issued</span>
-                          <span className="font-semibold text-foreground">{template.credentialsIssued}</span>
+                          <span className="text-sm text-muted-foreground">
+                            Issued
+                          </span>
+                          <span className="font-semibold text-foreground">
+                            {template.credentialsIssued}
+                          </span>
                         </div>
-                        <p className="text-xs text-muted-foreground">Created: {template.createdAt}</p>
+                        <p className="text-xs text-muted-foreground">
+                          Created: {template.createdAt}
+                        </p>
                       </div>
 
                       <div className="flex gap-2">
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
+                        <Button
+                          variant="outline"
+                          size="sm"
                           className="flex-1 gap-1 bg-transparent"
                           onClick={() => handleViewTemplate(template)}
                         >
@@ -371,11 +461,15 @@ export default function TemplatesPage() {
                         >
                           <Download className="h-4 w-4" />
                         </Button>
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
+                        <Button
+                          variant="outline"
+                          size="sm"
                           className="bg-transparent"
-                          onClick={() => router.push(`/dashboard/issuer/templates/edit/${template.id}`)}
+                          onClick={() =>
+                            router.push(
+                              `/dashboard/issuer/templates/edit/${template.id}`
+                            )
+                          }
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
@@ -424,21 +518,29 @@ export default function TemplatesPage() {
               <div className="flex-1 overflow-hidden p-6 flex flex-col">
                 <div className="flex-1 bg-background/30 rounded-lg border border-border/30 overflow-auto flex items-center justify-center">
                   {selectedTemplate.certificateImageUrl ? (
-                    <img
+                    <Image
                       src={selectedTemplate.certificateImageUrl}
                       alt={selectedTemplate.name}
+                      width={800}
+                      height={600}
                       className="w-full h-auto max-w-full"
+                      unoptimized
                     />
                   ) : selectedTemplate.badgeImageUrl ? (
-                    <img
+                    <Image
                       src={selectedTemplate.badgeImageUrl}
                       alt={selectedTemplate.name}
+                      width={800}
+                      height={600}
                       className="w-full h-auto max-w-full"
+                      unoptimized
                     />
                   ) : (
                     <div className="text-center space-y-2">
                       <FileText className="h-16 w-16 mx-auto text-muted-foreground/50" />
-                      <p className="text-muted-foreground">No preview available</p>
+                      <p className="text-muted-foreground">
+                        No preview available
+                      </p>
                     </div>
                   )}
                 </div>
@@ -480,14 +582,18 @@ export default function TemplatesPage() {
           <DialogHeader>
             <DialogTitle>Confirm Delete</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete this template? This action cannot be undone.
+              Are you sure you want to delete this template? This action cannot
+              be undone.
             </DialogDescription>
           </DialogHeader>
           <div className="flex gap-2 justify-end">
-            <Button variant="outline" onClick={() => {
-              setShowDeleteConfirm(false)
-              setTemplateToDelete(null)
-            }}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowDeleteConfirm(false);
+                setTemplateToDelete(null);
+              }}
+            >
               Cancel
             </Button>
             <Button variant="destructive" onClick={confirmDelete}>
@@ -497,6 +603,5 @@ export default function TemplatesPage() {
         </DialogContent>
       </Dialog>
     </div>
-  )
+  );
 }
-

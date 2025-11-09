@@ -1,19 +1,15 @@
-import { NextRequest, NextResponse } from "next/server"
-import { withAdmin, handleApiError } from "@/lib/api/middleware"
-import { User, Organization, Credential, Template } from "@/models"
-import connectDB from "@/lib/db/mongodb"
+import { NextRequest, NextResponse } from "next/server";
+import { withAdmin, handleApiError } from "@/lib/api/middleware";
+import { User, Organization, Credential, Template } from "@/models";
+import connectDB from "@/lib/db/mongodb";
 
-async function handler(
-  req: NextRequest,
-  _context?: { params?: Promise<Record<string, string>> | Record<string, string> },
-  _user?: Record<string, unknown>
-) {
+async function handler(req: NextRequest) {
   if (req.method !== "GET") {
-    return NextResponse.json({ error: "Method not allowed" }, { status: 405 })
+    return NextResponse.json({ error: "Method not allowed" }, { status: 405 });
   }
 
   try {
-    await connectDB()
+    await connectDB();
 
     // Get all statistics in parallel
     const [
@@ -42,21 +38,18 @@ async function handler(
       Credential.countDocuments({ isOnBlockchain: true }),
       Template.countDocuments(),
       Template.countDocuments({ isActive: true }),
-    ])
+    ]);
 
     // Get recent activity counts (last 30 days)
-    const thirtyDaysAgo = new Date()
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    const [
-      recentUsers,
-      recentCredentials,
-      recentOrganizations,
-    ] = await Promise.all([
-      User.countDocuments({ createdAt: { $gte: thirtyDaysAgo } }),
-      Credential.countDocuments({ createdAt: { $gte: thirtyDaysAgo } }),
-      Organization.countDocuments({ createdAt: { $gte: thirtyDaysAgo } }),
-    ])
+    const [recentUsers, recentCredentials, recentOrganizations] =
+      await Promise.all([
+        User.countDocuments({ createdAt: { $gte: thirtyDaysAgo } }),
+        Credential.countDocuments({ createdAt: { $gte: thirtyDaysAgo } }),
+        Organization.countDocuments({ createdAt: { $gte: thirtyDaysAgo } }),
+      ]);
 
     return NextResponse.json({
       users: {
@@ -82,11 +75,10 @@ async function handler(
         total: totalTemplates,
         active: activeTemplates,
       },
-    })
+    });
   } catch (error: unknown) {
-    return handleApiError(error)
+    return handleApiError(error);
   }
 }
 
-export const GET = withAdmin(handler)
-
+export const GET = withAdmin(handler);

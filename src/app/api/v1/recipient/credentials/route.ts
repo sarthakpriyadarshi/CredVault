@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { withAuth, handleApiError } from "@/lib/api/middleware"
 import { getPagination, createPaginatedResponse } from "@/lib/api/utils"
-import { Credential, Template, Organization } from "@/models"
+import { Credential } from "@/models"
 import connectDB from "@/lib/db/mongodb"
 
 async function handler(

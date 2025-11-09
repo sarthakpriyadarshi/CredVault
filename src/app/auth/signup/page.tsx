@@ -10,6 +10,7 @@ import { PrimaryButton } from "@/components/ui/primary-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AuthSidebar } from "@/components/auth-sidebar";
+import Image from "next/image";
 export default function RecipientSignupPage() {
   const [formData, setFormData] = useState({
     name: "",
@@ -197,7 +198,7 @@ export default function RecipientSignupPage() {
   return (
     <div className="min-h-screen bg-black flex items-center justify-center relative overflow-x-hidden">
       {/* Background gradient - fixed to viewport */}
-      <div className="fixed inset-0 bg-gradient-to-br from-zinc-900 via-black to-zinc-900 z-0" />
+      <div className="fixed inset-0 bg-linear-to-br from-zinc-900 via-black to-zinc-900 z-0" />
 
       {/* Decorative elements - fixed to viewport */}
       <div className="fixed top-20 right-20 w-72 h-72 bg-primary/10 rounded-full blur-3xl z-0" />
@@ -227,10 +228,12 @@ export default function RecipientSignupPage() {
               <div className="text-center mb-8 mt-8 md:mt-0">
                 <Link href="/" className="inline-block mb-6">
                   <div className="flex items-center justify-center space-x-2">
-                    <img
+                    <Image
                       src="/logo.svg"
                       alt="Logo"
-                      className="rounded-full size-8 w-8 h-8 object-contain"
+                      width={32}
+                      height={32}
+                      className="rounded-full object-contain"
                     />
                   </div>
                 </Link>

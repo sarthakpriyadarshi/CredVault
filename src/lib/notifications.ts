@@ -1,4 +1,4 @@
-import { Notification, User, Organization } from "@/models"
+import { Notification, User } from "@/models"
 import { sendEmail } from "@/lib/email/nodemailer"
 import {
   generateOrganizationSignupNotificationEmail,
@@ -9,7 +9,7 @@ import {
  * Create a notification for a user
  */
 export async function createNotification(params: {
-  userId: string | any
+  userId: string | { toString: () => string }
   type: "organization_signup" | "organization_approved" | "organization_rejected" | "credential_issued" | "credential_verified" | "password_reset"
   title: string
   message: string
@@ -34,7 +34,7 @@ export async function createNotification(params: {
  * Notify all admins about a new organization signup
  */
 export async function notifyAdminsOfOrganizationSignup(organization: {
-  _id: any
+  _id: { toString: () => string } | string
   name: string
   website?: string
   creatorEmail?: string // Pass email directly if available
@@ -121,7 +121,7 @@ export async function notifyAdminsOfOrganizationSignup(organization: {
  * Notify issuer about organization approval
  */
 export async function notifyIssuerOfApproval(organization: {
-  _id: any
+  _id: { toString: () => string } | string
   name: string
 }) {
   try {

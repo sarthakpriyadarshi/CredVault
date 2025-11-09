@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { withIssuer, handleApiError } from "@/lib/api/middleware"
-import { Credential, Template } from "@/models"
+import { Credential } from "@/models"
 import connectDB from "@/lib/db/mongodb"
 import mongoose from "mongoose"
 

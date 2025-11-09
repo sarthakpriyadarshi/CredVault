@@ -1,10 +1,10 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextResponse } from "next/server"
 import { getServerSessionForApi } from "@/lib/auth-server"
 import { Notification } from "@/models"
 import connectDB from "@/lib/db/mongodb"
 import { handleApiError } from "@/lib/api/middleware"
 
-export async function PUT(req: NextRequest) {
+export async function PUT() {
   try {
     await connectDB()
 

@@ -12,8 +12,7 @@ import mongoose from "mongoose"
  */
 async function handler(
   req: NextRequest,
-  context?: { params?: Promise<Record<string, string>> | Record<string, string> },
-  user?: Record<string, unknown>
+  context?: { params?: Promise<Record<string, string>> | Record<string, string> }
 ) {
   if (req.method !== "GET") {
     return methodNotAllowed()
@@ -47,7 +46,7 @@ async function handler(
       let decodedParam = idOrEmail
       try {
         decodedParam = decodeURIComponent(idOrEmail)
-      } catch (error) {
+      } catch {
         // If decoding fails, use the original parameter
         decodedParam = idOrEmail
       }
@@ -78,18 +77,42 @@ async function handler(
       .lean()
 
     // Format credentials
-    const formattedCredentials = credentials.map((cred: any) => ({
-      id: cred._id.toString(),
-      title: cred.templateId?.name || "Unknown Credential",
-      issuer: cred.organizationId?.name || "Unknown Organization",
-      category: cred.templateId?.category || "general",
-      issuedAt: cred.issuedAt,
-      expiresAt: cred.expiresAt || null,
-      type: cred.type,
-      certificateUrl: cred.certificateUrl || null,
-      badgeUrl: cred.badgeUrl || null,
-      isOnBlockchain: cred.isOnBlockchain || false,
-    }))
+interface CredentialPopulated {
+  _id: { toString: () => string }
+  templateId?: { name?: string; category?: string } | { toString: () => string }
+  organizationId?: { name?: string } | { toString: () => string }
+  issuedAt: Date
+  expiresAt?: Date
+  type: string
+  certificateUrl?: string
+  badgeUrl?: string
+  isOnBlockchain?: boolean
+}
+
+    const formattedCredentials = credentials.map((cred: CredentialPopulated) => {
+      // Check if templateId is populated (has name property) or just an ObjectId
+      const templateId = cred.templateId;
+      const isTemplatePopulated = templateId && typeof templateId === "object" && "name" in templateId;
+      const template = isTemplatePopulated ? (templateId as { name?: string; category?: string }) : null;
+
+      // Check if organizationId is populated (has name property) or just an ObjectId
+      const orgId = cred.organizationId;
+      const isOrgPopulated = orgId && typeof orgId === "object" && "name" in orgId;
+      const organization = isOrgPopulated ? (orgId as { name?: string }) : null;
+
+      return {
+        id: cred._id.toString(),
+        title: template?.name || "Unknown Credential",
+        issuer: organization?.name || "Unknown Organization",
+        category: template?.category || "general",
+        issuedAt: cred.issuedAt,
+        expiresAt: cred.expiresAt || null,
+        type: cred.type,
+        certificateUrl: cred.certificateUrl || null,
+        badgeUrl: cred.badgeUrl || null,
+        isOnBlockchain: cred.isOnBlockchain || false,
+      };
+    })
 
     return successResponse({
       profile: {

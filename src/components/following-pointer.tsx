@@ -1,68 +1,51 @@
-"use client"
+"use client";
 
-import React, { useEffect, useState } from "react"
-import { motion, AnimatePresence, useMotionValue } from "framer-motion"
-import { cn } from "@/lib/utils"
+import React, { useEffect, useState } from "react";
+import {
+  motion,
+  AnimatePresence,
+  useMotionValue,
+  MotionValue,
+} from "framer-motion";
+import { cn } from "@/lib/utils";
 
 export const FollowerPointerCard = ({
   children,
   className,
   title,
 }: {
-  children: React.ReactNode
-  className?: string
-  title?: string | React.ReactNode
+  children: React.ReactNode;
+  className?: string;
+  title?: string | React.ReactNode;
 }) => {
-  const x = useMotionValue(0)
-  const y = useMotionValue(0)
-  const ref = React.useRef<HTMLDivElement>(null)
-  const [rect, setRect] = useState<DOMRect | null>(null)
-  const [isInside, setIsInside] = useState<boolean>(false)
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+  const ref = React.useRef<HTMLDivElement>(null);
+  const [isInside, setIsInside] = useState<boolean>(false);
 
   useEffect(() => {
-    console.log("[v0] FollowerPointerCard mounted")
+    console.log("[v0] FollowerPointerCard mounted");
     return () => {
-      console.log("[v0] FollowerPointerCard unmounted")
-    }
-  }, [])
+      console.log("[v0] FollowerPointerCard unmounted");
+    };
+  }, []);
 
   useEffect(() => {
-    console.log("[v0] isInside changed:", isInside)
-  }, [isInside])
-
-  useEffect(() => {
-    const updateRect = () => {
-      if (ref.current) {
-        setRect(ref.current.getBoundingClientRect())
-      }
-    }
-
-    updateRect()
-
-    const handleResize = () => updateRect()
-    const handleScroll = () => updateRect()
-
-    window.addEventListener("resize", handleResize)
-    window.addEventListener("scroll", handleScroll)
-
-    return () => {
-      window.removeEventListener("resize", handleResize)
-      window.removeEventListener("scroll", handleScroll)
-    }
-  }, [])
+    console.log("[v0] isInside changed:", isInside);
+  }, [isInside]);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    x.set(e.clientX)
-    y.set(e.clientY)
-  }
+    x.set(e.clientX);
+    y.set(e.clientY);
+  };
 
   const handleMouseLeave = () => {
-    setIsInside(false)
-  }
+    setIsInside(false);
+  };
 
   const handleMouseEnter = () => {
-    setIsInside(true)
-  }
+    setIsInside(true);
+  };
 
   return (
     <div
@@ -75,20 +58,22 @@ export const FollowerPointerCard = ({
       ref={ref}
       className={cn("relative", className)}
     >
-      <AnimatePresence>{isInside && <FollowPointer x={x} y={y} title={title} />}</AnimatePresence>
+      <AnimatePresence>
+        {isInside && <FollowPointer x={x} y={y} title={title} />}
+      </AnimatePresence>
       {children}
     </div>
-  )
-}
+  );
+};
 
 export const FollowPointer = ({
   x,
   y,
   title,
 }: {
-  x: any
-  y: any
-  title?: string | React.ReactNode
+  x: MotionValue<number>;
+  y: MotionValue<number>;
+  title?: string | React.ReactNode;
 }) => {
   return (
     <motion.div
@@ -153,5 +138,5 @@ export const FollowPointer = ({
         </motion.div>
       </div>
     </motion.div>
-  )
-}
+  );
+};

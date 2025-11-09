@@ -1,14 +1,15 @@
-"use client"
+"use client";
 
-import { useSession } from "next-auth/react"
-import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
-import { DashboardHeader } from "@/components/dashboard-header"
-import { DashboardSidebar } from "@/components/dashboard-sidebar"
-import { Card } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import Image from "next/image";
+import { DashboardHeader } from "@/components/dashboard-header";
+import { DashboardSidebar } from "@/components/dashboard-sidebar";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -16,92 +17,109 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { ChevronRight, Save, Building2, Bell, Lock, FileText, Edit2, Upload } from "lucide-react"
-import { PrimaryButton } from "@/components/ui/primary-button"
+} from "@/components/ui/dialog";
+import {
+  ChevronRight,
+  Save,
+  Building2,
+  Bell,
+  Lock,
+  FileText,
+  Edit2,
+  Upload,
+} from "lucide-react";
+import { PrimaryButton } from "@/components/ui/primary-button";
 
 export default function IssuerSettingsPage() {
-  const { data: session, status } = useSession()
-  const router = useRouter()
-  const [activeSection, setActiveSection] = useState("organization")
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const [activeSection, setActiveSection] = useState("organization");
   const [settings, setSettings] = useState({
     emailNotifications: true,
     webhookEnabled: true,
     apiAccessEnabled: true,
-  })
+  });
   const [organization, setOrganization] = useState<{
-    id?: string
-    name?: string
-    email?: string
-    website?: string
-    verificationStatus?: string
-    description?: string
-    logo?: string
-    blockchainEnabled?: boolean
-  } | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState<string | null>(null)
+    id?: string;
+    name?: string;
+    email?: string;
+    website?: string;
+    verificationStatus?: string;
+    description?: string;
+    logo?: string;
+    blockchainEnabled?: boolean;
+  } | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   // Edit states
-  const [editName, setEditName] = useState(false)
-  const [editWebsite, setEditWebsite] = useState(false)
-  const [showChangePassword, setShowChangePassword] = useState(false)
-  const [nameValue, setNameValue] = useState("")
-  const [websiteValue, setWebsiteValue] = useState("")
+  const [editName, setEditName] = useState(false);
+  const [editWebsite, setEditWebsite] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [nameValue, setNameValue] = useState("");
+  const [websiteValue, setWebsiteValue] = useState("");
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: "",
     newPassword: "",
     confirmPassword: "",
-  })
+  });
 
   // Modal states for error and success messages
-  const [showErrorModal, setShowErrorModal] = useState(false)
-  const [showSuccessModal, setShowSuccessModal] = useState(false)
-  const [modalMessage, setModalMessage] = useState("")
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [modalMessage, setModalMessage] = useState("");
 
   useEffect(() => {
     if (status === "unauthenticated") {
-      router.push("/auth/issuer/login")
+      router.push("/auth/issuer/login");
     } else if (status === "authenticated" && session?.user?.role !== "issuer") {
-      router.push("/auth/issuer/login")
-    } else if (status === "authenticated" && session?.user?.role === "issuer" && !session.user?.isVerified) {
-      router.push("/auth/issuer/login?pending=true")
-    } else if (status === "authenticated" && session?.user?.role === "issuer" && session.user?.isVerified) {
-      loadOrganization()
+      router.push("/auth/issuer/login");
+    } else if (
+      status === "authenticated" &&
+      session?.user?.role === "issuer" &&
+      !session.user?.isVerified
+    ) {
+      router.push("/auth/issuer/login?pending=true");
+    } else if (
+      status === "authenticated" &&
+      session?.user?.role === "issuer" &&
+      session.user?.isVerified
+    ) {
+      loadOrganization();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session, status, router])
+  }, [session, status, router]);
 
   const loadOrganization = async () => {
-    setLoading(true)
+    setLoading(true);
     try {
       const res = await fetch("/api/v1/issuer/organization", {
         credentials: "include",
-      })
+      });
 
       if (!res.ok) {
         if (res.status === 401) {
-          router.push("/auth/issuer/login")
-          return
+          router.push("/auth/issuer/login");
+          return;
         }
-        console.error("Failed to fetch organization")
+        console.error("Failed to fetch organization");
       } else {
-        const data = await res.json()
-        setOrganization(data)
+        const data = await res.json();
+        setOrganization(data);
       }
     } catch (error) {
-      console.error("Error loading organization:", error)
+      console.error("Error loading organization:", error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleSaveSettings = async () => {
-    setSaving(true)
-    setError(null)
-    setSuccess(null)
+    setSaving(true);
+    setError(null);
+    setSuccess(null);
     try {
       const res = await fetch("/api/v1/issuer/settings", {
         method: "PUT",
@@ -110,30 +128,30 @@ export default function IssuerSettingsPage() {
         },
         credentials: "include",
         body: JSON.stringify(settings),
-      })
+      });
 
       if (!res.ok) {
-        throw new Error("Failed to save settings")
+        throw new Error("Failed to save settings");
       }
 
-      setSuccess("Settings saved successfully!")
-      setTimeout(() => setSuccess(null), 3000)
+      setSuccess("Settings saved successfully!");
+      setTimeout(() => setSuccess(null), 3000);
     } catch (error) {
-      console.error("Error saving settings:", error)
-      setError("Failed to save settings")
+      console.error("Error saving settings:", error);
+      setError("Failed to save settings");
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
-  }
+  };
 
   const handleSaveName = async () => {
     if (!nameValue.trim()) {
-      setError("Organization name cannot be empty")
-      return
+      setError("Organization name cannot be empty");
+      return;
     }
 
-    setSaving(true)
-    setError(null)
+    setSaving(true);
+    setError(null);
     try {
       const res = await fetch("/api/v1/issuer/organization", {
         method: "PUT",
@@ -142,26 +160,26 @@ export default function IssuerSettingsPage() {
         },
         credentials: "include",
         body: JSON.stringify({ name: nameValue.trim() }),
-      })
+      });
 
       if (!res.ok) {
-        throw new Error("Failed to update organization name")
+        throw new Error("Failed to update organization name");
       }
 
-      setEditName(false)
-      await loadOrganization()
-      setSuccess("Organization name updated successfully")
-      setTimeout(() => setSuccess(null), 3000)
+      setEditName(false);
+      await loadOrganization();
+      setSuccess("Organization name updated successfully");
+      setTimeout(() => setSuccess(null), 3000);
     } catch {
-      setError("Failed to update organization name")
+      setError("Failed to update organization name");
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
-  }
+  };
 
   const handleSaveWebsite = async () => {
-    setSaving(true)
-    setError(null)
+    setSaving(true);
+    setError(null);
     try {
       const res = await fetch("/api/v1/issuer/organization", {
         method: "PUT",
@@ -170,47 +188,51 @@ export default function IssuerSettingsPage() {
         },
         credentials: "include",
         body: JSON.stringify({ website: websiteValue.trim() }),
-      })
+      });
 
       if (!res.ok) {
-        throw new Error("Failed to update website")
+        throw new Error("Failed to update website");
       }
 
-      setEditWebsite(false)
-      await loadOrganization()
-      setSuccess("Website updated successfully")
-      setTimeout(() => setSuccess(null), 3000)
+      setEditWebsite(false);
+      await loadOrganization();
+      setSuccess("Website updated successfully");
+      setTimeout(() => setSuccess(null), 3000);
     } catch {
-      setError("Failed to update website")
+      setError("Failed to update website");
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
-  }
+  };
 
   const handleChangePassword = async () => {
-    if (!passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
-      setError("All fields are required")
-      return
+    if (
+      !passwordForm.currentPassword ||
+      !passwordForm.newPassword ||
+      !passwordForm.confirmPassword
+    ) {
+      setError("All fields are required");
+      return;
     }
 
     if (passwordForm.newPassword.length < 8) {
-      setError("New password must be at least 8 characters")
-      return
+      setError("New password must be at least 8 characters");
+      return;
     }
 
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      setError("New password and confirm password do not match")
-      return
+      setError("New password and confirm password do not match");
+      return;
     }
 
     if (passwordForm.currentPassword === passwordForm.newPassword) {
-      setError("New password must be different from current password")
-      return
+      setError("New password must be different from current password");
+      return;
     }
 
-    setSaving(true)
-    setError(null)
-    setSuccess(null)
+    setSaving(true);
+    setError(null);
+    setSuccess(null);
 
     try {
       const res = await fetch("/api/v1/auth/change-password", {
@@ -223,52 +245,63 @@ export default function IssuerSettingsPage() {
           currentPassword: passwordForm.currentPassword,
           newPassword: passwordForm.newPassword,
         }),
-      })
+      });
 
       if (!res.ok) {
-        const errorData = await res.json()
-        throw new Error(errorData.error || "Failed to change password")
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Failed to change password");
       }
 
-      setSuccess("Password changed successfully")
-      setShowChangePassword(false)
+      setSuccess("Password changed successfully");
+      setShowChangePassword(false);
       setPasswordForm({
         currentPassword: "",
         newPassword: "",
         confirmPassword: "",
-      })
-      setTimeout(() => setSuccess(null), 3000)
+      });
+      setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
-      console.error("Error changing password:", err)
-      setError(err && typeof err === "object" && "message" in err ? String(err.message) : "Failed to change password")
+      console.error("Error changing password:", err);
+      setError(
+        err && typeof err === "object" && "message" in err
+          ? String(err.message)
+          : "Failed to change password"
+      );
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
-  }
+  };
 
   if (status === "loading") {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-foreground">Loading session...</div>
       </div>
-    )
+    );
   }
 
-  if (status === "unauthenticated" || (status === "authenticated" && (!session || session.user?.role !== "issuer"))) {
-    return null
+  if (
+    status === "unauthenticated" ||
+    (status === "authenticated" &&
+      (!session || session.user?.role !== "issuer"))
+  ) {
+    return null;
   }
 
   return (
     <div className="min-h-screen w-full bg-black relative">
       {/* Background gradient - fixed to viewport */}
-      <div className="fixed inset-0 bg-gradient-to-br from-zinc-900 via-black to-zinc-900 z-0" />
+      <div className="fixed inset-0 bg-linear-to-br from-zinc-900 via-black to-zinc-900 z-0" />
 
       {/* Decorative elements - fixed to viewport */}
       <div className="fixed top-20 left-20 w-72 h-72 bg-primary/10 rounded-full blur-3xl z-0" />
       <div className="fixed bottom-20 right-20 w-96 h-96 bg-primary/5 rounded-full blur-3xl z-0" />
 
       <div className="relative z-10 overflow-x-hidden pt-20">
-        <DashboardHeader userRole="issuer" userName={session?.user?.name || undefined} />
+        <DashboardHeader
+          userRole="issuer"
+          userName={session?.user?.name || undefined}
+        />
 
         <div className="flex mt-4">
           <DashboardSidebar userRole="issuer" />
@@ -278,14 +311,19 @@ export default function IssuerSettingsPage() {
               {/* Header */}
               <div className="space-y-2">
                 <h1 className="text-3xl font-bold text-foreground">Settings</h1>
-                <p className="text-muted-foreground">Manage your issuer profile and preferences</p>
+                <p className="text-muted-foreground">
+                  Manage your issuer profile and preferences
+                </p>
               </div>
 
               {/* Messages */}
               {error && (
                 <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
                   {error}
-                  <button onClick={() => setError(null)} className="ml-2 text-red-300 hover:text-red-200">
+                  <button
+                    onClick={() => setError(null)}
+                    className="ml-2 text-red-300 hover:text-red-200"
+                  >
                     ×
                   </button>
                 </div>
@@ -313,7 +351,12 @@ export default function IssuerSettingsPage() {
                         title: "Notifications",
                         desc: "Alert settings",
                       },
-                      { id: "security", icon: <Lock className="h-5 w-5" />, title: "Security", desc: "Password & access" },
+                      {
+                        id: "security",
+                        icon: <Lock className="h-5 w-5" />,
+                        title: "Security",
+                        desc: "Password & access",
+                      },
                       {
                         id: "templates",
                         icon: <FileText className="h-5 w-5" />,
@@ -333,9 +376,13 @@ export default function IssuerSettingsPage() {
                         <div className="mt-1">{section.icon}</div>
                         <div className="flex-1 min-w-0">
                           <p className="font-medium text-sm">{section.title}</p>
-                          <p className="text-xs opacity-70 line-clamp-1">{section.desc}</p>
+                          <p className="text-xs opacity-70 line-clamp-1">
+                            {section.desc}
+                          </p>
                         </div>
-                        {activeSection === section.id && <ChevronRight className="h-4 w-4 mt-1 shrink-0" />}
+                        {activeSection === section.id && (
+                          <ChevronRight className="h-4 w-4 mt-1 shrink-0" />
+                        )}
                       </button>
                     ))}
                   </Card>
@@ -346,9 +393,13 @@ export default function IssuerSettingsPage() {
                   {activeSection === "organization" && (
                     <div className="space-y-4">
                       <Card className="p-6 border border-border/50 bg-card/50 backdrop-blur">
-                        <h3 className="text-lg font-semibold text-foreground mb-4">Organization Profile</h3>
+                        <h3 className="text-lg font-semibold text-foreground mb-4">
+                          Organization Profile
+                        </h3>
                         {loading ? (
-                          <div className="text-muted-foreground text-sm">Loading...</div>
+                          <div className="text-muted-foreground text-sm">
+                            Loading...
+                          </div>
                         ) : (
                           <div className="space-y-4">
                             {/* Logo Upload */}
@@ -356,10 +407,13 @@ export default function IssuerSettingsPage() {
                               <Label>Organization Logo</Label>
                               <div className="flex items-center gap-4">
                                 {organization?.logo ? (
-                                  <img
+                                  <Image
                                     src={organization.logo}
                                     alt="Logo"
-                                    className="w-20 h-20 rounded-full object-cover border-2 border-primary/50"
+                                    width={80}
+                                    height={80}
+                                    className="rounded-full object-cover border-2 border-primary/50"
+                                    unoptimized
                                   />
                                 ) : (
                                   <div className="w-20 h-20 rounded-full bg-primary/20 flex items-center justify-center border-2 border-primary/50">
@@ -373,64 +427,94 @@ export default function IssuerSettingsPage() {
                                     accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
                                     className="hidden"
                                     onChange={async (e) => {
-                                      const file = e.target.files?.[0]
-                                      if (!file) return
+                                      const file = e.target.files?.[0];
+                                      if (!file) return;
 
                                       try {
-                                        const formData = new FormData()
-                                        formData.append("file", file)
-                                        formData.append("type", "logo")
+                                        const formData = new FormData();
+                                        formData.append("file", file);
+                                        formData.append("type", "logo");
 
-                                        const res = await fetch("/api/v1/upload", {
-                                          method: "POST",
-                                          credentials: "include",
-                                          body: formData,
-                                        })
+                                        const res = await fetch(
+                                          "/api/v1/upload",
+                                          {
+                                            method: "POST",
+                                            credentials: "include",
+                                            body: formData,
+                                          }
+                                        );
 
                                         if (!res.ok) {
-                                          const error = await res.json()
-                                          setModalMessage(error.error || "Failed to upload logo")
-                                          setShowErrorModal(true)
-                                          return
+                                          const error = await res.json();
+                                          setModalMessage(
+                                            error.error ||
+                                              "Failed to upload logo"
+                                          );
+                                          setShowErrorModal(true);
+                                          return;
                                         }
 
-                                        const data = await res.json()
-                                        
+                                        const data = await res.json();
+
                                         // Update organization logo via API
-                                        const updateRes = await fetch("/api/v1/issuer/organization", {
-                                          method: "PUT",
-                                          headers: {
-                                            "Content-Type": "application/json",
-                                          },
-                                          credentials: "include",
-                                          body: JSON.stringify({ logo: data.base64 }),
-                                        })
+                                        const updateRes = await fetch(
+                                          "/api/v1/issuer/organization",
+                                          {
+                                            method: "PUT",
+                                            headers: {
+                                              "Content-Type":
+                                                "application/json",
+                                            },
+                                            credentials: "include",
+                                            body: JSON.stringify({
+                                              logo: data.base64,
+                                            }),
+                                          }
+                                        );
 
                                         if (!updateRes.ok) {
-                                          const error = await updateRes.json()
-                                          setModalMessage(error.error || "Failed to update logo")
-                                          setShowErrorModal(true)
-                                          return
+                                          const error = await updateRes.json();
+                                          setModalMessage(
+                                            error.error ||
+                                              "Failed to update logo"
+                                          );
+                                          setShowErrorModal(true);
+                                          return;
                                         }
 
-                                        setOrganization({ ...organization, logo: data.base64 })
-                                        setSuccess("Logo updated successfully!")
-                                        setTimeout(() => setSuccess(null), 3000)
+                                        setOrganization({
+                                          ...organization,
+                                          logo: data.base64,
+                                        });
+                                        setSuccess(
+                                          "Logo updated successfully!"
+                                        );
+                                        setTimeout(
+                                          () => setSuccess(null),
+                                          3000
+                                        );
                                       } catch (error) {
-                                        console.error("Error uploading logo:", error)
-                                        setModalMessage("Failed to upload logo")
-                                        setShowErrorModal(true)
+                                        console.error(
+                                          "Error uploading logo:",
+                                          error
+                                        );
+                                        setModalMessage(
+                                          "Failed to upload logo"
+                                        );
+                                        setShowErrorModal(true);
                                       }
                                     }}
                                   />
-                                  <Button 
-                                    variant="outline" 
-                                    size="sm" 
-                                    type="button" 
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    type="button"
                                     className="gap-2"
                                     onClick={() => {
-                                      const fileInput = document.getElementById("logo-upload") as HTMLInputElement
-                                      fileInput?.click()
+                                      const fileInput = document.getElementById(
+                                        "logo-upload"
+                                      ) as HTMLInputElement;
+                                      fileInput?.click();
                                     }}
                                   >
                                     <Upload className="h-4 w-4" />
@@ -438,21 +522,30 @@ export default function IssuerSettingsPage() {
                                   </Button>
                                 </div>
                               </div>
-                              <p className="text-xs text-muted-foreground">Upload organization logo (max 5MB)</p>
+                              <p className="text-xs text-muted-foreground">
+                                Upload organization logo (max 5MB)
+                              </p>
                             </div>
 
                             <div className="flex items-center justify-between p-4 bg-background/50 rounded-lg">
                               <div>
-                                <p className="font-medium text-foreground">Organization Name</p>
-                                <p className="text-sm text-muted-foreground">{organization?.name || "N/A"}</p>
+                                <p className="font-medium text-foreground">
+                                  Organization Name
+                                </p>
+                                <p className="text-sm text-muted-foreground">
+                                  {organization?.name || "N/A"}
+                                </p>
                               </div>
-                              <Dialog open={editName} onOpenChange={setEditName}>
+                              <Dialog
+                                open={editName}
+                                onOpenChange={setEditName}
+                              >
                                 <Button
                                   variant="outline"
                                   size="sm"
                                   onClick={() => {
-                                    setNameValue(organization?.name || "")
-                                    setEditName(true)
+                                    setNameValue(organization?.name || "");
+                                    setEditName(true);
                                   }}
                                 >
                                   <Edit2 className="h-4 w-4 mr-1" />
@@ -460,25 +553,38 @@ export default function IssuerSettingsPage() {
                                 </Button>
                                 <DialogContent className="bg-card border-border/50">
                                   <DialogHeader>
-                                    <DialogTitle>Edit Organization Name</DialogTitle>
-                                    <DialogDescription>Update your organization name</DialogDescription>
+                                    <DialogTitle>
+                                      Edit Organization Name
+                                    </DialogTitle>
+                                    <DialogDescription>
+                                      Update your organization name
+                                    </DialogDescription>
                                   </DialogHeader>
                                   <div className="space-y-4">
                                     <div>
                                       <Label>Organization Name</Label>
                                       <Input
                                         value={nameValue}
-                                        onChange={(e) => setNameValue(e.target.value)}
+                                        onChange={(e) =>
+                                          setNameValue(e.target.value)
+                                        }
                                         placeholder="Enter organization name"
                                         className="mt-1"
                                       />
                                     </div>
                                   </div>
                                   <DialogFooter>
-                                    <Button variant="outline" onClick={() => setEditName(false)} disabled={saving}>
+                                    <Button
+                                      variant="outline"
+                                      onClick={() => setEditName(false)}
+                                      disabled={saving}
+                                    >
                                       Cancel
                                     </Button>
-                                    <PrimaryButton onClick={handleSaveName} disabled={saving}>
+                                    <PrimaryButton
+                                      onClick={handleSaveName}
+                                      disabled={saving}
+                                    >
                                       {saving ? "Saving..." : "Save"}
                                     </PrimaryButton>
                                   </DialogFooter>
@@ -487,8 +593,12 @@ export default function IssuerSettingsPage() {
                             </div>
                             <div className="flex items-center justify-between p-4 bg-background/50 rounded-lg">
                               <div>
-                                <p className="font-medium text-foreground">Email</p>
-                                <p className="text-sm text-muted-foreground">{session?.user?.email || "N/A"}</p>
+                                <p className="font-medium text-foreground">
+                                  Email
+                                </p>
+                                <p className="text-sm text-muted-foreground">
+                                  {session?.user?.email || "N/A"}
+                                </p>
                               </div>
                               <Button variant="outline" size="sm" disabled>
                                 <Edit2 className="h-4 w-4 mr-1" />
@@ -497,16 +607,25 @@ export default function IssuerSettingsPage() {
                             </div>
                             <div className="flex items-center justify-between p-4 bg-background/50 rounded-lg">
                               <div>
-                                <p className="font-medium text-foreground">Website</p>
-                                <p className="text-sm text-muted-foreground">{organization?.website || "N/A"}</p>
+                                <p className="font-medium text-foreground">
+                                  Website
+                                </p>
+                                <p className="text-sm text-muted-foreground">
+                                  {organization?.website || "N/A"}
+                                </p>
                               </div>
-                              <Dialog open={editWebsite} onOpenChange={setEditWebsite}>
+                              <Dialog
+                                open={editWebsite}
+                                onOpenChange={setEditWebsite}
+                              >
                                 <Button
                                   variant="outline"
                                   size="sm"
                                   onClick={() => {
-                                    setWebsiteValue(organization?.website || "")
-                                    setEditWebsite(true)
+                                    setWebsiteValue(
+                                      organization?.website || ""
+                                    );
+                                    setEditWebsite(true);
                                   }}
                                 >
                                   <Edit2 className="h-4 w-4 mr-1" />
@@ -515,24 +634,35 @@ export default function IssuerSettingsPage() {
                                 <DialogContent className="bg-card border-border/50">
                                   <DialogHeader>
                                     <DialogTitle>Edit Website</DialogTitle>
-                                    <DialogDescription>Update your organization website</DialogDescription>
+                                    <DialogDescription>
+                                      Update your organization website
+                                    </DialogDescription>
                                   </DialogHeader>
                                   <div className="space-y-4">
                                     <div>
                                       <Label>Website</Label>
                                       <Input
                                         value={websiteValue}
-                                        onChange={(e) => setWebsiteValue(e.target.value)}
+                                        onChange={(e) =>
+                                          setWebsiteValue(e.target.value)
+                                        }
                                         placeholder="https://example.com"
                                         className="mt-1"
                                       />
                                     </div>
                                   </div>
                                   <DialogFooter>
-                                    <Button variant="outline" onClick={() => setEditWebsite(false)} disabled={saving}>
+                                    <Button
+                                      variant="outline"
+                                      onClick={() => setEditWebsite(false)}
+                                      disabled={saving}
+                                    >
                                       Cancel
                                     </Button>
-                                    <PrimaryButton onClick={handleSaveWebsite} disabled={saving}>
+                                    <PrimaryButton
+                                      onClick={handleSaveWebsite}
+                                      disabled={saving}
+                                    >
                                       {saving ? "Saving..." : "Save"}
                                     </PrimaryButton>
                                   </DialogFooter>
@@ -541,19 +671,34 @@ export default function IssuerSettingsPage() {
                             </div>
                             <div className="flex items-center justify-between p-4 bg-background/50 rounded-lg">
                               <div>
-                                <p className="font-medium text-foreground">Verification Status</p>
-                                <p className="text-sm text-muted-foreground">{organization?.verificationStatus || "N/A"}</p>
+                                <p className="font-medium text-foreground">
+                                  Verification Status
+                                </p>
+                                <p className="text-sm text-muted-foreground">
+                                  {organization?.verificationStatus || "N/A"}
+                                </p>
                               </div>
                             </div>
                             <div className="flex items-center justify-between p-4 bg-background/50 rounded-lg">
                               <div>
-                                <p className="font-medium text-foreground">Blockchain Status</p>
-                                <p className={`text-sm ${organization?.blockchainEnabled ? 'text-emerald-400' : 'text-muted-foreground'}`}>
-                                  {organization?.blockchainEnabled ? "Enabled" : "Disabled"}
+                                <p className="font-medium text-foreground">
+                                  Blockchain Status
+                                </p>
+                                <p
+                                  className={`text-sm ${
+                                    organization?.blockchainEnabled
+                                      ? "text-emerald-400"
+                                      : "text-muted-foreground"
+                                  }`}
+                                >
+                                  {organization?.blockchainEnabled
+                                    ? "Enabled"
+                                    : "Disabled"}
                                 </p>
                                 {!organization?.blockchainEnabled && (
                                   <p className="text-xs text-muted-foreground mt-1">
-                                    Contact your admin to enable blockchain for your organization
+                                    Contact your admin to enable blockchain for
+                                    your organization
                                   </p>
                                 )}
                               </div>
@@ -567,18 +712,29 @@ export default function IssuerSettingsPage() {
                   {activeSection === "notifications" && (
                     <div className="space-y-4">
                       <Card className="p-6 border border-border/50 bg-card/50 backdrop-blur">
-                        <h3 className="text-lg font-semibold text-foreground mb-4">Notification Settings</h3>
+                        <h3 className="text-lg font-semibold text-foreground mb-4">
+                          Notification Settings
+                        </h3>
                         <div className="space-y-4">
                           <div className="flex items-center justify-between p-4 bg-background/50 rounded-lg">
                             <div>
-                              <p className="font-medium text-foreground">Email Notifications</p>
-                              <p className="text-sm text-muted-foreground">Get updates about issuance and revocation</p>
+                              <p className="font-medium text-foreground">
+                                Email Notifications
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                Get updates about issuance and revocation
+                              </p>
                             </div>
                             <label className="relative inline-flex items-center cursor-pointer">
                               <input
                                 type="checkbox"
                                 checked={settings.emailNotifications}
-                                onChange={(e) => setSettings({ ...settings, emailNotifications: e.target.checked })}
+                                onChange={(e) =>
+                                  setSettings({
+                                    ...settings,
+                                    emailNotifications: e.target.checked,
+                                  })
+                                }
                                 className="sr-only peer"
                               />
                               <div className="w-11 h-6 bg-muted peer-checked:bg-primary rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
@@ -586,14 +742,23 @@ export default function IssuerSettingsPage() {
                           </div>
                           <div className="flex items-center justify-between p-4 bg-background/50 rounded-lg">
                             <div>
-                              <p className="font-medium text-foreground">Webhook Events</p>
-                              <p className="text-sm text-muted-foreground">Send events to webhook endpoint</p>
+                              <p className="font-medium text-foreground">
+                                Webhook Events
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                Send events to webhook endpoint
+                              </p>
                             </div>
                             <label className="relative inline-flex items-center cursor-pointer">
                               <input
                                 type="checkbox"
                                 checked={settings.webhookEnabled}
-                                onChange={(e) => setSettings({ ...settings, webhookEnabled: e.target.checked })}
+                                onChange={(e) =>
+                                  setSettings({
+                                    ...settings,
+                                    webhookEnabled: e.target.checked,
+                                  })
+                                }
                                 className="sr-only peer"
                               />
                               <div className="w-11 h-6 bg-muted peer-checked:bg-primary rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
@@ -607,14 +772,23 @@ export default function IssuerSettingsPage() {
                   {activeSection === "security" && (
                     <div className="space-y-4">
                       <Card className="p-6 border border-border/50 bg-card/50 backdrop-blur">
-                        <h3 className="text-lg font-semibold text-foreground mb-4">Security</h3>
+                        <h3 className="text-lg font-semibold text-foreground mb-4">
+                          Security
+                        </h3>
                         <div className="space-y-4">
                           <div className="flex items-center justify-between p-4 bg-background/50 rounded-lg">
                             <div>
-                              <p className="font-medium text-foreground">Change Password</p>
-                              <p className="text-sm text-muted-foreground">Update your account password</p>
+                              <p className="font-medium text-foreground">
+                                Change Password
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                Update your account password
+                              </p>
                             </div>
-                            <Dialog open={showChangePassword} onOpenChange={setShowChangePassword}>
+                            <Dialog
+                              open={showChangePassword}
+                              onOpenChange={setShowChangePassword}
+                            >
                               <Button
                                 variant="outline"
                                 size="sm"
@@ -623,9 +797,9 @@ export default function IssuerSettingsPage() {
                                     currentPassword: "",
                                     newPassword: "",
                                     confirmPassword: "",
-                                  })
-                                  setError(null)
-                                  setShowChangePassword(true)
+                                  });
+                                  setError(null);
+                                  setShowChangePassword(true);
                                 }}
                               >
                                 <Edit2 className="h-4 w-4 mr-1" />
@@ -635,18 +809,24 @@ export default function IssuerSettingsPage() {
                                 <DialogHeader>
                                   <DialogTitle>Change Password</DialogTitle>
                                   <DialogDescription>
-                                    Enter your current password and choose a new secure password
+                                    Enter your current password and choose a new
+                                    secure password
                                   </DialogDescription>
                                 </DialogHeader>
                                 <div className="space-y-4">
                                   <div>
-                                    <Label htmlFor="current-password">Current Password</Label>
+                                    <Label htmlFor="current-password">
+                                      Current Password
+                                    </Label>
                                     <Input
                                       id="current-password"
                                       type="password"
                                       value={passwordForm.currentPassword}
                                       onChange={(e) =>
-                                        setPasswordForm({ ...passwordForm, currentPassword: e.target.value })
+                                        setPasswordForm({
+                                          ...passwordForm,
+                                          currentPassword: e.target.value,
+                                        })
                                       }
                                       placeholder="Enter current password"
                                       className="mt-1"
@@ -654,25 +834,37 @@ export default function IssuerSettingsPage() {
                                     />
                                   </div>
                                   <div>
-                                    <Label htmlFor="new-password">New Password</Label>
+                                    <Label htmlFor="new-password">
+                                      New Password
+                                    </Label>
                                     <Input
                                       id="new-password"
                                       type="password"
                                       value={passwordForm.newPassword}
-                                      onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                                      onChange={(e) =>
+                                        setPasswordForm({
+                                          ...passwordForm,
+                                          newPassword: e.target.value,
+                                        })
+                                      }
                                       placeholder="Min. 8 characters"
                                       className="mt-1"
                                       autoComplete="new-password"
                                     />
                                   </div>
                                   <div>
-                                    <Label htmlFor="confirm-new-password">Confirm New Password</Label>
+                                    <Label htmlFor="confirm-new-password">
+                                      Confirm New Password
+                                    </Label>
                                     <Input
                                       id="confirm-new-password"
                                       type="password"
                                       value={passwordForm.confirmPassword}
                                       onChange={(e) =>
-                                        setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })
+                                        setPasswordForm({
+                                          ...passwordForm,
+                                          confirmPassword: e.target.value,
+                                        })
                                       }
                                       placeholder="Confirm new password"
                                       className="mt-1"
@@ -689,19 +881,22 @@ export default function IssuerSettingsPage() {
                                   <Button
                                     variant="outline"
                                     onClick={() => {
-                                      setShowChangePassword(false)
+                                      setShowChangePassword(false);
                                       setPasswordForm({
                                         currentPassword: "",
                                         newPassword: "",
                                         confirmPassword: "",
-                                      })
-                                      setError(null)
+                                      });
+                                      setError(null);
                                     }}
                                     disabled={saving}
                                   >
                                     Cancel
                                   </Button>
-                                  <PrimaryButton onClick={handleChangePassword} disabled={saving}>
+                                  <PrimaryButton
+                                    onClick={handleChangePassword}
+                                    disabled={saving}
+                                  >
                                     {saving ? "Changing..." : "Change Password"}
                                   </PrimaryButton>
                                 </DialogFooter>
@@ -716,12 +911,18 @@ export default function IssuerSettingsPage() {
                   {activeSection === "templates" && (
                     <div className="space-y-4">
                       <Card className="p-6 border border-border/50 bg-card/50 backdrop-blur">
-                        <h3 className="text-lg font-semibold text-foreground mb-4">Template Settings</h3>
+                        <h3 className="text-lg font-semibold text-foreground mb-4">
+                          Template Settings
+                        </h3>
                         <div className="space-y-4">
                           <div className="flex items-center justify-between p-4 bg-background/50 rounded-lg">
                             <div>
-                              <p className="font-medium text-foreground">Default Expiration Period</p>
-                              <p className="text-sm text-muted-foreground">5 years</p>
+                              <p className="font-medium text-foreground">
+                                Default Expiration Period
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                5 years
+                              </p>
                             </div>
                             <Button variant="outline" size="sm" disabled>
                               Change
@@ -729,8 +930,12 @@ export default function IssuerSettingsPage() {
                           </div>
                           <div className="flex items-center justify-between p-4 bg-background/50 rounded-lg">
                             <div>
-                              <p className="font-medium text-foreground">Verification Required</p>
-                              <p className="text-sm text-muted-foreground">Enabled</p>
+                              <p className="font-medium text-foreground">
+                                Verification Required
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                Enabled
+                              </p>
                             </div>
                             <Button variant="outline" size="sm" disabled>
                               Configure
@@ -742,12 +947,19 @@ export default function IssuerSettingsPage() {
                   )}
 
                   {/* Save Button */}
-                  {(activeSection === "notifications") && (
+                  {activeSection === "notifications" && (
                     <div className="flex justify-end gap-2">
-                      <Button variant="outline" onClick={() => loadOrganization()}>
+                      <Button
+                        variant="outline"
+                        onClick={() => loadOrganization()}
+                      >
                         Cancel
                       </Button>
-                      <PrimaryButton onClick={handleSaveSettings} disabled={saving} className="gap-2">
+                      <PrimaryButton
+                        onClick={handleSaveSettings}
+                        disabled={saving}
+                        className="gap-2"
+                      >
                         <Save className="h-4 w-4" />
                         {saving ? "Saving..." : "Save Changes"}
                       </PrimaryButton>
@@ -786,5 +998,5 @@ export default function IssuerSettingsPage() {
         </DialogContent>
       </Dialog>
     </div>
-  )
+  );
 }

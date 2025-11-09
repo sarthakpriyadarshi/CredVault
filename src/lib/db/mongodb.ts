@@ -8,14 +8,16 @@ interface MongooseCache {
 // Global cache for mongoose connection
 // Use globalThis which works in both Node.js and browser environments
 declare global {
-  // eslint-disable-next-line no-var
   var mongooseCache: MongooseCache | undefined
 }
 
 // Safely access global object (works in both Node.js and Edge Runtime)
-const globalForMongoose = typeof global !== "undefined" ? global : (typeof globalThis !== "undefined" ? globalThis : {} as any)
+interface GlobalType {
+  mongooseCache?: MongooseCache
+}
+const globalForMongoose: GlobalType = typeof global !== "undefined" ? global : (typeof globalThis !== "undefined" ? globalThis : {})
 
-let cached: MongooseCache = globalForMongoose.mongooseCache || { conn: null, promise: null }
+const cached: MongooseCache = globalForMongoose.mongooseCache || { conn: null, promise: null }
 
 if (!globalForMongoose.mongooseCache) {
   globalForMongoose.mongooseCache = cached

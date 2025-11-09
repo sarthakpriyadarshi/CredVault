@@ -39,7 +39,20 @@ async function handler(
         return NextResponse.json({ error: "Template not found" }, { status: 404 })
       }
 
-      const templateData = template as any
+      interface TemplatePopulated {
+        _id: { toString: () => string }
+        name: string
+        category?: string
+        type: string
+        placeholders?: Array<Record<string, unknown>>
+        certificateImage?: string
+        badgeImage?: string
+        isActive?: boolean
+        createdAt?: Date
+        createdBy?: { name?: string; email?: string } | { toString: () => string }
+      }
+
+      const templateData = template as TemplatePopulated
 
       return NextResponse.json({
         template: {
@@ -93,7 +106,7 @@ async function handler(
           fontColor?: string
           bold?: boolean
           italic?: boolean
-          qrCodeStyling?: any // QR code styling options
+          qrCodeStyling?: Record<string, unknown> // QR code styling options
         }>
         certificateImage?: string
         badgeImage?: string
@@ -125,7 +138,7 @@ async function handler(
         height?: number // For QR code fields
         bold?: boolean
         italic?: boolean
-        qrCodeStyling?: any // QR code styling options
+        qrCodeStyling?: Record<string, unknown> // QR code styling options
       }> = []
 
       for (const field of fields) {

@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server"
 
 // Parse request body
-export async function parseBody<T = any>(req: NextRequest): Promise<T> {
+export async function parseBody<T = Record<string, unknown>>(req: NextRequest): Promise<T> {
   try {
     return await req.json()
   } catch {

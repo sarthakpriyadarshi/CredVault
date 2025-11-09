@@ -5,11 +5,61 @@
  */
 
 import { NextRequest, NextResponse } from "next/server"
-import { withDB, withAuth, handleApiError } from "@/lib/api/middleware"
+import { withDB, handleApiError } from "@/lib/api/middleware"
 import { methodNotAllowed, successResponse, errorResponse, notFound, forbidden } from "@/lib/api/responses"
-import { Credential, Template, Organization, User } from "@/models"
+import { Credential, Template, User } from "@/models"
 import connectDB from "@/lib/db/mongodb"
 import { createNotification } from "@/lib/notifications"
+
+interface OrganizationPopulated {
+  _id: { toString: () => string }
+  name: string
+  verificationStatus: string
+}
+
+interface TemplatePopulated {
+  _id: { toString: () => string }
+  name: string
+}
+
+interface CredentialPopulated {
+  _id: { toString: () => string }
+  templateId: TemplatePopulated | { toString: () => string }
+  organizationId: OrganizationPopulated | { toString: () => string }
+  recipientId?: { toString: () => string }
+  recipientEmail?: string
+  isOnBlockchain: boolean
+  vaultFid?: string
+  vaultCid?: string
+  vaultUrl?: string
+  blockchainTxId?: string
+  blockchainNetwork?: string
+  blockchainVerified?: boolean
+  blockchainVerifiedAt?: Date
+  vaultIssuer?: string
+  status: string
+  expiresAt?: Date
+  issuedAt: Date
+  credentialData: Record<string, unknown>
+  type: string
+  certificateUrl?: string
+  badgeUrl?: string
+}
+
+interface VerificationDetails {
+  vaultFid?: string | null
+  vaultCid?: string | null
+  vaultUrl?: string | null
+  transactionId?: string | null
+  network?: string
+  blockchainVerified?: boolean
+  blockchainVerifiedAt?: Date | null
+  vaultIssuer?: string | null
+  status?: string
+  expiresAt?: Date | null
+  organizationVerified?: boolean
+  issuedAt?: Date
+}
 
 async function verifyCredential(
   req: NextRequest,
@@ -40,8 +90,8 @@ async function verifyCredential(
       return notFound("Credential not found")
     }
 
-    const cred = credential as any
-    const organization = cred.organizationId as any
+    const cred = credential as CredentialPopulated
+    const organization = cred.organizationId as OrganizationPopulated
 
     // If authenticated, verify ownership (for recipient access)
     if (user) {
@@ -67,7 +117,7 @@ async function verifyCredential(
       verified: boolean
       method: "blockchain" | "database"
       message: string
-      details?: any
+      details?: VerificationDetails
     }
 
     if (cred.isOnBlockchain) {
@@ -129,7 +179,7 @@ async function verifyCredential(
           role: "issuer",
         }).select("_id")
 
-        const template = cred.templateId as any
+        const template = cred.templateId as TemplatePopulated
         const credentialName = template?.name || "Credential"
 
         // Create notification for each issuer
@@ -152,7 +202,7 @@ async function verifyCredential(
     return successResponse({
       credential: {
         id: cred._id.toString(),
-        title: (cred.templateId as any)?.name || "Unknown Credential",
+        title: (cred.templateId as TemplatePopulated)?.name || "Unknown Credential",
         issuer: organization?.name || "Unknown Organization",
         recipientEmail: cred.recipientEmail,
         credentialData: cred.credentialData,
@@ -173,8 +223,7 @@ async function verifyCredential(
 // Check if Authorization header or cookies are present to determine auth
 async function handler(
   req: NextRequest,
-  context?: { params?: Promise<Record<string, string>> | Record<string, string> },
-  _user?: Record<string, unknown>
+  context?: { params?: Promise<Record<string, string>> | Record<string, string> }
 ) {
   // Check if user is authenticated by looking for session
   // This is a simplified approach - in production you might want to check cookies/headers
@@ -203,7 +252,7 @@ async function postHandler(
   req: NextRequest,
   context?: { params?: Promise<Record<string, string>> | Record<string, string> }
 ) {
-  return withDB(async (req, ctx) => {
+  return withDB(async () => {
     try {
       const params = await Promise.resolve(context?.params || {})
       const credentialId = params.id
@@ -267,8 +316,12 @@ async function postHandler(
       const verifyResult = await vaultProtocol.verifyCertificate(credential.vaultFid, credential.recipientEmail)
 
       if (!verifyResult.success) {
+        interface VerifyResultError {
+          error?: string
+        }
+        const errorResult = verifyResult as VerifyResultError
         return NextResponse.json(
-          { error: (verifyResult as any).error || "Failed to verify on blockchain" },
+          { error: errorResult.error || "Failed to verify on blockchain" },
           { status: 500 }
         )
       }

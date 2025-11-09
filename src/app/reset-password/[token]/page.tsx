@@ -1,63 +1,57 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { Eye, EyeOff, CheckCircle2 } from "lucide-react"
-import { motion } from "framer-motion"
-import { PrimaryButton } from "@/components/ui/primary-button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import Link from "next/link"
-import Image from "next/image"
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { Eye, EyeOff, CheckCircle2 } from "lucide-react";
+import { motion } from "framer-motion";
+import { PrimaryButton } from "@/components/ui/primary-button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import Link from "next/link";
+import Image from "next/image";
 
-export default function ResetPasswordPage({ params }: { params: Promise<{ token: string }> }) {
-  const router = useRouter()
-  const [password, setPassword] = useState("")
-  const [confirmPassword, setConfirmPassword] = useState("")
-  const [showPassword, setShowPassword] = useState(false)
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState("")
-  const [success, setSuccess] = useState(false)
-  const [token, setToken] = useState<string | null>(null)
-  const [isScrolled, setIsScrolled] = useState(false)
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 100)
-    }
-
-    window.addEventListener("scroll", handleScroll)
-    return () => window.removeEventListener("scroll", handleScroll)
-  }, [])
+export default function ResetPasswordPage({
+  params,
+}: {
+  params: Promise<{ token: string }>;
+}) {
+  const router = useRouter();
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
+  const [token, setToken] = useState<string | null>(null);
 
   useEffect(() => {
     params.then((resolvedParams) => {
-      setToken(resolvedParams.token)
-    })
-  }, [params])
+      setToken(resolvedParams.token);
+    });
+  }, [params]);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError("")
+    e.preventDefault();
+    setError("");
 
     // Validation
     if (password.length < 6) {
-      setError("Password must be at least 6 characters long")
-      return
+      setError("Password must be at least 6 characters long");
+      return;
     }
 
     if (password !== confirmPassword) {
-      setError("Passwords do not match")
-      return
+      setError("Passwords do not match");
+      return;
     }
 
     if (!token) {
-      setError("Invalid reset token")
-      return
+      setError("Invalid reset token");
+      return;
     }
 
-    setLoading(true)
+    setLoading(true);
 
     try {
       const res = await fetch("/api/v1/auth/reset-password", {
@@ -66,25 +60,25 @@ export default function ResetPasswordPage({ params }: { params: Promise<{ token:
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ token, password }),
-      })
+      });
 
-      const data = await res.json()
+      const data = await res.json();
 
       if (res.ok) {
-        setSuccess(true)
+        setSuccess(true);
         setTimeout(() => {
-          router.push("/auth/login")
-        }, 3000)
+          router.push("/auth/login");
+        }, 3000);
       } else {
-        setError(data.error || "Failed to reset password")
+        setError(data.error || "Failed to reset password");
       }
     } catch (error) {
-      console.error("Reset password error:", error)
-      setError("An error occurred. Please try again.")
+      console.error("Reset password error:", error);
+      setError("An error occurred. Please try again.");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   if (success) {
     return (
@@ -97,9 +91,7 @@ export default function ResetPasswordPage({ params }: { params: Promise<{ token:
         <div className="fixed bottom-20 right-20 w-96 h-96 bg-primary/5 rounded-full blur-3xl z-0" />
 
         {/* Desktop Header */}
-        <header
-          className="fixed top-4 left-1/2 -translate-x-1/2 z-[9999] hidden md:flex w-full max-w-5xl flex-row items-center justify-between rounded-full bg-background/80 backdrop-blur-sm border border-border/50 shadow-lg px-4 py-2"
-        >
+        <header className="fixed top-4 left-1/2 -translate-x-1/2 z-9999 hidden md:flex w-full max-w-5xl flex-row items-center justify-between rounded-full bg-background/80 backdrop-blur-sm border border-border/50 shadow-lg px-4 py-2">
           <Link
             href="/"
             className="z-50 flex items-center justify-center gap-2"
@@ -132,7 +124,7 @@ export default function ResetPasswordPage({ params }: { params: Promise<{ token:
 
             <Link
               href="/auth/signup"
-              className="rounded-md font-bold cursor-pointer hover:-translate-y-0.5 transition duration-200 inline-block text-center bg-gradient-to-b from-primary to-primary/80 text-primary-foreground shadow-[0px_2px_0px_0px_rgba(255,255,255,0.3)_inset] px-4 py-2 text-sm"
+              className="rounded-md font-bold cursor-pointer hover:-translate-y-0.5 transition duration-200 inline-block text-center bg-linear-to-b from-primary to-primary/80 text-primary-foreground shadow-[0px_2px_0px_0px_rgba(255,255,255,0.3)_inset] px-4 py-2 text-sm"
             >
               Sign Up
             </Link>
@@ -140,7 +132,7 @@ export default function ResetPasswordPage({ params }: { params: Promise<{ token:
         </header>
 
         {/* Mobile Header */}
-        <header className="fixed top-4 left-4 right-4 z-[9999] flex w-auto flex-row items-center justify-between rounded-full bg-background/80 backdrop-blur-sm border border-border/50 shadow-lg md:hidden px-4 py-3">
+        <header className="fixed top-4 left-4 right-4 z-9999 flex w-auto flex-row items-center justify-between rounded-full bg-background/80 backdrop-blur-sm border border-border/50 shadow-lg md:hidden px-4 py-3">
           <Link href="/" className="flex items-center justify-center gap-2">
             <Image
               src="/logo.svg"
@@ -162,9 +154,12 @@ export default function ResetPasswordPage({ params }: { params: Promise<{ token:
             >
               {/* Title */}
               <div className="text-center mb-8">
-                <h1 className="text-3xl font-bold text-white mb-2">Password Reset!</h1>
+                <h1 className="text-3xl font-bold text-white mb-2">
+                  Password Reset!
+                </h1>
                 <p className="text-zinc-400">
-                  Your password has been reset successfully. Redirecting you to sign in...
+                  Your password has been reset successfully. Redirecting you to
+                  sign in...
                 </p>
               </div>
 
@@ -183,22 +178,22 @@ export default function ResetPasswordPage({ params }: { params: Promise<{ token:
                   </div>
 
                   <div>
-                    <p className="text-zinc-300">Your password has been reset successfully!</p>
+                    <p className="text-zinc-300">
+                      Your password has been reset successfully!
+                    </p>
                   </div>
                 </div>
               </motion.div>
 
               {/* Footer */}
               <div className="mt-8 text-center text-sm text-zinc-400">
-                <p>
-                  Redirecting to sign in page...
-                </p>
+                <p>Redirecting to sign in page...</p>
               </div>
             </motion.div>
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -211,13 +206,8 @@ export default function ResetPasswordPage({ params }: { params: Promise<{ token:
       <div className="fixed bottom-20 right-20 w-96 h-96 bg-primary/5 rounded-full blur-3xl z-0" />
 
       {/* Desktop Header */}
-      <header
-        className="fixed top-4 left-1/2 -translate-x-1/2 z-[9999] hidden md:flex w-full max-w-5xl flex-row items-center justify-between rounded-full bg-background/80 backdrop-blur-sm border border-border/50 shadow-lg px-4 py-2"
-      >
-        <Link
-          href="/"
-          className="z-50 flex items-center justify-center gap-2"
-        >
+      <header className="fixed top-4 left-1/2 -translate-x-1/2 z-9999 hidden md:flex w-full max-w-5xl flex-row items-center justify-between rounded-full bg-background/80 backdrop-blur-sm border border-border/50 shadow-lg px-4 py-2">
+        <Link href="/" className="z-50 flex items-center justify-center gap-2">
           <Image
             src="/logo.svg"
             alt="Logo"
@@ -246,7 +236,7 @@ export default function ResetPasswordPage({ params }: { params: Promise<{ token:
 
           <Link
             href="/auth/signup"
-            className="rounded-md font-bold cursor-pointer hover:-translate-y-0.5 transition duration-200 inline-block text-center bg-gradient-to-b from-primary to-primary/80 text-primary-foreground shadow-[0px_2px_0px_0px_rgba(255,255,255,0.3)_inset] px-4 py-2 text-sm"
+            className="rounded-md font-bold cursor-pointer hover:-translate-y-0.5 transition duration-200 inline-block text-center bg-linear-to-b from-primary to-primary/80 text-primary-foreground shadow-[0px_2px_0px_0px_rgba(255,255,255,0.3)_inset] px-4 py-2 text-sm"
           >
             Sign Up
           </Link>
@@ -254,7 +244,7 @@ export default function ResetPasswordPage({ params }: { params: Promise<{ token:
       </header>
 
       {/* Mobile Header */}
-      <header className="fixed top-4 left-4 right-4 z-[9999] flex w-auto flex-row items-center justify-between rounded-full bg-background/80 backdrop-blur-sm border border-border/50 shadow-lg md:hidden px-4 py-3">
+      <header className="fixed top-4 left-4 right-4 z-9999 flex w-auto flex-row items-center justify-between rounded-full bg-background/80 backdrop-blur-sm border border-border/50 shadow-lg md:hidden px-4 py-3">
         <Link href="/" className="flex items-center justify-center gap-2">
           <Image
             src="/logo.svg"
@@ -276,10 +266,10 @@ export default function ResetPasswordPage({ params }: { params: Promise<{ token:
           >
             {/* Title */}
             <div className="text-center mb-8">
-              <h1 className="text-3xl font-bold text-white mb-2">Reset Password</h1>
-              <p className="text-zinc-400">
-                Enter your new password below
-              </p>
+              <h1 className="text-3xl font-bold text-white mb-2">
+                Reset Password
+              </h1>
+              <p className="text-zinc-400">Enter your new password below</p>
             </div>
 
             {/* Form Card */}
@@ -317,7 +307,11 @@ export default function ResetPasswordPage({ params }: { params: Promise<{ token:
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white transition-colors"
                     >
-                      {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                      {showPassword ? (
+                        <EyeOff className="h-5 w-5" />
+                      ) : (
+                        <Eye className="h-5 w-5" />
+                      )}
                     </button>
                   </div>
                   <p className="text-xs text-zinc-400 mt-1">
@@ -343,15 +337,25 @@ export default function ResetPasswordPage({ params }: { params: Promise<{ token:
                     />
                     <button
                       type="button"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      onClick={() =>
+                        setShowConfirmPassword(!showConfirmPassword)
+                      }
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white transition-colors"
                     >
-                      {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                      {showConfirmPassword ? (
+                        <EyeOff className="h-5 w-5" />
+                      ) : (
+                        <Eye className="h-5 w-5" />
+                      )}
                     </button>
                   </div>
                 </div>
 
-                <PrimaryButton type="submit" disabled={loading} className="w-full">
+                <PrimaryButton
+                  type="submit"
+                  disabled={loading}
+                  className="w-full"
+                >
                   {loading ? "Resetting Password..." : "Reset Password"}
                 </PrimaryButton>
               </form>
@@ -361,7 +365,10 @@ export default function ResetPasswordPage({ params }: { params: Promise<{ token:
             <div className="mt-8 text-center text-sm text-zinc-400">
               <p>
                 Need help?{" "}
-                <a href="mailto:support@credvault.app" className="text-primary hover:underline">
+                <a
+                  href="mailto:support@credvault.app"
+                  className="text-primary hover:underline"
+                >
                   Contact Support
                 </a>
               </p>
@@ -370,5 +377,5 @@ export default function ResetPasswordPage({ params }: { params: Promise<{ token:
         </div>
       </div>
     </div>
-  )
+  );
 }
