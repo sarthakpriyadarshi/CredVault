@@ -55,7 +55,11 @@ export default function EditTemplatePage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const params = useParams();
-  const templateId = params.id as string;
+  // Handle case where params.id might be an array or string, and trim it
+  const rawTemplateId = Array.isArray(params.id)
+    ? params.id[0]
+    : (params.id as string | undefined);
+  const templateId = rawTemplateId?.trim() || undefined;
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
   const badgeImageRef = useRef<HTMLImageElement | null>(null);
@@ -108,39 +112,77 @@ export default function EditTemplatePage() {
   // Validate MongoDB ObjectId format (24 hex characters)
   const isValidObjectId = (id: string | undefined): boolean => {
     if (!id) return false;
+    // Trim whitespace
+    const trimmedId = id.trim();
+    if (!trimmedId) return false;
     // Check for placeholder syntax like %%drp:id:...%%
-    if (id.includes("%%") || id.includes("drp:")) return false;
+    if (trimmedId.includes("%%") || trimmedId.includes("drp:")) return false;
     // MongoDB ObjectId must be exactly 24 hex characters
-    return /^[0-9a-fA-F]{24}$/.test(id);
+    return /^[0-9a-fA-F]{24}$/.test(trimmedId);
   };
 
   useEffect(() => {
-    // Validate templateId before proceeding
-    if (!templateId || !isValidObjectId(templateId)) {
-      setModalMessage("Invalid template ID");
-      setShowErrorModal(true);
-      setTimeout(() => {
-        setShowErrorModal(false);
-        router.push("/dashboard/issuer/templates");
-      }, 1500);
+    // Wait for session to load
+    if (status === "loading") {
       return;
     }
 
+    // Check authentication first
     if (status === "unauthenticated") {
       router.push("/auth/issuer/login");
-    } else if (status === "authenticated" && session?.user?.role !== "issuer") {
+      return;
+    }
+
+    if (status === "authenticated" && session?.user?.role !== "issuer") {
       router.push("/auth/issuer/login");
-    } else if (
+      return;
+    }
+
+    if (
       status === "authenticated" &&
       session?.user?.role === "issuer" &&
       !session.user?.isVerified
     ) {
       router.push("/auth/issuer/login?pending=true");
-    } else if (
+      return;
+    }
+
+    // Only validate templateId after authentication is confirmed
+    if (
       status === "authenticated" &&
       session?.user?.role === "issuer" &&
       session.user?.isVerified
     ) {
+      // Validate templateId before proceeding
+      if (!templateId) {
+        console.error("[Edit Template] Template ID is missing:", templateId);
+        setModalMessage("Template ID is missing");
+        setShowErrorModal(true);
+        setTimeout(() => {
+          setShowErrorModal(false);
+          router.push("/dashboard/issuer/templates");
+        }, 1500);
+        return;
+      }
+
+      if (!isValidObjectId(templateId)) {
+        console.error(
+          "[Edit Template] Invalid template ID format:",
+          templateId
+        );
+        setModalMessage(`Invalid template ID format: ${templateId}`);
+        setShowErrorModal(true);
+        setTimeout(() => {
+          setShowErrorModal(false);
+          router.push("/dashboard/issuer/templates");
+        }, 1500);
+        return;
+      }
+
+      console.log(
+        "[Edit Template] Valid template ID, loading template:",
+        templateId
+      );
       loadTemplate();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -149,6 +191,10 @@ export default function EditTemplatePage() {
   const loadTemplate = async () => {
     // Validate templateId before making API call
     if (!templateId || !isValidObjectId(templateId)) {
+      console.error(
+        "[Edit Template] Invalid template ID in loadTemplate:",
+        templateId
+      );
       setModalMessage("Invalid template ID");
       setShowErrorModal(true);
       setTimeout(() => {
@@ -160,6 +206,7 @@ export default function EditTemplatePage() {
 
     try {
       setLoading(true);
+      console.log("[Edit Template] Fetching template:", templateId);
       const res = await fetch(`/api/v1/issuer/templates/${templateId}`, {
         credentials: "include",
       });
