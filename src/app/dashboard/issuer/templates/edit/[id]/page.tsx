@@ -105,7 +105,27 @@ export default function EditTemplatePage() {
   const CANVAS_WIDTH = 800;
   const CANVAS_HEIGHT = 600;
 
+  // Validate MongoDB ObjectId format (24 hex characters)
+  const isValidObjectId = (id: string | undefined): boolean => {
+    if (!id) return false;
+    // Check for placeholder syntax like %%drp:id:...%%
+    if (id.includes("%%") || id.includes("drp:")) return false;
+    // MongoDB ObjectId must be exactly 24 hex characters
+    return /^[0-9a-fA-F]{24}$/.test(id);
+  };
+
   useEffect(() => {
+    // Validate templateId before proceeding
+    if (!templateId || !isValidObjectId(templateId)) {
+      setModalMessage("Invalid template ID");
+      setShowErrorModal(true);
+      setTimeout(() => {
+        setShowErrorModal(false);
+        router.push("/dashboard/issuer/templates");
+      }, 1500);
+      return;
+    }
+
     if (status === "unauthenticated") {
       router.push("/auth/issuer/login");
     } else if (status === "authenticated" && session?.user?.role !== "issuer") {
@@ -127,6 +147,17 @@ export default function EditTemplatePage() {
   }, [session, status, router, templateId]);
 
   const loadTemplate = async () => {
+    // Validate templateId before making API call
+    if (!templateId || !isValidObjectId(templateId)) {
+      setModalMessage("Invalid template ID");
+      setShowErrorModal(true);
+      setTimeout(() => {
+        setShowErrorModal(false);
+        router.push("/dashboard/issuer/templates");
+      }, 1500);
+      return;
+    }
+
     try {
       setLoading(true);
       const res = await fetch(`/api/v1/issuer/templates/${templateId}`, {
@@ -1387,6 +1418,14 @@ export default function EditTemplatePage() {
         certificateImage,
         badgeImage,
       };
+
+      // Validate templateId before making API call
+      if (!templateId || !isValidObjectId(templateId)) {
+        setModalMessage("Invalid template ID");
+        setShowErrorModal(true);
+        setSaving(false);
+        return;
+      }
 
       // Debug: Log the template data being sent
       console.log(
