@@ -98,6 +98,81 @@ export default function IssuerAnalyticsPage() {
     }
   };
 
+  const exportAnalytics = () => {
+    if (!analytics) {
+      console.error("No analytics data to export");
+      return;
+    }
+
+    try {
+      const csvRows: string[] = [];
+
+      // Summary Section
+      csvRows.push("ANALYTICS SUMMARY");
+      csvRows.push("");
+      csvRows.push("Metric,Value");
+      csvRows.push(`Total Issued,${analytics.totalIssued || 0}`);
+      csvRows.push(`Active Recipients,${analytics.activeRecipients || 0}`);
+      csvRows.push(`Revoked Credentials,${analytics.revoked || 0}`);
+      csvRows.push(`Average Issuance Time,${analytics.avgTime || "N/A"}`);
+      csvRows.push("");
+      csvRows.push("");
+
+      // Monthly Trend Section
+      const trendData = analytics.trend || [];
+      if (trendData.length > 0) {
+        csvRows.push("MONTHLY TREND");
+        csvRows.push("");
+        csvRows.push("Month,Issued,Recipients,Revoked");
+        trendData.forEach((item) => {
+          csvRows.push(
+            `${item.month || ""},${item.issued || 0},${item.recipients || 0},${
+              item.revoked || 0
+            }`
+          );
+        });
+        csvRows.push("");
+        csvRows.push("");
+      }
+
+      // Top Templates Section
+      const topTemplates = analytics.topTemplates || [];
+      if (topTemplates.length > 0) {
+        csvRows.push("TOP TEMPLATES");
+        csvRows.push("");
+        csvRows.push("Template Name,Issued,Status");
+        topTemplates.forEach((template) => {
+          const status = template.active !== false ? "Active" : "Archived";
+          const name = template.name || "Unknown";
+          const issued = template.issued || 0;
+          // Escape commas and quotes in CSV values
+          const escapedName =
+            name.includes(",") || name.includes('"')
+              ? `"${name.replace(/"/g, '""')}"`
+              : name;
+          csvRows.push(`${escapedName},${issued},${status}`);
+        });
+      }
+
+      const csv = csvRows.join("\n");
+
+      // Create download
+      const element = document.createElement("a");
+      element.setAttribute(
+        "href",
+        "data:text/csv;charset=utf-8," + encodeURIComponent(csv)
+      );
+      const timestamp = new Date().toISOString().split("T")[0];
+      element.setAttribute("download", `analytics_report_${timestamp}.csv`);
+      element.style.display = "none";
+      document.body.appendChild(element);
+      element.click();
+      document.body.removeChild(element);
+    } catch (error) {
+      console.error("Error exporting analytics:", error);
+    }
+  };
+
   if (status === "loading") {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -128,7 +203,7 @@ export default function IssuerAnalyticsPage() {
   return (
     <div className="min-h-screen w-full bg-black relative">
       {/* Background gradient - fixed to viewport */}
-      <div className="fixed inset-0 bg-gradient-to-br from-zinc-900 via-black to-zinc-900 z-0" />
+      <div className="fixed inset-0 bg-linear-to-br from-zinc-900 via-black to-zinc-900 z-0" />
 
       {/* Decorative elements - fixed to viewport */}
       <div className="fixed top-20 left-20 w-72 h-72 bg-primary/10 rounded-full blur-3xl z-0" />
@@ -164,7 +239,7 @@ export default function IssuerAnalyticsPage() {
                     <Calendar className="h-4 w-4" />
                     Last 6 Months
                   </Button>
-                  <PrimaryButton className="gap-2">
+                  <PrimaryButton className="gap-2" onClick={exportAnalytics}>
                     <Download className="h-4 w-4" />
                     Export
                   </PrimaryButton>

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { withAuth, handleApiError } from "@/lib/api/middleware"
-import { User, Organization } from "@/models"
+import { User } from "@/models"
 import connectDB from "@/lib/db/mongodb"
 
 async function handler(

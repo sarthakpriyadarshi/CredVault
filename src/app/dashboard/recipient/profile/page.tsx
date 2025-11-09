@@ -24,6 +24,7 @@ export default function RecipientProfilePage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [imageError, setImageError] = useState(false);
+  const [nextImageError, setNextImageError] = useState(false);
 
   const [profile, setProfile] = useState({
     id: "",
@@ -91,6 +92,7 @@ export default function RecipientProfilePage() {
         });
         // Reset image error when profile loads
         setImageError(false);
+        setNextImageError(false);
       }
     } catch (error) {
       console.error("Error loading profile:", error);
@@ -165,6 +167,20 @@ export default function RecipientProfilePage() {
     // Otherwise, assume it's base64 and add the data URL prefix
     // Try to detect image type from base64 or default to png
     return `data:image/png;base64,${image}`;
+  };
+
+  // Check if image source (after formatting) is a data URL
+  const isDataUrl = (image: string | null): boolean => {
+    if (!image) return false;
+    const src = getImageSrc(image);
+    return src.startsWith("data:");
+  };
+
+  // Check if image is an external URL (not data URL)
+  const isExternalUrl = (image: string | null): boolean => {
+    if (!image) return false;
+    const src = getImageSrc(image);
+    return src.startsWith("http://") || src.startsWith("https://");
   };
 
   if (status === "loading") {
@@ -269,21 +285,107 @@ export default function RecipientProfilePage() {
                       <Label>Profile Avatar</Label>
                       <div className="flex items-center gap-4">
                         {profile.image && !imageError ? (
-                          <Image
-                            src={getImageSrc(profile.image)}
-                            alt="Avatar"
-                            width={80}
-                            height={80}
-                            className="rounded-full object-cover border-2 border-primary/50"
-                            unoptimized
-                            onError={() => {
-                              console.error("Failed to load avatar image");
-                              setImageError(true);
-                            }}
-                            onLoad={() => {
-                              setImageError(false);
-                            }}
-                          />
+                          isDataUrl(profile.image) ? (
+                            // Use regular img tag for data URLs (Next.js Image has issues with data URLs)
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={getImageSrc(profile.image)}
+                              alt="Avatar"
+                              width={80}
+                              height={80}
+                              className="w-20 h-20 rounded-full object-cover border-2 border-primary/50"
+                              crossOrigin={
+                                isExternalUrl(profile.image) &&
+                                !isDataUrl(profile.image)
+                                  ? "anonymous"
+                                  : undefined
+                              }
+                              referrerPolicy={
+                                isExternalUrl(profile.image)
+                                  ? "no-referrer"
+                                  : undefined
+                              }
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                console.error("Failed to load avatar image:", {
+                                  src: target.src?.substring(0, 100), // Log first 100 chars of src
+                                  error: e,
+                                  isExternal: isExternalUrl(profile.image),
+                                });
+                                setImageError(true);
+                              }}
+                              onLoad={() => {
+                                setImageError(false);
+                              }}
+                            />
+                          ) : nextImageError ? (
+                            // Fallback to regular img tag if Next.js Image fails
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={getImageSrc(profile.image)}
+                              alt="Avatar"
+                              width={80}
+                              height={80}
+                              className="w-20 h-20 rounded-full object-cover border-2 border-primary/50"
+                              crossOrigin={
+                                isExternalUrl(profile.image) &&
+                                !isDataUrl(profile.image)
+                                  ? "anonymous"
+                                  : undefined
+                              }
+                              referrerPolicy={
+                                isExternalUrl(profile.image)
+                                  ? "no-referrer"
+                                  : undefined
+                              }
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                console.error(
+                                  "Failed to load avatar image (fallback img):",
+                                  {
+                                    src: target.src?.substring(0, 100),
+                                    error: e,
+                                    isExternal: isExternalUrl(profile.image),
+                                  }
+                                );
+                                // If both Next.js Image and regular img failed, show placeholder
+                                setImageError(true);
+                              }}
+                              onLoad={() => {
+                                setImageError(false);
+                              }}
+                            />
+                          ) : (
+                            // Use Next.js Image for regular URLs (http/https)
+                            <Image
+                              src={getImageSrc(profile.image)}
+                              alt="Avatar"
+                              width={80}
+                              height={80}
+                              className="rounded-full object-cover border-2 border-primary/50"
+                              unoptimized
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                console.error(
+                                  "Failed to load avatar image (Next.js Image), falling back to regular img:",
+                                  {
+                                    originalImage: profile.image?.substring(
+                                      0,
+                                      50
+                                    ),
+                                    src: target.src?.substring(0, 100),
+                                    isDataUrl: isDataUrl(profile.image),
+                                  }
+                                );
+                                // Fallback to regular img tag instead of showing error
+                                setNextImageError(true);
+                              }}
+                              onLoad={() => {
+                                setImageError(false);
+                                setNextImageError(false);
+                              }}
+                            />
+                          )
                         ) : (
                           <div className="w-20 h-20 rounded-full bg-primary/20 flex items-center justify-center border-2 border-primary/50">
                             <span className="text-2xl font-bold text-primary">
@@ -357,6 +459,7 @@ export default function RecipientProfilePage() {
                                 setProfile({ ...profile, image: data.base64 });
                                 // Reset image error when new image is uploaded
                                 setImageError(false);
+                                setNextImageError(false);
 
                                 // Update session to reflect new avatar (this will refresh the header)
                                 // Call updateSession multiple times with delays to ensure it propagates

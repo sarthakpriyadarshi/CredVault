@@ -33,7 +33,21 @@ async function getHandler(
 
     // Get credential counts for each template
     const { Credential } = await import("@/models")
-    const templateIds = templates.map((t: any) => t._id)
+    interface TemplateLean {
+      _id: { toString: () => string }
+      name: string
+      category?: string
+      isActive?: boolean
+      createdAt?: Date
+      placeholders?: Array<{ fieldName?: string; type?: string }>
+    }
+
+    interface CredentialCount {
+      _id: { toString: () => string }
+      count: number
+    }
+
+    const templateIds = templates.map((t: TemplateLean) => t._id)
     const credentialCounts = await Credential.aggregate([
       {
         $match: {
@@ -48,16 +62,16 @@ async function getHandler(
       },
     ])
 
-    const countMap = new Map(credentialCounts.map((item: any) => [item._id.toString(), item.count]))
+    const countMap = new Map(credentialCounts.map((item: CredentialCount) => [item._id.toString(), item.count]))
 
-    const templatesWithCounts = templates.map((t: any) => ({
+    const templatesWithCounts = templates.map((t: TemplateLean) => ({
       id: t._id.toString(),
       name: t.name,
       category: t.category || "general",
       credentialsIssued: countMap.get(t._id.toString()) || 0,
       createdAt: t.createdAt,
       archived: !t.isActive,
-      fields: t.placeholders?.map((p: any) => ({
+      fields: t.placeholders?.map((p) => ({
         name: p.fieldName,
         type: p.type,
       })) || [],
@@ -101,7 +115,7 @@ async function postHandler(
         fontColor?: string
         bold?: boolean
         italic?: boolean
-        qrCodeStyling?: any // QR code styling options
+        qrCodeStyling?: Record<string, unknown> // QR code styling options
       }>
       certificateImage?: string
       badgeImage?: string
@@ -143,7 +157,7 @@ async function postHandler(
           height?: number // For QR code fields
           bold?: boolean
           italic?: boolean
-          qrCodeStyling?: any // QR code styling options
+          qrCodeStyling?: Record<string, unknown> // QR code styling options
         }> = []
 
         for (const field of fields) {

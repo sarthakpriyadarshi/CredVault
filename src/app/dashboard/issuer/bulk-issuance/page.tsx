@@ -351,6 +351,93 @@ export default function BulkIssuancePage() {
     }
   };
 
+  const exportReport = () => {
+    if (issuanceRecords.length === 0) {
+      setDialogMessage("No issuance records to export");
+      setShowErrorDialog(true);
+      return;
+    }
+
+    try {
+      // Get all unique keys from all records (to include all CSV fields)
+      const allKeys = new Set<string>();
+      issuanceRecords.forEach((record) => {
+        Object.keys(record).forEach((key) => {
+          if (key !== "status" && key !== "message") {
+            allKeys.add(key);
+          }
+        });
+      });
+
+      // Standard columns that should always be present
+      const standardColumns = ["recipientName", "email"];
+      const additionalColumns = Array.from(allKeys).filter(
+        (key) => !standardColumns.includes(key)
+      );
+
+      // Build header row
+      const headers = [
+        ...standardColumns,
+        ...additionalColumns,
+        "Status",
+        "Message",
+      ];
+
+      // Build CSV rows
+      const csvRows = [
+        headers.join(","), // Header row
+        ...issuanceRecords.map((record) => {
+          return headers
+            .map((header) => {
+              let value = "";
+              if (header === "Status") {
+                value = record.status || "";
+              } else if (header === "Message") {
+                value = record.message || "";
+              } else {
+                value = record[header] || "";
+              }
+              // Escape commas and quotes in CSV values
+              if (
+                value.includes(",") ||
+                value.includes('"') ||
+                value.includes("\n")
+              ) {
+                value = `"${value.replace(/"/g, '""')}"`;
+              }
+              return value;
+            })
+            .join(",");
+        }),
+      ];
+
+      const csv = csvRows.join("\n");
+
+      // Create download
+      const element = document.createElement("a");
+      element.setAttribute(
+        "href",
+        "data:text/csv;charset=utf-8," + encodeURIComponent(csv)
+      );
+      const templateName =
+        templates.find((t) => t.id === selectedTemplate)?.name ||
+        "bulk-issuance";
+      const timestamp = new Date().toISOString().split("T")[0];
+      element.setAttribute(
+        "download",
+        `${templateName.replace(/[^a-z0-9]/gi, "_")}_report_${timestamp}.csv`
+      );
+      element.style.display = "none";
+      document.body.appendChild(element);
+      element.click();
+      document.body.removeChild(element);
+    } catch (error) {
+      console.error("Error exporting report:", error);
+      setDialogMessage("Failed to export report");
+      setShowErrorDialog(true);
+    }
+  };
+
   const successCount = issuanceRecords.filter(
     (r) => r.status === "success"
   ).length;
@@ -375,7 +462,7 @@ export default function BulkIssuancePage() {
   return (
     <div className="min-h-screen w-full bg-black relative">
       {/* Background gradient - fixed to viewport */}
-      <div className="fixed inset-0 bg-gradient-to-br from-zinc-900 via-black to-zinc-900 z-0" />
+      <div className="fixed inset-0 bg-linear-to-br from-zinc-900 via-black to-zinc-900 z-0" />
 
       {/* Decorative elements - fixed to viewport */}
       <div className="fixed top-20 left-20 w-72 h-72 bg-primary/10 rounded-full blur-3xl z-0" />
@@ -588,6 +675,7 @@ export default function BulkIssuancePage() {
                           variant="outline"
                           size="sm"
                           className="gap-2 bg-transparent"
+                          onClick={exportReport}
                         >
                           <Download className="h-4 w-4" />
                           Export Report

@@ -1,60 +1,74 @@
-import { NextRequest, NextResponse } from "next/server"
-import { withAdmin, handleApiError } from "@/lib/api/middleware"
-import { Organization, User } from "@/models"
-import connectDB from "@/lib/db/mongodb"
-import { invalidateAllUsers } from "@/lib/cache"
-import { notifyIssuerOfApproval } from "@/lib/notifications"
+import { NextRequest, NextResponse } from "next/server";
+import { withAdmin, handleApiError } from "@/lib/api/middleware";
+import { Types } from "mongoose";
+import { Organization, User } from "@/models";
+import connectDB from "@/lib/db/mongodb";
+import { invalidateAllUsers } from "@/lib/cache";
+import { notifyIssuerOfApproval } from "@/lib/notifications";
 
 async function handler(
   req: NextRequest,
-  context?: { params?: Promise<Record<string, string>> | Record<string, string> },
+  context?: {
+    params?: Promise<Record<string, string>> | Record<string, string>;
+  },
   user?: Record<string, unknown>
 ) {
   if (req.method !== "POST") {
-    return NextResponse.json({ error: "Method not allowed" }, { status: 405 })
+    return NextResponse.json({ error: "Method not allowed" }, { status: 405 });
   }
 
   try {
-    await connectDB()
+    await connectDB();
 
     // Await params if it's a Promise (Next.js 16)
-    const params = context?.params instanceof Promise ? await context.params : context?.params
-    const organizationId = params?.id
+    const params =
+      context?.params instanceof Promise
+        ? await context.params
+        : context?.params;
+    const organizationId = params?.id;
 
     if (!organizationId) {
-      return NextResponse.json({ error: "Organization ID is required" }, { status: 400 })
+      return NextResponse.json(
+        { error: "Organization ID is required" },
+        { status: 400 }
+      );
     }
 
-    const organization = await Organization.findById(organizationId)
+    const organization = await Organization.findById(organizationId);
 
     if (!organization) {
-      return NextResponse.json({ error: "Organization not found" }, { status: 404 })
+      return NextResponse.json(
+        { error: "Organization not found" },
+        { status: 404 }
+      );
     }
 
     if (organization.verificationStatus !== "pending") {
       return NextResponse.json(
         { error: `Organization is already ${organization.verificationStatus}` },
         { status: 400 }
-      )
+      );
     }
 
     // Update organization status
-    organization.verificationStatus = "approved"
-    organization.verifiedBy = user?.id as any
-    organization.verifiedAt = new Date()
-    await organization.save()
+    organization.verificationStatus = "approved";
+    if (user?.id) {
+      organization.verifiedBy = new Types.ObjectId(user.id as string);
+    }
+    organization.verifiedAt = new Date();
+    await organization.save();
 
     // Update all issuer users associated with this organization to be verified
     await User.updateMany(
       { organizationId: organization._id, role: "issuer" },
       { $set: { isVerified: true } }
-    )
+    );
 
     // Invalidate cache for all affected users (use false for Route Handler)
-    await invalidateAllUsers(false)
+    await invalidateAllUsers(false);
 
     // Notify issuer about approval
-    await notifyIssuerOfApproval(organization)
+    await notifyIssuerOfApproval(organization);
 
     return NextResponse.json({
       message: "Organization approved successfully",
@@ -64,11 +78,10 @@ async function handler(
         verificationStatus: organization.verificationStatus,
         verifiedAt: organization.verifiedAt,
       },
-    })
+    });
   } catch (error: unknown) {
-    return handleApiError(error)
+    return handleApiError(error);
   }
 }
 
-export const POST = withAdmin(handler)
-
+export const POST = withAdmin(handler);

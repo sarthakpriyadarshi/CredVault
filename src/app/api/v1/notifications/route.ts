@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
     const limit = parseInt(searchParams.get("limit") || "50")
     const skip = parseInt(searchParams.get("skip") || "0")
 
-    const query: any = { userId: session.user.id }
+    const query: { userId: string; read?: boolean } = { userId: session.user.id }
     if (unreadOnly) {
       query.read = false
     }

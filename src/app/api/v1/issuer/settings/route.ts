@@ -24,10 +24,20 @@ async function handler(
     if (req.method === "GET") {
       const dbUser = await User.findById(userId).select("settings").lean()
 
+      interface UserWithSettings {
+        settings?: {
+          emailNotifications?: boolean
+          webhookEnabled?: boolean
+          apiAccessEnabled?: boolean
+        }
+      }
+
+      const userWithSettings = dbUser as UserWithSettings | null
+
       return NextResponse.json({
-        emailNotifications: (dbUser as any)?.settings?.emailNotifications ?? true,
-        webhookEnabled: (dbUser as any)?.settings?.webhookEnabled ?? false,
-        apiAccessEnabled: (dbUser as any)?.settings?.apiAccessEnabled ?? false,
+        emailNotifications: userWithSettings?.settings?.emailNotifications ?? true,
+        webhookEnabled: userWithSettings?.settings?.webhookEnabled ?? false,
+        apiAccessEnabled: userWithSettings?.settings?.apiAccessEnabled ?? false,
       })
     }
 
