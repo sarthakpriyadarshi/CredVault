@@ -22,6 +22,11 @@ async function handler(
         return NextResponse.json({ error: "Template ID is required" }, { status: 400 })
       }
 
+      // Validate MongoDB ObjectId format
+      if (!mongoose.Types.ObjectId.isValid(templateId) || templateId.length !== 24) {
+        return NextResponse.json({ error: "Invalid template ID format" }, { status: 400 })
+      }
+
       if (!organizationIdStr) {
         return NextResponse.json({ error: "Organization ID not found" }, { status: 400 })
       }
@@ -85,6 +90,11 @@ async function handler(
 
       if (!templateId) {
         return NextResponse.json({ error: "Template ID is required" }, { status: 400 })
+      }
+
+      // Validate MongoDB ObjectId format
+      if (!mongoose.Types.ObjectId.isValid(templateId) || templateId.length !== 24) {
+        return NextResponse.json({ error: "Invalid template ID format" }, { status: 400 })
       }
 
       if (!organizationIdStr) {
@@ -269,6 +279,11 @@ async function handler(
 
       if (!templateId) {
         return NextResponse.json({ error: "Template ID is required" }, { status: 400 })
+      }
+
+      // Validate MongoDB ObjectId format
+      if (!mongoose.Types.ObjectId.isValid(templateId) || templateId.length !== 24) {
+        return NextResponse.json({ error: "Invalid template ID format" }, { status: 400 })
       }
 
       if (!organizationIdStr) {
