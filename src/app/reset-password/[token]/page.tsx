@@ -91,7 +91,7 @@ export default function ResetPasswordPage({
         <div className="fixed bottom-20 right-20 w-96 h-96 bg-primary/5 rounded-full blur-3xl z-0" />
 
         {/* Desktop Header */}
-        <header className="fixed top-4 left-1/2 -translate-x-1/2 z-[9999] hidden md:flex w-full max-w-5xl flex-row items-center justify-between rounded-full bg-background/80 backdrop-blur-sm border border-border/50 shadow-lg px-4 py-2">
+        <header className="fixed top-4 left-1/2 -translate-x-1/2 z-9999 hidden md:flex w-full max-w-5xl flex-row items-center justify-between rounded-full bg-background/80 backdrop-blur-sm border border-border/50 shadow-lg px-4 py-2">
           <Link
             href="/"
             className="z-50 flex items-center justify-center gap-2"
@@ -124,7 +124,7 @@ export default function ResetPasswordPage({
 
             <Link
               href="/auth/signup"
-              className="rounded-md font-bold cursor-pointer hover:-translate-y-0.5 transition duration-200 inline-block text-center bg-gradient-to-b from-primary to-primary/80 text-primary-foreground shadow-[0px_2px_0px_0px_rgba(255,255,255,0.3)_inset] px-4 py-2 text-sm"
+              className="rounded-md font-bold cursor-pointer hover:-translate-y-0.5 transition duration-200 inline-block text-center bg-linear-to-b from-primary to-primary/80 text-primary-foreground shadow-[0px_2px_0px_0px_rgba(255,255,255,0.3)_inset] px-4 py-2 text-sm"
             >
               Sign Up
             </Link>
@@ -132,7 +132,7 @@ export default function ResetPasswordPage({
         </header>
 
         {/* Mobile Header */}
-        <header className="fixed top-4 left-4 right-4 z-[9999] flex w-auto flex-row items-center justify-between rounded-full bg-background/80 backdrop-blur-sm border border-border/50 shadow-lg md:hidden px-4 py-3">
+        <header className="fixed top-4 left-4 right-4 z-9999 flex w-auto flex-row items-center justify-between rounded-full bg-background/80 backdrop-blur-sm border border-border/50 shadow-lg md:hidden px-4 py-3">
           <Link href="/" className="flex items-center justify-center gap-2">
             <Image
               src="/logo.svg"
@@ -206,7 +206,7 @@ export default function ResetPasswordPage({
       <div className="fixed bottom-20 right-20 w-96 h-96 bg-primary/5 rounded-full blur-3xl z-0" />
 
       {/* Desktop Header */}
-      <header className="fixed top-4 left-1/2 -translate-x-1/2 z-[9999] hidden md:flex w-full max-w-5xl flex-row items-center justify-between rounded-full bg-background/80 backdrop-blur-sm border border-border/50 shadow-lg px-4 py-2">
+      <header className="fixed top-4 left-1/2 -translate-x-1/2 z-9999 hidden md:flex w-full max-w-5xl flex-row items-center justify-between rounded-full bg-background/80 backdrop-blur-sm border border-border/50 shadow-lg px-4 py-2">
         <Link href="/" className="z-50 flex items-center justify-center gap-2">
           <Image
             src="/logo.svg"
@@ -236,7 +236,7 @@ export default function ResetPasswordPage({
 
           <Link
             href="/auth/signup"
-            className="rounded-md font-bold cursor-pointer hover:-translate-y-0.5 transition duration-200 inline-block text-center bg-gradient-to-b from-primary to-primary/80 text-primary-foreground shadow-[0px_2px_0px_0px_rgba(255,255,255,0.3)_inset] px-4 py-2 text-sm"
+            className="rounded-md font-bold cursor-pointer hover:-translate-y-0.5 transition duration-200 inline-block text-center bg-linear-to-b from-primary to-primary/80 text-primary-foreground shadow-[0px_2px_0px_0px_rgba(255,255,255,0.3)_inset] px-4 py-2 text-sm"
           >
             Sign Up
           </Link>
@@ -244,7 +244,7 @@ export default function ResetPasswordPage({
       </header>
 
       {/* Mobile Header */}
-      <header className="fixed top-4 left-4 right-4 z-[9999] flex w-auto flex-row items-center justify-between rounded-full bg-background/80 backdrop-blur-sm border border-border/50 shadow-lg md:hidden px-4 py-3">
+      <header className="fixed top-4 left-4 right-4 z-9999 flex w-auto flex-row items-center justify-between rounded-full bg-background/80 backdrop-blur-sm border border-border/50 shadow-lg md:hidden px-4 py-3">
         <Link href="/" className="flex items-center justify-center gap-2">
           <Image
             src="/logo.svg"

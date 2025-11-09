@@ -163,7 +163,7 @@ export default function PublicProfilePage() {
     return (
       <div className="min-h-screen w-full bg-black relative">
         {/* Background gradient - fixed to viewport */}
-        <div className="fixed inset-0 bg-gradient-to-br from-zinc-900 via-black to-zinc-900 z-0" />
+        <div className="fixed inset-0 bg-linear-to-br from-zinc-900 via-black to-zinc-900 z-0" />
 
         {/* Decorative elements - fixed to viewport */}
         <div className="fixed top-20 left-20 w-72 h-72 bg-primary/10 rounded-full blur-3xl z-0" />
@@ -171,7 +171,7 @@ export default function PublicProfilePage() {
 
         {/* Header */}
         <header
-          className={`sticky top-4 z-[9999] mx-auto flex w-full flex-row items-center justify-between rounded-full bg-background/80 backdrop-blur-sm border border-border/50 shadow-lg transition-all duration-300 ${
+          className={`sticky top-4 z-9999 mx-auto flex w-full flex-row items-center justify-between rounded-full bg-background/80 backdrop-blur-sm border border-border/50 shadow-lg transition-all duration-300 ${
             isScrolled ? "max-w-3xl px-4" : "max-w-5xl px-6"
           } py-3`}
           style={{
@@ -227,7 +227,7 @@ export default function PublicProfilePage() {
   return (
     <div className="min-h-screen w-full bg-black relative">
       {/* Background gradient - fixed to viewport */}
-      <div className="fixed inset-0 bg-gradient-to-br from-zinc-900 via-black to-zinc-900 z-0" />
+      <div className="fixed inset-0 bg-linear-to-br from-zinc-900 via-black to-zinc-900 z-0" />
 
       {/* Decorative elements - fixed to viewport */}
       <div className="fixed top-20 left-20 w-72 h-72 bg-primary/10 rounded-full blur-3xl z-0" />
@@ -235,7 +235,7 @@ export default function PublicProfilePage() {
 
       {/* Header */}
       <header
-        className={`sticky top-4 z-[9999] mx-auto flex w-full flex-row items-center justify-between rounded-full bg-background/80 backdrop-blur-sm border border-border/50 shadow-lg transition-all duration-300 ${
+        className={`sticky top-4 z-9999 mx-auto flex w-full flex-row items-center justify-between rounded-full bg-background/80 backdrop-blur-sm border border-border/50 shadow-lg transition-all duration-300 ${
           isScrolled ? "max-w-3xl px-4" : "max-w-5xl px-6"
         } py-3`}
         style={{
@@ -271,7 +271,7 @@ export default function PublicProfilePage() {
             <Card className="p-6 border border-border/50 bg-card/50 backdrop-blur">
               <div className="flex flex-col md:flex-row gap-6">
                 {/* Avatar */}
-                <div className="flex-shrink-0">
+                <div className="shrink-0">
                   {profile.image ? (
                     <Image
                       src={profile.image}
@@ -527,7 +527,7 @@ export default function PublicProfilePage() {
                             >
                               <Button
                                 size="sm"
-                                className="w-full bg-gradient-to-b from-primary to-primary/80 text-primary-foreground shadow-[0px_2px_0px_0px_rgba(255,255,255,0.3)_inset] gap-2"
+                                className="w-full bg-linear-to-b from-primary to-primary/80 text-primary-foreground shadow-[0px_2px_0px_0px_rgba(255,255,255,0.3)_inset] gap-2"
                               >
                                 <Download className="h-3 w-3" />
                                 Download

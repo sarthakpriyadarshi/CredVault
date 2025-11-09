@@ -1973,7 +1973,7 @@ export default function EditTemplatePage() {
                                       fields.find((f) => f.id === selectedField)
                                         ?.fontFamily || selectedFontFamily
                                     }
-                                    onValueChange={(value) => {
+                                    onValueChange={(value: string) => {
                                       if (selectedField) {
                                         setFields(
                                           fields.map((f) =>

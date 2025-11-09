@@ -64,7 +64,7 @@ export default function Features() {
       className="text-foreground relative overflow-hidden py-12 sm:py-24 md:py-32"
     >
       <div className="bg-primary absolute -top-10 left-1/2 h-16 w-44 -translate-x-1/2 rounded-full opacity-40 blur-3xl select-none"></div>
-      <div className="via-primary/50 absolute top-0 left-1/2 h-px w-3/5 -translate-x-1/2 bg-gradient-to-r from-transparent to-transparent transition-all ease-in-out"></div>
+      <div className="via-primary/50 absolute top-0 left-1/2 h-px w-3/5 -translate-x-1/2 bg-linear-to-r from-transparent to-transparent transition-all ease-in-out"></div>
       <motion.div
         ref={ref}
         initial={{ opacity: 0, y: 50 }}
@@ -74,7 +74,7 @@ export default function Features() {
       >
         <h2
           className={cn(
-            "via-foreground mb-8 bg-gradient-to-b from-zinc-800 to-zinc-700 bg-clip-text text-center text-4xl font-semibold tracking-tighter text-transparent md:text-[54px] md:leading-[60px]",
+            "via-foreground mb-8 bg-linear-to-b from-zinc-800 to-zinc-700 bg-clip-text text-center text-4xl font-semibold tracking-tighter text-transparent md:text-[54px] md:leading-[60px]",
             geist.className
           )}
         >
@@ -458,7 +458,7 @@ export default function Features() {
                         scrambleSpeed={70}
                         maxIterations={20}
                         useOriginalCharsOnly={false}
-                        className="cursor-pointer bg-gradient-to-t from-primary to-primary bg-clip-text text-transparent font-mono"
+                        className="cursor-pointer bg-linear-to-t from-primary to-primary bg-clip-text text-transparent font-mono"
                         isHovering={isHovering}
                         setIsHovering={setIsHovering}
                         characters="abcdefghijklmnopqrstuvwxyz!@#$%^&*()_+-=[]{}|;':\,./<>?"
@@ -636,7 +636,7 @@ export default function Features() {
                 </div>
                 <div className="flex grow items-center justify-center select-none relative min-h-[300px] p-4 mb-6">
                   <div className="relative w-full max-w-sm">
-                    <div className="w-full h-auto rounded-lg shadow-lg bg-gradient-to-br from-primary/20 via-primary/10 to-transparent border border-primary/30 p-8">
+                    <div className="w-full h-auto rounded-lg shadow-lg bg-linear-to-br from-primary/20 via-primary/10 to-transparent border border-primary/30 p-8">
                       <div className="space-y-4">
                         <div className="flex items-center justify-between">
                           <h4 className="text-white font-semibold text-lg">
@@ -676,7 +676,7 @@ export default function Features() {
                         </div>
                       </div>
                     </div>
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent rounded-lg pointer-events-none"></div>
+                    <div className="absolute inset-0 bg-linear-to-t from-black/20 to-transparent rounded-lg pointer-events-none"></div>
                   </div>
                 </div>
               </motion.div>

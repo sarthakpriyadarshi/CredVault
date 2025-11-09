@@ -23,6 +23,7 @@ export default function RecipientProfilePage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [imageError, setImageError] = useState(false);
 
   const [profile, setProfile] = useState({
     id: "",
@@ -56,6 +57,11 @@ export default function RecipientProfilePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, status, router]);
 
+  // Reset image error when profile image changes
+  useEffect(() => {
+    setImageError(false);
+  }, [profile.image]);
+
   const loadProfile = async () => {
     setLoading(true);
     try {
@@ -83,6 +89,8 @@ export default function RecipientProfilePage() {
           twitter: data.profile.twitter || "",
           website: data.profile.website || "",
         });
+        // Reset image error when profile loads
+        setImageError(false);
       }
     } catch (error) {
       console.error("Error loading profile:", error);
@@ -142,6 +150,22 @@ export default function RecipientProfilePage() {
     : typeof window !== "undefined"
     ? `${window.location.origin}/profile/${encodeURIComponent(profile.email)}`
     : `/profile/${encodeURIComponent(profile.email)}`;
+
+  // Helper function to format image URL
+  const getImageSrc = (image: string | null): string => {
+    if (!image) return "";
+    // If it's already a full URL (http/https), return as-is
+    if (image.startsWith("http://") || image.startsWith("https://")) {
+      return image;
+    }
+    // If it already has data: prefix, return as-is
+    if (image.startsWith("data:")) {
+      return image;
+    }
+    // Otherwise, assume it's base64 and add the data URL prefix
+    // Try to detect image type from base64 or default to png
+    return `data:image/png;base64,${image}`;
+  };
 
   if (status === "loading") {
     return <LoadingScreen message="Loading session..." />;
@@ -244,21 +268,21 @@ export default function RecipientProfilePage() {
                     <div className="space-y-2">
                       <Label>Profile Avatar</Label>
                       <div className="flex items-center gap-4">
-                        {profile.image ? (
+                        {profile.image && !imageError ? (
                           <Image
-                            src={
-                              profile.image.startsWith("http://") ||
-                              profile.image.startsWith("https://")
-                                ? profile.image
-                                : profile.image.startsWith("data:")
-                                ? profile.image
-                                : `data:image/png;base64,${profile.image}`
-                            }
+                            src={getImageSrc(profile.image)}
                             alt="Avatar"
                             width={80}
                             height={80}
                             className="rounded-full object-cover border-2 border-primary/50"
                             unoptimized
+                            onError={() => {
+                              console.error("Failed to load avatar image");
+                              setImageError(true);
+                            }}
+                            onLoad={() => {
+                              setImageError(false);
+                            }}
                           />
                         ) : (
                           <div className="w-20 h-20 rounded-full bg-primary/20 flex items-center justify-center border-2 border-primary/50">
@@ -331,6 +355,8 @@ export default function RecipientProfilePage() {
 
                                 // Update local state
                                 setProfile({ ...profile, image: data.base64 });
+                                // Reset image error when new image is uploaded
+                                setImageError(false);
 
                                 // Update session to reflect new avatar (this will refresh the header)
                                 // Call updateSession multiple times with delays to ensure it propagates
